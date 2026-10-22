@@ -1,0 +1,58 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.platform_log_record",
+    "label": "Create table \"platform_log_record\"",
+    "summary": "Creates table \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"platform_log_record\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"platform_log_record\"",
+        "sql": "CREATE TABLE \"public\".\"platform_log_record\" (\n  \"code\" text,\n  \"id\" BIGSERIAL NOT NULL,\n  \"message\" text NOT NULL,\n  \"severity\" text NOT NULL,\n  \"shipped_at\" timestamptz,\n  \"software_id\" text NOT NULL,\n  \"timestamp\" timestamptz(3) NOT NULL,\n  \"type\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"platform_log_record\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ]
+  }
+]

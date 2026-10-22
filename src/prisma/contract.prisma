@@ -1,21 +1,21 @@
 // use prisma-8
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
-}
+// platform_log_record: the local store of the in-app logger (DEC-127, FND-04
+// rule 3, FND-05). GET /api/admin/logs reads this table.
+//
+// Skeleton (stage B0): the table and its columns only. The named checks
+// (log_record_severity_is_known, log_record_type_is_known,
+// log_record_message_length), the three indexes and the rawSql function
+// platform_refuse_delete() come in the build migration (DEC-005).
+model PlatformLogRecord {
+  id         BigInt                @id @default(autoincrement())
+  softwareId String                @map("software_id")
+  timestamp  TimestamptzString(3)
+  severity   String
+  type       String
+  code       String?
+  message    String
+  shippedAt  TimestamptzString?    @map("shipped_at")
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  @@map("platform_log_record")
 }
