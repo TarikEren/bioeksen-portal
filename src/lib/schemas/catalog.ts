@@ -374,6 +374,33 @@ export const LotView = z.strictObject({
 });
 export type LotView = z.infer<typeof LotView>;
 
+/**
+ * The small reference to a product that another module reads (the e-IFU
+ * documents, IFU-10). It holds no catalog number and no count: the catalog
+ * service answers it with one read of one table.
+ */
+export const ProductRef = z.strictObject({
+  id: EntityId,
+  internalCode: z.string(),
+  name: LocalizedName,
+  regulatoryStatus: RegulatoryStatus,
+  isActive: z.boolean(),
+});
+export type ProductRef = z.infer<typeof ProductRef>;
+
+/** The small reference to a LOT, with its catalog number and its product (IFU-40). */
+export const LotRef = z.strictObject({
+  id: EntityId,
+  lotNumber: z.string(),
+  manufacturingDate: businessDate,
+  hasDateConflict: z.boolean(),
+  catalogNumberId: EntityId,
+  catalogNumber: z.string(),
+  productId: EntityId,
+  product: ProductRef,
+});
+export type LotRef = z.infer<typeof LotRef>;
+
 /** One row of an import plan, before the commit. */
 export const ImportPlanRow = z.strictObject({
   rowNumber: z.number().int().positive(),
