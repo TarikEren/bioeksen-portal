@@ -1,10 +1,11 @@
 # The demo of Bioeksen Portal (DEC-135, FND-02 rule 5).
 #
 # Until IT gives the Entra values and the test and production servers, the app
-# runs as a demo on one machine: the app image, PostgreSQL 16, Redis 7, MinIO
-# and Mailpit. The app runs with APP_ENV demo, without an identity provider:
-# GET /api/health and GET /api/admin/logs answer 503 AUTH-5500, and
-# GET /api/health/ready answers 200. The demo is not for real users.
+# runs as a demo on one machine: the app image, the worker, PostgreSQL 16,
+# Redis 7, MinIO and Mailpit. The app runs with APP_ENV demo, without an
+# identity provider: GET /api/health and GET /api/admin/logs answer 503
+# AUTH-5500 for a token that it cannot verify, and GET /api/health/ready
+# answers 200. The demo is not for real users.
 #
 # This file holds no secret. Every secret comes from `.env` (see `.env.example`,
 # whose values are placeholders: change each one that says `change-me`).
@@ -12,15 +13,89 @@
 # demo and for development; production runs the images that IT deploys
 # (sds-ci, DEC-128).
 #
-#   cp .env.example .env
+#   cp .env.example .env     # set BOOTSTRAP_ADMIN_EMAIL for the first start
 #   docker compose -f compose.demo.yaml up --build -d
 #   curl http://localhost:3000/api/health/ready
 #   docker compose -f compose.demo.yaml down -v      # also removes the data
 #
 # The order of the start: PostgreSQL, then `migrate` (once, `prisma db migrate`),
-# then the app. `bucket` makes the bucket of MinIO once. The app does not run
-# migrations itself, and its image holds none.
+# then `bootstrap` (once, ACC-40: the roles and the permissions, and the first
+# Platform Administrator with its invitation mail), then the app and the worker.
+# `bucket` makes the documents bucket of MinIO once, with versioning on
+# (PLT-10 rule 2). The app does not run migrations itself, and its image holds
+# none.
+#
+# The mail relay (the B1 contract, *The demo relay*). DEC-135 applies each rule of
+# production to the demo, so PLT-20.AC3 applies: the app sends nothing to a relay
+# that offers no STARTTLS. `mail-cert` makes a self-signed certificate for the
+# host `mailpit` once, in the volume `mail-tls`. Mailpit offers STARTTLS with it,
+# and requires it. The app, the worker and the bootstrap step trust this one
+# certificate through `NODE_EXTRA_CA_CERTS`. No setting of the app changes, and
+# no check of TLS is switched off. The key stays in a volume that only these
+# containers mount.
 name: bioeksen-portal-demo
+
+# The settings of the app. The app, the worker and the bootstrap step read the
+# same configuration module (FND-03), so they get the same block. A name with no
+# value passes from `.env` only when it is set there; it is not set in the
+# container otherwise (an empty value is not usable, FND-03 rule 3). The test
+# seams are not passed: they stay closed.
+x-app-environment: &app-environment
+  APP_ENV: demo
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${APP_PORT:-3000}}
+  # No proxy stands before the demo. The loopback address trusts none of the
+  # callers that reach the container.
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+  DATABASE_URL: postgresql://${POSTGRES_USER:-bioeksen}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/bioeksen_portal_demo
+  REDIS_URL: redis://redis:6379
+
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:${MINIO_PORT:-9000}}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET: ${S3_BUCKET:-bioeksen-portal}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_USER: ${SMTP_USER:-demo}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:?set SMTP_PASSWORD in .env}
+  MAIL_FROM: ${MAIL_FROM:-portal@example.invalid}
+  # The one certificate that the app trusts besides the system authorities: the
+  # certificate of the demo relay.
+  NODE_EXTRA_CA_CERTS: /mail-tls/cert.pem
+
+  EIFU_LEGAL_NOTICE_VERSION: ${EIFU_LEGAL_NOTICE_VERSION:?set EIFU_LEGAL_NOTICE_VERSION in .env}
+  EIFU_IDENTITY_KEYS: ${EIFU_IDENTITY_KEYS:?set EIFU_IDENTITY_KEYS in .env}
+  EIFU_IDENTITY_LOOKUP_PEPPER: ${EIFU_IDENTITY_LOOKUP_PEPPER:?set EIFU_IDENTITY_LOOKUP_PEPPER in .env}
+
+  # The identity provider (DEC-135). Set all of them or none.
+  ENTRA_TENANT_ID:
+  ENTRA_ISSUER:
+  ENTRA_JWKS_URI:
+  ENTRA_JWKS_MAX_AGE_SECONDS:
+  ENTRA_AUDIENCE:
+  ENTRA_CLIENT_ID:
+  ENTRA_OPERATOR_SCOPE:
+  ENTRA_CLIENT_CERTIFICATE_PATH:
+  ENTRA_CLIENT_SECRET:
+
+# What the app, the worker and the bootstrap step share: no file that the server
+# writes (the root is read-only), no capability, and the relay certificate.
+x-app-service: &app-service
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  volumes:
+    - mail-tls:/mail-tls:ro
 
 services:
   postgres:
@@ -68,10 +143,11 @@ services:
       - minio-data:/data
 
   bucket:
-    # One shot: makes the bucket when it does not exist. The image of MinIO holds
-    # its client, `mc`. The alias comes from MC_HOST_local, so the credentials are
-    # never in a command line. MinIO needs a moment to start: the loop tries
-    # again, and stops after 60 tries.
+    # One shot: makes the documents bucket when it does not exist, and turns
+    # versioning on (PLT-10 rule 2, DEC-124: the bucket has no expiry rule). The
+    # image of MinIO holds its client, `mc`. The alias comes from MC_HOST_local, so
+    # the credentials are never in a command line. MinIO needs a moment to start:
+    # the loop tries again, and stops after 60 tries.
     image: cgr.dev/chainguard/minio:latest
     restart: "no"
     depends_on:
@@ -84,7 +160,7 @@ services:
       - -c
       - |
         tries=0
-        until mc mb --ignore-existing "local/$${S3_BUCKET}"; do
+        until mc mb --ignore-existing "local/$${S3_BUCKET}-documents"; do
           tries=$$((tries + 1))
           if [ "$${tries}" -ge 60 ]; then
             echo "the bucket was not made" >&2
@@ -92,12 +168,47 @@ services:
           fi
           sleep 1
         done
+        mc version enable "local/$${S3_BUCKET}-documents"
+
+  mail-cert:
+    # One shot: makes the certificate of the demo relay once. The certificate is
+    # for the host `mailpit`, and it is self-signed. It stays in the volume, so
+    # a restart keeps it, and `down -v` makes a new one. The key is readable by
+    # every user of the volume, because Mailpit runs as another user than this
+    # step; no other container mounts the volume with write access.
+    image: alpine/openssl:latest
+    restart: "no"
+    volumes:
+      - mail-tls:/tls
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -s /tls/cert.pem ] && [ -s /tls/key.pem ]; then
+          exit 0
+        fi
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+          -keyout /tls/key.pem -out /tls/cert.pem \
+          -subj "/CN=mailpit" -addext "subjectAltName=DNS:mailpit"
+        chmod 644 /tls/cert.pem /tls/key.pem
 
   mailpit:
     image: axllent/mailpit:v1.27
     restart: unless-stopped
+    depends_on:
+      mail-cert:
+        condition: service_completed_successfully
+    environment:
+      # STARTTLS with the certificate of `mail-cert`, required before any
+      # AUTH or message. The demo accepts any login (SMTP_USER and SMTP_PASSWORD).
+      MP_SMTP_TLS_CERT: /tls/cert.pem
+      MP_SMTP_TLS_KEY: /tls/key.pem
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
     ports:
       - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    volumes:
+      - mail-tls:/tls:ro
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 3s
@@ -118,15 +229,57 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-bioeksen}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/bioeksen_portal_demo
 
+  bootstrap:
+    # One shot, after the migrations and before the app (ACC-40): makes the
+    # permissions and the roles match the registry, and, while no active
+    # Platform Administrator exists, makes one for BOOTSTRAP_ADMIN_EMAIL and
+    # sends the invitation through the relay. It prints no password. It exits
+    # with code 2 and the app does not start when no administrator exists and
+    # BOOTSTRAP_ADMIN_EMAIL is not set in `.env`.
+    build:
+      context: .
+      target: worker
+    image: bioeksen-portal-demo-worker:local
+    <<: *app-service
+    restart: "no"
+    command: ["node", "--conditions=react-server", "worker/bootstrap.mjs"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    environment:
+      <<: *app-environment
+      BOOTSTRAP_ADMIN_EMAIL:
+
+  worker:
+    # The worker process (PLT-30, DEC-008): one pass each hour, under an advisory
+    # lock of PostgreSQL. It has no job in stage B1.
+    build:
+      context: .
+      target: worker
+    image: bioeksen-portal-demo-worker:local
+    <<: *app-service
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *app-environment
+
   app:
     build:
       context: .
       target: runtime
     image: bioeksen-portal-demo:local
-    restart: unless-stopped
-    init: true
+    <<: *app-service
     depends_on:
       migrate:
+        condition: service_completed_successfully
+      bootstrap:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
@@ -136,55 +289,11 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
-    # The image holds no file that the server writes, so the root can be read-only.
-    read_only: true
     tmpfs:
       - /tmp
       - /app/.next/cache
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
     environment:
-      APP_ENV: demo
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${APP_PORT:-3000}}
-      # No proxy stands before the demo. The loopback address trusts none of the
-      # callers that reach the container.
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-
-      DATABASE_URL: postgresql://${POSTGRES_USER:-bioeksen}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/bioeksen_portal_demo
-      REDIS_URL: redis://redis:6379
-
-      S3_ENDPOINT_URL: http://minio:9000
-      S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:${MINIO_PORT:-9000}}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      S3_BUCKET: ${S3_BUCKET:-bioeksen-portal}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
-
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      SMTP_USER: ${SMTP_USER:-demo}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:?set SMTP_PASSWORD in .env}
-      MAIL_FROM: ${MAIL_FROM:-portal@example.invalid}
-
-      EIFU_LEGAL_NOTICE_VERSION: ${EIFU_LEGAL_NOTICE_VERSION:?set EIFU_LEGAL_NOTICE_VERSION in .env}
-      EIFU_IDENTITY_KEYS: ${EIFU_IDENTITY_KEYS:?set EIFU_IDENTITY_KEYS in .env}
-      EIFU_IDENTITY_LOOKUP_PEPPER: ${EIFU_IDENTITY_LOOKUP_PEPPER:?set EIFU_IDENTITY_LOOKUP_PEPPER in .env}
-
-      # The identity provider (DEC-135). These pass through from `.env` only when
-      # they are set there; a name with no value is not set in the container. Set
-      # all of them or none. TEST_SEAMS_ENABLED is not passed: the seams stay closed.
-      ENTRA_TENANT_ID:
-      ENTRA_ISSUER:
-      ENTRA_JWKS_URI:
-      ENTRA_JWKS_MAX_AGE_SECONDS:
-      ENTRA_AUDIENCE:
-      ENTRA_CLIENT_ID:
-      ENTRA_OPERATOR_SCOPE:
-      ENTRA_CLIENT_CERTIFICATE_PATH:
-      ENTRA_CLIENT_SECRET:
+      <<: *app-environment
     healthcheck:
       test:
         - CMD
@@ -200,3 +309,4 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  mail-tls:

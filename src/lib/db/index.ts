@@ -14,7 +14,7 @@ import "server-only";
 
 import postgres from "@prisma/orm-postgres/runtime";
 import type { TimestamptzString } from "@prisma/orm-postgres/target/codec-types";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 import { getConfig } from "@/lib/config";
 import { AppError } from "@/lib/errors";
@@ -220,4 +220,48 @@ export function fromColumnInstant(stored: string): Date {
     throw new AppError("DB-5000", "Query failed", { reason: "a timestamp column holds a text that is not an instant" });
   }
   return instant;
+}
+
+/** The result of `tryWithAdvisoryLock`. */
+export type AdvisoryLockResult<TValue> =
+  | { readonly acquired: true; readonly value: TValue }
+  | { readonly acquired: false };
+
+/**
+ * Runs `work` while this process holds the advisory lock `key` of PostgreSQL
+ * (DEC-008, PLT-30.AC1). It does not wait: when another process holds the lock,
+ * it returns `{ acquired: false }` and runs nothing.
+ *
+ * The lock belongs to one connection, so the function takes a connection of the
+ * pool and keeps it until the work ends. It unlocks in all cases. A connection
+ * that dies drops the lock by itself, so a crash never leaves it held.
+ *
+ * @throws AppError The code of the registry for a failure of the database, or the error of `work`.
+ */
+export async function tryWithAdvisoryLock<TValue>(
+  key: bigint,
+  work: () => Promise<TValue>,
+): Promise<AdvisoryLockResult<TValue>> {
+  let client: PoolClient;
+  try {
+    client = await getHandle().pool.connect();
+  } catch (error) {
+    throw toDatabaseError(error, "read");
+  }
+  let locked = false;
+  try {
+    const answer = await client.query<{ locked: boolean }>("SELECT pg_try_advisory_lock($1::bigint) AS locked", [String(key)]);
+    locked = answer.rows[0]?.locked === true;
+    if (!locked) {
+      return { acquired: false };
+    }
+    return { acquired: true, value: await work() };
+  } catch (error) {
+    throw toDatabaseError(error, "write");
+  } finally {
+    if (locked) {
+      await client.query("SELECT pg_advisory_unlock($1::bigint)", [String(key)]).catch(() => undefined);
+    }
+    client.release();
+  }
 }

@@ -74,16 +74,18 @@ const TIMEOUT_ERROR_CODES: ReadonlySet<string> = new Set(["ETIMEDOUT", "ESOCKETT
 /** Maps an error of the client to the code of the registry, with a fixed reason. */
 export function toMailFailure(error: unknown): AppError {
   const code = typeof error === "object" && error !== null ? Reflect.get(error, "code") : undefined;
+  const text = error instanceof Error ? error.message : "";
+  if (code === "ETLS" || /certificate|self.signed|handshake|TLS|SSL/i.test(text)) {
+    // The relay offers no STARTTLS, or its certificate is not one that the app trusts (PLT-20.AC3).
+    return new AppError("UP-5000", "Upstream response unusable", {
+      reason: "the mail relay offers no STARTTLS or its certificate is refused",
+    });
+  }
   if (typeof code === "string" && TIMEOUT_ERROR_CODES.has(code)) {
     return new AppError("UP-5501", "Upstream timed out", { reason: "the mail relay did not answer in time" });
   }
   if (typeof code === "string" && UNAVAILABLE_ERROR_CODES.has(code)) {
     return new AppError("UP-5500", "Upstream unavailable", { reason: "the mail relay is not reachable" });
-  }
-  if (code === "ETLS") {
-    return new AppError("UP-5000", "Upstream response unusable", {
-      reason: "the mail relay offers no STARTTLS or its certificate is refused",
-    });
   }
   return new AppError("UP-5000", "Upstream response unusable", { reason: "the mail relay refused the message" });
 }

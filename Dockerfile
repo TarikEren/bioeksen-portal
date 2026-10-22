@@ -3,10 +3,12 @@
 # Stages: dependencies, build, and the runtime. Only the runtime stage's files
 # are in the app image. The image holds no secret, no `.env` file and no
 # migration: the settings arrive at run time, and the migrations run from the
-# `migrate` target, which is a separate image (see below).
+# `migrate` target, which is a separate image (see below). The worker and the
+# bootstrap command run from the `worker` target (see below).
 #
 #   docker build --target runtime -t bioeksen-portal .
 #   docker build --target migrate -t bioeksen-portal-migrate .
+#   docker build --target worker -t bioeksen-portal-worker .
 #
 # `runtime` is the last stage, so a build with no `--target` gives the app image.
 
@@ -32,10 +34,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 
-# Build: the standalone output of Next.js (`output: "standalone"`).
+# Build: the standalone output of Next.js (`output: "standalone"`), and the
+# bundles of the worker and of the bootstrap command (`src/scripts/build-worker.ts`).
 FROM dependencies AS build
 COPY . .
-RUN pnpm run build
+RUN pnpm run build && pnpm run build:worker
 
 
 # Migrations: the Prisma CLI, the contract and the migration files. No app code
@@ -62,6 +65,26 @@ COPY src/prisma ./src/prisma
 RUN node_modules/.bin/prisma contract emit
 USER node
 CMD ["node_modules/.bin/prisma", "db", "migrate", "--yes"]
+
+
+# Worker: the worker process (PLT-30) and the bootstrap command (ACC-40). The two
+# bundles come from the build stage. The packages stay outside the bundles, so
+# the image holds the production packages of the lockfile and nothing of the
+# development tools. `--conditions=react-server` makes `import "server-only"`
+# empty in a plain Node.js process. The default command is the worker; the
+# bootstrap step of `compose.demo.yaml` runs `worker/bootstrap.mjs` instead.
+FROM base AS worker-dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+FROM ${NODE_IMAGE} AS worker
+ENV NODE_ENV=production     NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
+COPY --from=worker-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/.next/worker ./worker
+COPY --from=build --chown=node:node /app/.bioeksen/software-id ./.bioeksen/software-id
+USER node
+CMD ["node", "--conditions=react-server", "worker/main.mjs"]
 
 
 # Runtime: the server that the build traced, its static files, and the software
