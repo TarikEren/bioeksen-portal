@@ -116,6 +116,15 @@ function wrap<TInput>(
         }
         const principal =
           spec.principal === "operator" ? await authenticateOperator(request.headers.get("authorization")) : null;
+        if (principal !== null) {
+          // Each authorization decision is logged, the grant too (`sds-logging`, **What to log**).
+          logger.write({
+            severity: "INFO",
+            type: "SECURITY",
+            message: "operator request granted",
+            tail: { sub: principal.subject, method: request.method, path: request.nextUrl.pathname },
+          });
+        }
         response = await handler(await load(request, principal));
       } catch (error) {
         response = answerFailure(error, request, spec);
@@ -143,10 +152,12 @@ export function defineJsonRoute<TBody>(
   return wrap(
     spec,
     async (request, principal) => {
-      // Size before media type (step 11 before step 12), then the parse.
+      // Size before media type (step 11 before step 12). A body with no length
+      // is counted as it arrives, so it is read before the media type is checked.
       assertDeclaredLength(request, limit);
+      const bytes = await readBoundedBody(request, limit);
       assertJsonMediaType(request.headers.get("content-type"));
-      const parsed = parseJsonBytes(await readBoundedBody(request, limit));
+      const parsed = parseJsonBytes(bytes);
       const result = spec.bodySchema.safeParse(parsed);
       if (!result.success) {
         throw bodyValidationError(parsed, result.error);
