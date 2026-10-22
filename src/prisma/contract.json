@@ -4,6 +4,26 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
+    "catalog_catalog_number": {
+      "model": "CatalogCatalogNumber",
+      "namespace": "public"
+    },
+    "catalog_lot": {
+      "model": "CatalogLot",
+      "namespace": "public"
+    },
+    "catalog_lot_import": {
+      "model": "CatalogLotImport",
+      "namespace": "public"
+    },
+    "catalog_lot_import_row": {
+      "model": "CatalogLotImportRow",
+      "namespace": "public"
+    },
+    "catalog_product": {
+      "model": "CatalogProduct",
+      "namespace": "public"
+    },
     "identity_auth_token": {
       "model": "IdentityAuthToken",
       "namespace": "public"
@@ -41,6 +61,766 @@
     "namespaces": {
       "public": {
         "models": {
+          "CatalogCatalogNumber": {
+            "fields": {
+              "catalogNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "format": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "packSize": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              }
+            },
+            "relations": {
+              "lots": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "catalogNumberId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLot",
+                  "namespace": "public"
+                }
+              },
+              "product": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogProduct",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "catalogNumber": {
+                  "column": "catalog_number"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "format": {
+                  "column": "format"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isActive": {
+                  "column": "is_active"
+                },
+                "packSize": {
+                  "column": "pack_size"
+                },
+                "productId": {
+                  "column": "product_id"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "catalog_catalog_number"
+            }
+          },
+          "CatalogLot": {
+            "fields": {
+              "catalogNumberId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "expiryDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "hasDateConflict": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotImportId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "manufacturingDate": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "manufacturingDateSource": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "suppliedManufacturingDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              }
+            },
+            "relations": {
+              "catalogNumber": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "catalogNumberId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogCatalogNumber",
+                  "namespace": "public"
+                }
+              },
+              "importRows": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "lotId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLotImportRow",
+                  "namespace": "public"
+                }
+              },
+              "lotImport": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "lotImportId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLotImport",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "catalogNumberId": {
+                  "column": "catalog_number_id"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "expiryDate": {
+                  "column": "expiry_date"
+                },
+                "hasDateConflict": {
+                  "column": "has_date_conflict"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lotImportId": {
+                  "column": "lot_import_id"
+                },
+                "lotNumber": {
+                  "column": "lot_number"
+                },
+                "manufacturingDate": {
+                  "column": "manufacturing_date"
+                },
+                "manufacturingDateSource": {
+                  "column": "manufacturing_date_source"
+                },
+                "suppliedManufacturingDate": {
+                  "column": "supplied_manufacturing_date"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "catalog_lot"
+            }
+          },
+          "CatalogLotImport": {
+            "fields": {
+              "completedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "conflictCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "createdCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "existingCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "failureCode": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "invalidCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "rowCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "sourceFilename": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "sourceHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "uploadedByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "lots": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "lotImportId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLot",
+                  "namespace": "public"
+                }
+              },
+              "product": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "productId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogProduct",
+                  "namespace": "public"
+                }
+              },
+              "rows": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "lotImportId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLotImportRow",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "completedAt": {
+                  "column": "completed_at"
+                },
+                "conflictCount": {
+                  "column": "conflict_count"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdCount": {
+                  "column": "created_count"
+                },
+                "existingCount": {
+                  "column": "existing_count"
+                },
+                "failureCode": {
+                  "column": "failure_code"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "invalidCount": {
+                  "column": "invalid_count"
+                },
+                "productId": {
+                  "column": "product_id"
+                },
+                "rowCount": {
+                  "column": "row_count"
+                },
+                "sourceFilename": {
+                  "column": "source_filename"
+                },
+                "sourceHash": {
+                  "column": "source_hash"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "uploadedByUserId": {
+                  "column": "uploaded_by_user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "catalog_lot_import"
+            }
+          },
+          "CatalogLotImportRow": {
+            "fields": {
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotImportId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "outcome": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rawCells": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "reason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rowNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "lot": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "lotId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLot",
+                  "namespace": "public"
+                }
+              },
+              "lotImport": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "lotImportId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLotImport",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "id": {
+                  "column": "id"
+                },
+                "lotId": {
+                  "column": "lot_id"
+                },
+                "lotImportId": {
+                  "column": "lot_import_id"
+                },
+                "outcome": {
+                  "column": "outcome"
+                },
+                "rawCells": {
+                  "column": "raw_cells"
+                },
+                "reason": {
+                  "column": "reason"
+                },
+                "rowNumber": {
+                  "column": "row_number"
+                }
+              },
+              "namespaceId": "public",
+              "table": "catalog_lot_import_row"
+            }
+          },
+          "CatalogProduct": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "internalCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "kitCodeBase": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "regulatoryStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              }
+            },
+            "relations": {
+              "catalogNumbers": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogCatalogNumber",
+                  "namespace": "public"
+                }
+              },
+              "lotImports": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productId"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLotImport",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "internalCode": {
+                  "column": "internal_code"
+                },
+                "isActive": {
+                  "column": "is_active"
+                },
+                "kitCodeBase": {
+                  "column": "kit_code_base"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "regulatoryStatus": {
+                  "column": "regulatory_status"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "catalog_product"
+            }
+          },
           "IdentityAuthToken": {
             "fields": {
               "createdAt": {
@@ -975,6 +1755,673 @@
       "public": {
         "entries": {
           "table": {
+            "catalog_catalog_number": {
+              "checks": [
+                {
+                  "expression": "((format IS NULL) OR (format = ANY (ARRAY['VCAP'::text, 'LYOPHILIZED'::text, 'LIQUID'::text])))",
+                  "name": "catalog_catalog_number_format_is_known"
+                },
+                {
+                  "expression": "(char_length(catalog_number) <= 64)",
+                  "name": "catalog_catalog_number_length"
+                },
+                {
+                  "expression": "((pack_size IS NULL) OR (char_length(pack_size) <= 32))",
+                  "name": "catalog_catalog_number_pack_size_length"
+                }
+              ],
+              "columns": {
+                "catalog_number": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "format": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "is_active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "pack_size": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "product_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "catalog_catalog_number_product_idx"
+                  },
+                  "name": "catalog_catalog_number_product_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "product_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_catalog_number"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_product"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "product_id"
+                  ],
+                  "name": "catalog_catalog_number_product_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "catalog_number"
+                  ],
+                  "name": "catalog_number_unique"
+                }
+              ]
+            },
+            "catalog_lot": {
+              "checks": [
+                {
+                  "expression": "(char_length(lot_number) <= 64)",
+                  "name": "catalog_lot_lot_number_length"
+                },
+                {
+                  "expression": "(manufacturing_date_source = ANY (ARRAY['PARSED_FROM_LOT'::text, 'SUPPLIED'::text, 'MANUAL_CORRECTION'::text]))",
+                  "name": "catalog_lot_manufacturing_date_source_is_known"
+                },
+                {
+                  "expression": "((expiry_date IS NULL) OR (expiry_date > manufacturing_date))",
+                  "name": "lot_expiry_after_manufacturing"
+                }
+              ],
+              "columns": {
+                "catalog_number_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "expiry_date": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
+                "has_date_conflict": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "lot_import_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "lot_number": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "manufacturing_date": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": false
+                },
+                "manufacturing_date_source": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "supplied_manufacturing_date": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "catalog_lot_catalog_number_id_idx_2e984c6f"
+                  },
+                  "name": "catalog_lot_catalog_number_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "catalog_number_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_catalog_number"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "catalog_lot_lot_import_idx"
+                  },
+                  "name": "catalog_lot_lot_import_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "lot_import_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot_import"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "catalog_number_id"
+                  ],
+                  "name": "catalog_lot_catalog_number_id_idx_2e984c6f",
+                  "prefix": "catalog_lot_catalog_number_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "lot_import_id"
+                  ],
+                  "name": "catalog_lot_lot_import_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "lot_number"
+                  ],
+                  "name": "lot_number_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "catalog_number_id",
+                    "lot_number"
+                  ],
+                  "name": "lot_unique_per_catalog_number"
+                }
+              ]
+            },
+            "catalog_lot_import": {
+              "checks": [
+                {
+                  "expression": "((row_count >= 0) AND (created_count >= 0) AND (existing_count >= 0) AND (conflict_count >= 0) AND (invalid_count >= 0))",
+                  "name": "catalog_lot_import_counts_not_negative"
+                },
+                {
+                  "expression": "((failure_code IS NULL) OR (status = 'FAILED'::text))",
+                  "name": "catalog_lot_import_failure_code_only_when_failed"
+                },
+                {
+                  "expression": "(status = ANY (ARRAY['PROCESSING'::text, 'COMPLETED'::text, 'FAILED'::text]))",
+                  "name": "catalog_lot_import_status_is_known"
+                },
+                {
+                  "expression": "((status <> 'COMPLETED'::text) OR ((((created_count + existing_count) + conflict_count) + invalid_count) = row_count))",
+                  "name": "lot_import_counts_add_up"
+                }
+              ],
+              "columns": {
+                "completed_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "conflict_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "created_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "existing_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "failure_code": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "invalid_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "product_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "row_count": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "source_filename": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "source_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "uploaded_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "catalog_lot_import_product_id_idx_22a2b7d2"
+                  },
+                  "name": "catalog_lot_import_product_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "product_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot_import"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_product"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "product_id"
+                  ],
+                  "name": "catalog_lot_import_product_id_idx_22a2b7d2",
+                  "prefix": "catalog_lot_import_product_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "source_hash"
+                  ],
+                  "name": "catalog_lot_import_source_hash_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "catalog_lot_import_row": {
+              "checks": [
+                {
+                  "expression": "(row_number >= 1)",
+                  "name": "catalog_lot_import_row_number_from_one"
+                },
+                {
+                  "expression": "(outcome = ANY (ARRAY['CREATED'::text, 'ALREADY_EXISTS'::text, 'CONFLICT_REVIEW_REQUIRED'::text, 'INVALID_CATALOG_NUMBER'::text, 'INVALID_LOT_FORMAT'::text, 'INVALID_DATE'::text]))",
+                  "name": "catalog_lot_import_row_outcome_is_known"
+                },
+                {
+                  "expression": "((reason IS NULL) OR (reason = ANY (ARRAY['LOT_ALREADY_EXISTS'::text, 'DUPLICATE_ROW'::text, 'DATE_DIFFERS_FROM_REGISTERED'::text, 'SUPPLIED_DATE_CONFLICT'::text, 'KIT_CODE_MISMATCH'::text, 'CONFLICTING_ROWS'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'OTHER_PRODUCT'::text, 'LOT_MISSING'::text, 'LOT_FORMAT_INVALID'::text, 'LOT_DATE_INVALID'::text, 'SUPPLIED_DATE_INVALID'::text])))",
+                  "name": "catalog_lot_import_row_reason_is_known"
+                }
+              ],
+              "columns": {
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "lot_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "lot_import_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "outcome": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "raw_cells": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": false
+                },
+                "reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "row_number": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "catalog_lot_import_row_lot_import_id_idx_9c2a267d"
+                  },
+                  "name": "catalog_lot_import_row_lot_import_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "lot_import_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot_import_row"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot_import"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "catalog_lot_import_row_lot_idx"
+                  },
+                  "name": "catalog_lot_import_row_lot_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "lot_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot_import_row"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "lot_id"
+                  ],
+                  "name": "catalog_lot_import_row_lot_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "lot_import_id"
+                  ],
+                  "name": "catalog_lot_import_row_lot_import_id_idx_9c2a267d",
+                  "prefix": "catalog_lot_import_row_lot_import_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "lot_import_id",
+                    "row_number"
+                  ],
+                  "name": "lot_import_row_unique"
+                }
+              ]
+            },
+            "catalog_product": {
+              "checks": [
+                {
+                  "expression": "((description IS NULL) OR ((jsonb_typeof(description) = 'object'::text) AND (jsonb_typeof((description -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((description -> 'en'::text)) = 'string'::text)))",
+                  "name": "catalog_product_description_has_both_languages"
+                },
+                {
+                  "expression": "(char_length(internal_code) <= 64)",
+                  "name": "catalog_product_internal_code_length"
+                },
+                {
+                  "expression": "((kit_code_base IS NULL) OR (char_length(kit_code_base) <= 32))",
+                  "name": "catalog_product_kit_code_base_length"
+                },
+                {
+                  "expression": "((jsonb_typeof(name) = 'object'::text) AND (jsonb_typeof((name -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((name -> 'en'::text)) = 'string'::text))",
+                  "name": "catalog_product_name_has_both_languages"
+                },
+                {
+                  "expression": "(regulatory_status = ANY (ARRAY['IVD'::text, 'RUO'::text]))",
+                  "name": "catalog_product_regulatory_status_is_known"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "description": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "internal_code": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "is_active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "kit_code_base": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "name": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": false
+                },
+                "regulatory_status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "internal_code",
+                    "regulatory_status"
+                  ],
+                  "name": "product_unique_identity"
+                }
+              ]
+            },
             "identity_auth_token": {
               "checks": [
                 {
@@ -1798,7 +3245,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "eca4a59f5254f24a70d12d673bf8ae09b29ae0e6e05b9a0f87d1f7ee578e5675"
+    "storageHash": "50c3e51e688ccd632a36f42612ab7efd04b595f604a949e8ecdc1fa3b0f85da5"
   },
   "capabilities": {
     "postgres": {

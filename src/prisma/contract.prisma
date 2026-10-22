@@ -166,3 +166,139 @@ model PlatformAuditRecord {
   @@index([occurredAt], map: "platform_audit_record_occurred_at_idx")
   @@map("platform_audit_record")
 }
+
+// catalog_product: a product is one stem with one regulatory status (CAT-10,
+// DEC-040). `internal_code` is the stem. `name` and `description` hold both
+// languages (DEC-011). `regulatory_status` has no default (DEC-041). The row is
+// never deleted (DEC-010): the triggers of the migration `catalog` refuse DELETE
+// and TRUNCATE.
+model CatalogProduct {
+  id               BigInt               @id @default(autoincrement())
+  internalCode     String               @map("internal_code")
+  name             Jsonb
+  description      Jsonb?
+  regulatoryStatus String               @map("regulatory_status")
+  kitCodeBase      String?              @map("kit_code_base")
+  isActive         Boolean              @default(true) @map("is_active")
+  createdAt        TimestamptzString(3) @map("created_at")
+  updatedAt        TimestamptzString(3) @map("updated_at")
+
+  catalogNumbers CatalogCatalogNumber[]
+  lotImports     CatalogLotImport[]
+
+  @@unique([internalCode, regulatoryStatus], map: "product_unique_identity")
+  @@check(expression: sql`((jsonb_typeof(name) = 'object'::text) AND (jsonb_typeof((name -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((name -> 'en'::text)) = 'string'::text))`, map: "catalog_product_name_has_both_languages")
+  @@check(expression: sql`((description IS NULL) OR ((jsonb_typeof(description) = 'object'::text) AND (jsonb_typeof((description -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((description -> 'en'::text)) = 'string'::text)))`, map: "catalog_product_description_has_both_languages")
+  @@check(expression: sql`(regulatory_status = ANY (ARRAY['IVD'::text, 'RUO'::text]))`, map: "catalog_product_regulatory_status_is_known")
+  @@check(expression: sql`(char_length(internal_code) <= 64)`, map: "catalog_product_internal_code_length")
+  @@check(expression: sql`((kit_code_base IS NULL) OR (char_length(kit_code_base) <= 32))`, map: "catalog_product_kit_code_base_length")
+  @@map("catalog_product")
+}
+
+// catalog_catalog_number: a catalog number belongs to one product and is unique
+// in the whole catalog (CAT-20, DEC-042). The row is never deleted (DEC-010).
+model CatalogCatalogNumber {
+  id            BigInt               @id @default(autoincrement())
+  productId     BigInt               @map("product_id")
+  catalogNumber String               @map("catalog_number")
+  packSize      String?              @map("pack_size")
+  format        String?
+  isActive      Boolean              @default(true) @map("is_active")
+  createdAt     TimestamptzString(3) @map("created_at")
+  updatedAt     TimestamptzString(3) @map("updated_at")
+
+  product CatalogProduct @relation(fields: [productId], references: [id], onDelete: Restrict, map: "catalog_catalog_number_product_fk")
+  lots    CatalogLot[]
+
+  @@unique([catalogNumber], map: "catalog_number_unique")
+  @@check(expression: sql`(char_length(catalog_number) <= 64)`, map: "catalog_catalog_number_length")
+  @@check(expression: sql`((pack_size IS NULL) OR (char_length(pack_size) <= 32))`, map: "catalog_catalog_number_pack_size_length")
+  @@check(expression: sql`((format IS NULL) OR (format = ANY (ARRAY['VCAP'::text, 'LYOPHILIZED'::text, 'LIQUID'::text])))`, map: "catalog_catalog_number_format_is_known")
+  @@index([productId], map: "catalog_catalog_number_product_idx")
+  @@map("catalog_catalog_number")
+}
+
+// catalog_lot: a LOT belongs to one catalog number (CAT-40, DEC-045). The dates
+// are business dates (DEC-039): the column type carries the text YYYY-MM-DD, so
+// no time zone moves a date. `lot_number_idx` serves the one lookup of DEC-045.
+// The row is never deleted (DEC-010).
+model CatalogLot {
+  id                        BigInt               @id @default(autoincrement())
+  catalogNumberId           BigInt               @map("catalog_number_id")
+  lotNumber                 String               @map("lot_number")
+  manufacturingDate         DateString           @map("manufacturing_date")
+  manufacturingDateSource   String               @map("manufacturing_date_source")
+  suppliedManufacturingDate DateString?          @map("supplied_manufacturing_date")
+  expiryDate                DateString?          @map("expiry_date")
+  hasDateConflict           Boolean              @default(false) @map("has_date_conflict")
+  lotImportId               BigInt?              @map("lot_import_id")
+  createdAt                 TimestamptzString(3) @map("created_at")
+  updatedAt                 TimestamptzString(3) @map("updated_at")
+
+  catalogNumber CatalogCatalogNumber  @relation(fields: [catalogNumberId], references: [id], onDelete: Restrict, map: "catalog_lot_catalog_number_fk")
+  lotImport     CatalogLotImport?     @relation(fields: [lotImportId], references: [id], onDelete: Restrict, map: "catalog_lot_lot_import_fk")
+  importRows    CatalogLotImportRow[]
+
+  @@unique([catalogNumberId, lotNumber], map: "lot_unique_per_catalog_number")
+  @@check(expression: sql`((expiry_date IS NULL) OR (expiry_date > manufacturing_date))`, map: "lot_expiry_after_manufacturing")
+  @@check(expression: sql`(manufacturing_date_source = ANY (ARRAY['PARSED_FROM_LOT'::text, 'SUPPLIED'::text, 'MANUAL_CORRECTION'::text]))`, map: "catalog_lot_manufacturing_date_source_is_known")
+  @@check(expression: sql`(char_length(lot_number) <= 64)`, map: "catalog_lot_lot_number_length")
+  @@index([lotNumber], map: "lot_number_idx")
+  @@index([lotImportId], map: "catalog_lot_lot_import_idx")
+  @@map("catalog_lot")
+}
+
+// catalog_lot_import: one commit of a LOT import (CAT-60). `uploaded_by_user_id`
+// holds the user id and has no foreign key to identity_user: a module reads
+// another module only through its service (DEC-004). The row is never deleted
+// (DEC-010).
+model CatalogLotImport {
+  id               BigInt                @id @default(autoincrement())
+  sourceFilename   String?               @map("source_filename")
+  sourceHash       String                @map("source_hash")
+  productId        BigInt?               @map("product_id")
+  uploadedByUserId BigInt                @map("uploaded_by_user_id")
+  status           String
+  rowCount         Int                   @map("row_count")
+  createdCount     Int                   @map("created_count")
+  existingCount    Int                   @map("existing_count")
+  conflictCount    Int                   @map("conflict_count")
+  invalidCount     Int                   @map("invalid_count")
+  failureCode      String?               @map("failure_code")
+  createdAt        TimestamptzString(3)  @map("created_at")
+  completedAt      TimestamptzString(3)? @map("completed_at")
+
+  product CatalogProduct?       @relation(fields: [productId], references: [id], onDelete: Restrict, map: "catalog_lot_import_product_fk")
+  lots    CatalogLot[]
+  rows    CatalogLotImportRow[]
+
+  @@check(expression: sql`(status = ANY (ARRAY['PROCESSING'::text, 'COMPLETED'::text, 'FAILED'::text]))`, map: "catalog_lot_import_status_is_known")
+  @@check(expression: sql`((status <> 'COMPLETED'::text) OR ((((created_count + existing_count) + conflict_count) + invalid_count) = row_count))`, map: "lot_import_counts_add_up")
+  @@check(expression: sql`((failure_code IS NULL) OR (status = 'FAILED'::text))`, map: "catalog_lot_import_failure_code_only_when_failed")
+  @@check(expression: sql`((row_count >= 0) AND (created_count >= 0) AND (existing_count >= 0) AND (conflict_count >= 0) AND (invalid_count >= 0))`, map: "catalog_lot_import_counts_not_negative")
+  @@index([sourceHash], map: "catalog_lot_import_source_hash_idx")
+  @@map("catalog_lot_import")
+}
+
+// catalog_lot_import_row: one row of an import with its outcome and reason
+// (CAT-60 rule 6). `raw_cells` keeps the cells as they arrived (rule 10). The
+// row is never deleted (DEC-010).
+model CatalogLotImportRow {
+  id          BigInt  @id @default(autoincrement())
+  lotImportId BigInt  @map("lot_import_id")
+  rowNumber   Int     @map("row_number")
+  outcome     String
+  reason      String?
+  rawCells    Jsonb   @map("raw_cells")
+  lotId       BigInt? @map("lot_id")
+
+  lotImport CatalogLotImport @relation(fields: [lotImportId], references: [id], onDelete: Restrict, map: "catalog_lot_import_row_lot_import_fk")
+  lot       CatalogLot?      @relation(fields: [lotId], references: [id], onDelete: Restrict, map: "catalog_lot_import_row_lot_fk")
+
+  @@unique([lotImportId, rowNumber], map: "lot_import_row_unique")
+  @@check(expression: sql`(row_number >= 1)`, map: "catalog_lot_import_row_number_from_one")
+  @@check(expression: sql`(outcome = ANY (ARRAY['CREATED'::text, 'ALREADY_EXISTS'::text, 'CONFLICT_REVIEW_REQUIRED'::text, 'INVALID_CATALOG_NUMBER'::text, 'INVALID_LOT_FORMAT'::text, 'INVALID_DATE'::text]))`, map: "catalog_lot_import_row_outcome_is_known")
+  @@check(expression: sql`((reason IS NULL) OR (reason = ANY (ARRAY['LOT_ALREADY_EXISTS'::text, 'DUPLICATE_ROW'::text, 'DATE_DIFFERS_FROM_REGISTERED'::text, 'SUPPLIED_DATE_CONFLICT'::text, 'KIT_CODE_MISMATCH'::text, 'CONFLICTING_ROWS'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'OTHER_PRODUCT'::text, 'LOT_MISSING'::text, 'LOT_FORMAT_INVALID'::text, 'LOT_DATE_INVALID'::text, 'SUPPLIED_DATE_INVALID'::text])))`, map: "catalog_lot_import_row_reason_is_known")
+  @@index([lotId], map: "catalog_lot_import_row_lot_idx")
+  @@map("catalog_lot_import_row")
+}

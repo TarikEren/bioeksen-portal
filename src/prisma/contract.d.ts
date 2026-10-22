@@ -21,7 +21,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'eca4a59f5254f24a70d12d673bf8ae09b29ae0e6e05b9a0f87d1f7ee578e5675'>;
+  StorageHashBase<'50c3e51e688ccd632a36f42612ab7efd04b595f604a949e8ecdc1fa3b0f85da5'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -236,6 +236,65 @@ type DefaultLiteralValue<CodecId extends string, Encoded> = CodecId extends keyo
 
 export type FieldOutputTypes = {
   readonly public: {
+    readonly CatalogCatalogNumber: {
+      readonly catalogNumber: CodecTypes['pg/text@1']['output'];
+      readonly createdAt: TimestamptzString<3>;
+      readonly format: CodecTypes['pg/text@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly isActive: CodecTypes['pg/bool@1']['output'];
+      readonly packSize: CodecTypes['pg/text@1']['output'] | null;
+      readonly productId: CodecTypes['pg/int8@1']['output'];
+      readonly updatedAt: TimestamptzString<3>;
+    };
+    readonly CatalogLot: {
+      readonly catalogNumberId: CodecTypes['pg/int8@1']['output'];
+      readonly createdAt: TimestamptzString<3>;
+      readonly expiryDate: CodecTypes['pg/date-string@1']['output'] | null;
+      readonly hasDateConflict: CodecTypes['pg/bool@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly lotImportId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly lotNumber: CodecTypes['pg/text@1']['output'];
+      readonly manufacturingDate: CodecTypes['pg/date-string@1']['output'];
+      readonly manufacturingDateSource: CodecTypes['pg/text@1']['output'];
+      readonly suppliedManufacturingDate: CodecTypes['pg/date-string@1']['output'] | null;
+      readonly updatedAt: TimestamptzString<3>;
+    };
+    readonly CatalogLotImport: {
+      readonly completedAt: TimestamptzString<3> | null;
+      readonly conflictCount: CodecTypes['pg/int4@1']['output'];
+      readonly createdAt: TimestamptzString<3>;
+      readonly createdCount: CodecTypes['pg/int4@1']['output'];
+      readonly existingCount: CodecTypes['pg/int4@1']['output'];
+      readonly failureCode: CodecTypes['pg/text@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly invalidCount: CodecTypes['pg/int4@1']['output'];
+      readonly productId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly rowCount: CodecTypes['pg/int4@1']['output'];
+      readonly sourceFilename: CodecTypes['pg/text@1']['output'] | null;
+      readonly sourceHash: CodecTypes['pg/text@1']['output'];
+      readonly status: CodecTypes['pg/text@1']['output'];
+      readonly uploadedByUserId: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly CatalogLotImportRow: {
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly lotId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly lotImportId: CodecTypes['pg/int8@1']['output'];
+      readonly outcome: CodecTypes['pg/text@1']['output'];
+      readonly rawCells: CodecTypes['pg/jsonb@1']['output'];
+      readonly reason: CodecTypes['pg/text@1']['output'] | null;
+      readonly rowNumber: CodecTypes['pg/int4@1']['output'];
+    };
+    readonly CatalogProduct: {
+      readonly createdAt: TimestamptzString<3>;
+      readonly description: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly internalCode: CodecTypes['pg/text@1']['output'];
+      readonly isActive: CodecTypes['pg/bool@1']['output'];
+      readonly kitCodeBase: CodecTypes['pg/text@1']['output'] | null;
+      readonly name: CodecTypes['pg/jsonb@1']['output'];
+      readonly regulatoryStatus: CodecTypes['pg/text@1']['output'];
+      readonly updatedAt: TimestamptzString<3>;
+    };
     readonly IdentityAuthToken: {
       readonly createdAt: TimestamptzString<3>;
       readonly createdByUserId: CodecTypes['pg/int8@1']['output'] | null;
@@ -311,6 +370,65 @@ export type FieldOutputTypes = {
 };
 export type FieldInputTypes = {
   readonly public: {
+    readonly CatalogCatalogNumber: {
+      readonly catalogNumber: CodecTypes['pg/text@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly format: CodecTypes['pg/text@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly isActive: CodecTypes['pg/bool@1']['input'];
+      readonly packSize: CodecTypes['pg/text@1']['input'] | null;
+      readonly productId: CodecTypes['pg/int8@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly CatalogLot: {
+      readonly catalogNumberId: CodecTypes['pg/int8@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expiryDate: CodecTypes['pg/date-string@1']['input'] | null;
+      readonly hasDateConflict: CodecTypes['pg/bool@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly lotImportId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly lotNumber: CodecTypes['pg/text@1']['input'];
+      readonly manufacturingDate: CodecTypes['pg/date-string@1']['input'];
+      readonly manufacturingDateSource: CodecTypes['pg/text@1']['input'];
+      readonly suppliedManufacturingDate: CodecTypes['pg/date-string@1']['input'] | null;
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly CatalogLotImport: {
+      readonly completedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly conflictCount: CodecTypes['pg/int4@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdCount: CodecTypes['pg/int4@1']['input'];
+      readonly existingCount: CodecTypes['pg/int4@1']['input'];
+      readonly failureCode: CodecTypes['pg/text@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly invalidCount: CodecTypes['pg/int4@1']['input'];
+      readonly productId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly rowCount: CodecTypes['pg/int4@1']['input'];
+      readonly sourceFilename: CodecTypes['pg/text@1']['input'] | null;
+      readonly sourceHash: CodecTypes['pg/text@1']['input'];
+      readonly status: CodecTypes['pg/text@1']['input'];
+      readonly uploadedByUserId: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly CatalogLotImportRow: {
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly lotId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly lotImportId: CodecTypes['pg/int8@1']['input'];
+      readonly outcome: CodecTypes['pg/text@1']['input'];
+      readonly rawCells: CodecTypes['pg/jsonb@1']['input'];
+      readonly reason: CodecTypes['pg/text@1']['input'] | null;
+      readonly rowNumber: CodecTypes['pg/int4@1']['input'];
+    };
+    readonly CatalogProduct: {
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly description: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly internalCode: CodecTypes['pg/text@1']['input'];
+      readonly isActive: CodecTypes['pg/bool@1']['input'];
+      readonly kitCodeBase: CodecTypes['pg/text@1']['input'] | null;
+      readonly name: CodecTypes['pg/jsonb@1']['input'];
+      readonly regulatoryStatus: CodecTypes['pg/text@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
     readonly IdentityAuthToken: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly createdByUserId: CodecTypes['pg/int8@1']['input'] | null;
@@ -386,6 +504,65 @@ export type FieldInputTypes = {
 };
 export type StorageColumnTypes = {
   readonly public: {
+    readonly catalog_catalog_number: {
+      readonly catalog_number: CodecTypes['pg/text@1']['output'];
+      readonly created_at: TimestamptzString<3>;
+      readonly format: CodecTypes['pg/text@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly is_active: CodecTypes['pg/bool@1']['output'];
+      readonly pack_size: CodecTypes['pg/text@1']['output'] | null;
+      readonly product_id: CodecTypes['pg/int8@1']['output'];
+      readonly updated_at: TimestamptzString<3>;
+    };
+    readonly catalog_lot: {
+      readonly catalog_number_id: CodecTypes['pg/int8@1']['output'];
+      readonly created_at: TimestamptzString<3>;
+      readonly expiry_date: CodecTypes['pg/date-string@1']['output'] | null;
+      readonly has_date_conflict: CodecTypes['pg/bool@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly lot_import_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly lot_number: CodecTypes['pg/text@1']['output'];
+      readonly manufacturing_date: CodecTypes['pg/date-string@1']['output'];
+      readonly manufacturing_date_source: CodecTypes['pg/text@1']['output'];
+      readonly supplied_manufacturing_date: CodecTypes['pg/date-string@1']['output'] | null;
+      readonly updated_at: TimestamptzString<3>;
+    };
+    readonly catalog_lot_import: {
+      readonly completed_at: TimestamptzString<3> | null;
+      readonly conflict_count: CodecTypes['pg/int4@1']['output'];
+      readonly created_at: TimestamptzString<3>;
+      readonly created_count: CodecTypes['pg/int4@1']['output'];
+      readonly existing_count: CodecTypes['pg/int4@1']['output'];
+      readonly failure_code: CodecTypes['pg/text@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly invalid_count: CodecTypes['pg/int4@1']['output'];
+      readonly product_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly row_count: CodecTypes['pg/int4@1']['output'];
+      readonly source_filename: CodecTypes['pg/text@1']['output'] | null;
+      readonly source_hash: CodecTypes['pg/text@1']['output'];
+      readonly status: CodecTypes['pg/text@1']['output'];
+      readonly uploaded_by_user_id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly catalog_lot_import_row: {
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly lot_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly lot_import_id: CodecTypes['pg/int8@1']['output'];
+      readonly outcome: CodecTypes['pg/text@1']['output'];
+      readonly raw_cells: CodecTypes['pg/jsonb@1']['output'];
+      readonly reason: CodecTypes['pg/text@1']['output'] | null;
+      readonly row_number: CodecTypes['pg/int4@1']['output'];
+    };
+    readonly catalog_product: {
+      readonly created_at: TimestamptzString<3>;
+      readonly description: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly internal_code: CodecTypes['pg/text@1']['output'];
+      readonly is_active: CodecTypes['pg/bool@1']['output'];
+      readonly kit_code_base: CodecTypes['pg/text@1']['output'] | null;
+      readonly name: CodecTypes['pg/jsonb@1']['output'];
+      readonly regulatory_status: CodecTypes['pg/text@1']['output'];
+      readonly updated_at: TimestamptzString<3>;
+    };
     readonly identity_auth_token: {
       readonly created_at: TimestamptzString<3>;
       readonly created_by_user_id: CodecTypes['pg/int8@1']['output'] | null;
@@ -461,6 +638,65 @@ export type StorageColumnTypes = {
 };
 export type StorageColumnInputTypes = {
   readonly public: {
+    readonly catalog_catalog_number: {
+      readonly catalog_number: CodecTypes['pg/text@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly format: CodecTypes['pg/text@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly is_active: CodecTypes['pg/bool@1']['input'];
+      readonly pack_size: CodecTypes['pg/text@1']['input'] | null;
+      readonly product_id: CodecTypes['pg/int8@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly catalog_lot: {
+      readonly catalog_number_id: CodecTypes['pg/int8@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expiry_date: CodecTypes['pg/date-string@1']['input'] | null;
+      readonly has_date_conflict: CodecTypes['pg/bool@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly lot_import_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly lot_number: CodecTypes['pg/text@1']['input'];
+      readonly manufacturing_date: CodecTypes['pg/date-string@1']['input'];
+      readonly manufacturing_date_source: CodecTypes['pg/text@1']['input'];
+      readonly supplied_manufacturing_date: CodecTypes['pg/date-string@1']['input'] | null;
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly catalog_lot_import: {
+      readonly completed_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly conflict_count: CodecTypes['pg/int4@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly created_count: CodecTypes['pg/int4@1']['input'];
+      readonly existing_count: CodecTypes['pg/int4@1']['input'];
+      readonly failure_code: CodecTypes['pg/text@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly invalid_count: CodecTypes['pg/int4@1']['input'];
+      readonly product_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly row_count: CodecTypes['pg/int4@1']['input'];
+      readonly source_filename: CodecTypes['pg/text@1']['input'] | null;
+      readonly source_hash: CodecTypes['pg/text@1']['input'];
+      readonly status: CodecTypes['pg/text@1']['input'];
+      readonly uploaded_by_user_id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly catalog_lot_import_row: {
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly lot_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly lot_import_id: CodecTypes['pg/int8@1']['input'];
+      readonly outcome: CodecTypes['pg/text@1']['input'];
+      readonly raw_cells: CodecTypes['pg/jsonb@1']['input'];
+      readonly reason: CodecTypes['pg/text@1']['input'] | null;
+      readonly row_number: CodecTypes['pg/int4@1']['input'];
+    };
+    readonly catalog_product: {
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly description: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly internal_code: CodecTypes['pg/text@1']['input'];
+      readonly is_active: CodecTypes['pg/bool@1']['input'];
+      readonly kit_code_base: CodecTypes['pg/text@1']['input'] | null;
+      readonly name: CodecTypes['pg/jsonb@1']['input'];
+      readonly regulatory_status: CodecTypes['pg/text@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
     readonly identity_auth_token: {
       readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly created_by_user_id: CodecTypes['pg/int8@1']['input'] | null;
@@ -536,6 +772,82 @@ export type StorageColumnInputTypes = {
 };
 
 export namespace Models {
+  export type public_CatalogCatalogNumber = {
+    catalogNumber: CodecTypes['pg/text@1']['output'];
+    createdAt: TimestamptzString<3>;
+    format: CodecTypes['pg/text@1']['output'] | null;
+    id: CodecTypes['pg/int8@1']['output'];
+    isActive: CodecTypes['pg/bool@1']['output'];
+    packSize: CodecTypes['pg/text@1']['output'] | null;
+    productId: CodecTypes['pg/int8@1']['output'];
+    updatedAt: TimestamptzString<3>;
+    lots: public_CatalogLot[];
+    product: public_CatalogProduct;
+    readonly [RelationKeys]?: 'lots' | 'product';
+  };
+  export type public_CatalogLot = {
+    catalogNumberId: CodecTypes['pg/int8@1']['output'];
+    createdAt: TimestamptzString<3>;
+    expiryDate: CodecTypes['pg/date-string@1']['output'] | null;
+    hasDateConflict: CodecTypes['pg/bool@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    lotImportId: CodecTypes['pg/int8@1']['output'] | null;
+    lotNumber: CodecTypes['pg/text@1']['output'];
+    manufacturingDate: CodecTypes['pg/date-string@1']['output'];
+    manufacturingDateSource: CodecTypes['pg/text@1']['output'];
+    suppliedManufacturingDate: CodecTypes['pg/date-string@1']['output'] | null;
+    updatedAt: TimestamptzString<3>;
+    catalogNumber: public_CatalogCatalogNumber;
+    importRows: public_CatalogLotImportRow[];
+    lotImport: public_CatalogLotImport | null;
+    readonly [RelationKeys]?: 'catalogNumber' | 'importRows' | 'lotImport';
+  };
+  export type public_CatalogLotImport = {
+    completedAt: TimestamptzString<3> | null;
+    conflictCount: CodecTypes['pg/int4@1']['output'];
+    createdAt: TimestamptzString<3>;
+    createdCount: CodecTypes['pg/int4@1']['output'];
+    existingCount: CodecTypes['pg/int4@1']['output'];
+    failureCode: CodecTypes['pg/text@1']['output'] | null;
+    id: CodecTypes['pg/int8@1']['output'];
+    invalidCount: CodecTypes['pg/int4@1']['output'];
+    productId: CodecTypes['pg/int8@1']['output'] | null;
+    rowCount: CodecTypes['pg/int4@1']['output'];
+    sourceFilename: CodecTypes['pg/text@1']['output'] | null;
+    sourceHash: CodecTypes['pg/text@1']['output'];
+    status: CodecTypes['pg/text@1']['output'];
+    uploadedByUserId: CodecTypes['pg/int8@1']['output'];
+    lots: public_CatalogLot[];
+    product: public_CatalogProduct | null;
+    rows: public_CatalogLotImportRow[];
+    readonly [RelationKeys]?: 'lots' | 'product' | 'rows';
+  };
+  export type public_CatalogLotImportRow = {
+    id: CodecTypes['pg/int8@1']['output'];
+    lotId: CodecTypes['pg/int8@1']['output'] | null;
+    lotImportId: CodecTypes['pg/int8@1']['output'];
+    outcome: CodecTypes['pg/text@1']['output'];
+    rawCells: CodecTypes['pg/jsonb@1']['output'];
+    reason: CodecTypes['pg/text@1']['output'] | null;
+    rowNumber: CodecTypes['pg/int4@1']['output'];
+    lot: public_CatalogLot | null;
+    lotImport: public_CatalogLotImport;
+    readonly [RelationKeys]?: 'lot' | 'lotImport';
+  };
+  export type public_CatalogProduct = {
+    createdAt: TimestamptzString<3>;
+    description: CodecTypes['pg/jsonb@1']['output'] | null;
+    id: CodecTypes['pg/int8@1']['output'];
+    internalCode: CodecTypes['pg/text@1']['output'];
+    isActive: CodecTypes['pg/bool@1']['output'];
+    kitCodeBase: CodecTypes['pg/text@1']['output'] | null;
+    name: CodecTypes['pg/jsonb@1']['output'];
+    regulatoryStatus: CodecTypes['pg/text@1']['output'];
+    updatedAt: TimestamptzString<3>;
+    catalogNumbers: public_CatalogCatalogNumber[];
+    lotImports: public_CatalogLotImport[];
+    readonly [RelationKeys]?: 'catalogNumbers' | 'lotImports';
+  };
   export type public_IdentityAuthToken = {
     createdAt: TimestamptzString<3>;
     createdByUserId: CodecTypes['pg/int8@1']['output'] | null;
@@ -636,6 +948,11 @@ export namespace Models {
 
 export declare const models: {
   public: {
+    CatalogCatalogNumber: Models.public_CatalogCatalogNumber;
+    CatalogLot: Models.public_CatalogLot;
+    CatalogLotImport: Models.public_CatalogLotImport;
+    CatalogLotImportRow: Models.public_CatalogLotImportRow;
+    CatalogProduct: Models.public_CatalogProduct;
     IdentityAuthToken: Models.public_IdentityAuthToken;
     IdentityPermission: Models.public_IdentityPermission;
     IdentityRole: Models.public_IdentityRole;
@@ -665,6 +982,529 @@ type ContractBase = Omit<
         readonly kind: 'postgres-schema';
         readonly entries: {
           readonly table: {
+            readonly catalog_catalog_number: {
+              columns: {
+                readonly catalog_number: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly format: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly is_active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly pack_size: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly product_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['catalog_number'];
+                  readonly name: 'catalog_number_unique';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'catalog_catalog_number_product_idx';
+                  readonly columns: readonly ['product_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_catalog_number';
+                    readonly columns: readonly ['product_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_product';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_catalog_number_product_fk';
+                },
+              ];
+            };
+            readonly catalog_lot: {
+              columns: {
+                readonly catalog_number_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly expiry_date: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly has_date_conflict: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly lot_import_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly lot_number: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly manufacturing_date: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly manufacturing_date_source: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly supplied_manufacturing_date: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['catalog_number_id', 'lot_number'];
+                  readonly name: 'lot_unique_per_catalog_number';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'catalog_lot_catalog_number_id_idx_2e984c6f';
+                  readonly prefix: 'catalog_lot_catalog_number_id_idx';
+                  readonly columns: readonly ['catalog_number_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'catalog_lot_lot_import_idx';
+                  readonly columns: readonly ['lot_import_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'lot_number_idx';
+                  readonly columns: readonly ['lot_number'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot';
+                    readonly columns: readonly ['catalog_number_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_catalog_number';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_lot_catalog_number_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot';
+                    readonly columns: readonly ['lot_import_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot_import';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_lot_lot_import_fk';
+                },
+              ];
+            };
+            readonly catalog_lot_import: {
+              columns: {
+                readonly completed_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly conflict_count: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly created_count: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly existing_count: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly failure_code: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly invalid_count: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly product_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly row_count: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly source_filename: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly source_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly uploaded_by_user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'catalog_lot_import_product_id_idx_22a2b7d2';
+                  readonly prefix: 'catalog_lot_import_product_id_idx';
+                  readonly columns: readonly ['product_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'catalog_lot_import_source_hash_idx';
+                  readonly columns: readonly ['source_hash'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot_import';
+                    readonly columns: readonly ['product_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_product';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_lot_import_product_fk';
+                },
+              ];
+            };
+            readonly catalog_lot_import_row: {
+              columns: {
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly lot_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly lot_import_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly outcome: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly raw_cells: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly reason: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly row_number: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['lot_import_id', 'row_number'];
+                  readonly name: 'lot_import_row_unique';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'catalog_lot_import_row_lot_idx';
+                  readonly columns: readonly ['lot_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'catalog_lot_import_row_lot_import_id_idx_9c2a267d';
+                  readonly prefix: 'catalog_lot_import_row_lot_import_id_idx';
+                  readonly columns: readonly ['lot_import_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot_import_row';
+                    readonly columns: readonly ['lot_import_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot_import';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_lot_import_row_lot_import_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot_import_row';
+                    readonly columns: readonly ['lot_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'catalog_lot';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'catalog_lot_import_row_lot_fk';
+                },
+              ];
+            };
+            readonly catalog_product: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly description: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly internal_code: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly is_active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly kit_code_base: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly regulatory_status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['internal_code', 'regulatory_status'];
+                  readonly name: 'product_unique_identity';
+                },
+              ];
+              indexes: readonly [];
+              foreignKeys: readonly [];
+            };
             readonly identity_auth_token: {
               columns: {
                 readonly created_at: {
@@ -1339,6 +2179,26 @@ type ContractBase = Omit<
   readonly target: 'postgres';
   readonly targetFamily: 'sql';
   readonly roots: {
+    readonly catalog_catalog_number: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'CatalogCatalogNumber';
+    };
+    readonly catalog_lot: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'CatalogLot';
+    };
+    readonly catalog_lot_import: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'CatalogLotImport';
+    };
+    readonly catalog_lot_import_row: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'CatalogLotImportRow';
+    };
+    readonly catalog_product: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'CatalogProduct';
+    };
     readonly identity_auth_token: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'IdentityAuthToken';
@@ -1376,6 +2236,483 @@ type ContractBase = Omit<
     readonly namespaces: {
       readonly public: {
         readonly models: {
+          readonly CatalogCatalogNumber: {
+            readonly fields: {
+              readonly catalogNumber: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly format: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly isActive: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly packSize: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly productId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly lots: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLot';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['catalogNumberId'];
+                };
+              };
+              readonly product: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogProduct';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['productId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'catalog_catalog_number';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly catalogNumber: { readonly column: 'catalog_number' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly format: { readonly column: 'format' };
+                readonly id: { readonly column: 'id' };
+                readonly isActive: { readonly column: 'is_active' };
+                readonly packSize: { readonly column: 'pack_size' };
+                readonly productId: { readonly column: 'product_id' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly CatalogLot: {
+            readonly fields: {
+              readonly catalogNumberId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly expiryDate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
+              readonly hasDateConflict: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly lotImportId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly lotNumber: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly manufacturingDate: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
+              readonly manufacturingDateSource: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly suppliedManufacturingDate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly catalogNumber: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogCatalogNumber';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['catalogNumberId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly importRows: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLotImportRow';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['lotId'];
+                };
+              };
+              readonly lotImport: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLotImport';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['lotImportId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'catalog_lot';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly catalogNumberId: { readonly column: 'catalog_number_id' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly expiryDate: { readonly column: 'expiry_date' };
+                readonly hasDateConflict: { readonly column: 'has_date_conflict' };
+                readonly id: { readonly column: 'id' };
+                readonly lotImportId: { readonly column: 'lot_import_id' };
+                readonly lotNumber: { readonly column: 'lot_number' };
+                readonly manufacturingDate: { readonly column: 'manufacturing_date' };
+                readonly manufacturingDateSource: { readonly column: 'manufacturing_date_source' };
+                readonly suppliedManufacturingDate: {
+                  readonly column: 'supplied_manufacturing_date';
+                };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly CatalogLotImport: {
+            readonly fields: {
+              readonly completedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly conflictCount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly createdCount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly existingCount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly failureCode: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly invalidCount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly productId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly rowCount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly sourceFilename: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly sourceHash: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly uploadedByUserId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+            };
+            readonly relations: {
+              readonly lots: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLot';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['lotImportId'];
+                };
+              };
+              readonly product: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogProduct';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['productId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly rows: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLotImportRow';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['lotImportId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'catalog_lot_import';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly completedAt: { readonly column: 'completed_at' };
+                readonly conflictCount: { readonly column: 'conflict_count' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly createdCount: { readonly column: 'created_count' };
+                readonly existingCount: { readonly column: 'existing_count' };
+                readonly failureCode: { readonly column: 'failure_code' };
+                readonly id: { readonly column: 'id' };
+                readonly invalidCount: { readonly column: 'invalid_count' };
+                readonly productId: { readonly column: 'product_id' };
+                readonly rowCount: { readonly column: 'row_count' };
+                readonly sourceFilename: { readonly column: 'source_filename' };
+                readonly sourceHash: { readonly column: 'source_hash' };
+                readonly status: { readonly column: 'status' };
+                readonly uploadedByUserId: { readonly column: 'uploaded_by_user_id' };
+              };
+            };
+          };
+          readonly CatalogLotImportRow: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly lotId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly lotImportId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly outcome: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly rawCells: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+              readonly reason: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly rowNumber: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+            };
+            readonly relations: {
+              readonly lot: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLot';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['lotId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly lotImport: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLotImport';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['lotImportId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'catalog_lot_import_row';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly lotId: { readonly column: 'lot_id' };
+                readonly lotImportId: { readonly column: 'lot_import_id' };
+                readonly outcome: { readonly column: 'outcome' };
+                readonly rawCells: { readonly column: 'raw_cells' };
+                readonly reason: { readonly column: 'reason' };
+                readonly rowNumber: { readonly column: 'row_number' };
+              };
+            };
+          };
+          readonly CatalogProduct: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly description: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly internalCode: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly isActive: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly kitCodeBase: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+              readonly regulatoryStatus: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly catalogNumbers: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogCatalogNumber';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['productId'];
+                };
+              };
+              readonly lotImports: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'CatalogLotImport';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['productId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'catalog_product';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly description: { readonly column: 'description' };
+                readonly id: { readonly column: 'id' };
+                readonly internalCode: { readonly column: 'internal_code' };
+                readonly isActive: { readonly column: 'is_active' };
+                readonly kitCodeBase: { readonly column: 'kit_code_base' };
+                readonly name: { readonly column: 'name' };
+                readonly regulatoryStatus: { readonly column: 'regulatory_status' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
           readonly IdentityAuthToken: {
             readonly fields: {
               readonly createdAt: {

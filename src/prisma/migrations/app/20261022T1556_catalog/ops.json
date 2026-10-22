@@ -1,0 +1,1219 @@
+[
+  {
+    "id": "table.catalog_catalog_number",
+    "label": "Create table \"catalog_catalog_number\"",
+    "summary": "Creates table \"catalog_catalog_number\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalog_catalog_number"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalog_catalog_number\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalog_catalog_number\"",
+        "sql": "CREATE TABLE \"public\".\"catalog_catalog_number\" (\n  \"catalog_number\" text NOT NULL,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"format\" text,\n  \"id\" BIGSERIAL NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"pack_size\" text,\n  \"product_id\" int8 NOT NULL,\n  \"updated_at\" timestamptz(3) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"catalog_catalog_number_format_is_known\" CHECK (((format IS NULL) OR (format = ANY (ARRAY['VCAP'::text, 'LYOPHILIZED'::text, 'LIQUID'::text])))),\n  CONSTRAINT \"catalog_catalog_number_length\" CHECK ((char_length(catalog_number) <= 64)),\n  CONSTRAINT \"catalog_catalog_number_pack_size_length\" CHECK (((pack_size IS NULL) OR (char_length(pack_size) <= 32)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalog_catalog_number\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.catalog_lot",
+    "label": "Create table \"catalog_lot\"",
+    "summary": "Creates table \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalog_lot\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalog_lot\"",
+        "sql": "CREATE TABLE \"public\".\"catalog_lot\" (\n  \"catalog_number_id\" int8 NOT NULL,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"expiry_date\" date,\n  \"has_date_conflict\" bool DEFAULT false NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"lot_import_id\" int8,\n  \"lot_number\" text NOT NULL,\n  \"manufacturing_date\" date NOT NULL,\n  \"manufacturing_date_source\" text NOT NULL,\n  \"supplied_manufacturing_date\" date,\n  \"updated_at\" timestamptz(3) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"catalog_lot_lot_number_length\" CHECK ((char_length(lot_number) <= 64)),\n  CONSTRAINT \"catalog_lot_manufacturing_date_source_is_known\" CHECK ((manufacturing_date_source = ANY (ARRAY['PARSED_FROM_LOT'::text, 'SUPPLIED'::text, 'MANUAL_CORRECTION'::text]))),\n  CONSTRAINT \"lot_expiry_after_manufacturing\" CHECK (((expiry_date IS NULL) OR (expiry_date > manufacturing_date)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalog_lot\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.catalog_lot_import",
+    "label": "Create table \"catalog_lot_import\"",
+    "summary": "Creates table \"catalog_lot_import\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalog_lot_import"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalog_lot_import\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalog_lot_import\"",
+        "sql": "CREATE TABLE \"public\".\"catalog_lot_import\" (\n  \"completed_at\" timestamptz(3),\n  \"conflict_count\" int4 NOT NULL,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"created_count\" int4 NOT NULL,\n  \"existing_count\" int4 NOT NULL,\n  \"failure_code\" text,\n  \"id\" BIGSERIAL NOT NULL,\n  \"invalid_count\" int4 NOT NULL,\n  \"product_id\" int8,\n  \"row_count\" int4 NOT NULL,\n  \"source_filename\" text,\n  \"source_hash\" text NOT NULL,\n  \"status\" text NOT NULL,\n  \"uploaded_by_user_id\" int8 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"catalog_lot_import_counts_not_negative\" CHECK (((row_count >= 0) AND (created_count >= 0) AND (existing_count >= 0) AND (conflict_count >= 0) AND (invalid_count >= 0))),\n  CONSTRAINT \"catalog_lot_import_failure_code_only_when_failed\" CHECK (((failure_code IS NULL) OR (status = 'FAILED'::text))),\n  CONSTRAINT \"catalog_lot_import_status_is_known\" CHECK ((status = ANY (ARRAY['PROCESSING'::text, 'COMPLETED'::text, 'FAILED'::text]))),\n  CONSTRAINT \"lot_import_counts_add_up\" CHECK (((status <> 'COMPLETED'::text) OR ((((created_count + existing_count) + conflict_count) + invalid_count) = row_count)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalog_lot_import\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.catalog_lot_import_row",
+    "label": "Create table \"catalog_lot_import_row\"",
+    "summary": "Creates table \"catalog_lot_import_row\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalog_lot_import_row\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalog_lot_import_row\"",
+        "sql": "CREATE TABLE \"public\".\"catalog_lot_import_row\" (\n  \"id\" BIGSERIAL NOT NULL,\n  \"lot_id\" int8,\n  \"lot_import_id\" int8 NOT NULL,\n  \"outcome\" text NOT NULL,\n  \"raw_cells\" jsonb NOT NULL,\n  \"reason\" text,\n  \"row_number\" int4 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"catalog_lot_import_row_number_from_one\" CHECK ((row_number >= 1)),\n  CONSTRAINT \"catalog_lot_import_row_outcome_is_known\" CHECK ((outcome = ANY (ARRAY['CREATED'::text, 'ALREADY_EXISTS'::text, 'CONFLICT_REVIEW_REQUIRED'::text, 'INVALID_CATALOG_NUMBER'::text, 'INVALID_LOT_FORMAT'::text, 'INVALID_DATE'::text]))),\n  CONSTRAINT \"catalog_lot_import_row_reason_is_known\" CHECK (((reason IS NULL) OR (reason = ANY (ARRAY['LOT_ALREADY_EXISTS'::text, 'DUPLICATE_ROW'::text, 'DATE_DIFFERS_FROM_REGISTERED'::text, 'SUPPLIED_DATE_CONFLICT'::text, 'KIT_CODE_MISMATCH'::text, 'CONFLICTING_ROWS'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'OTHER_PRODUCT'::text, 'LOT_MISSING'::text, 'LOT_FORMAT_INVALID'::text, 'LOT_DATE_INVALID'::text, 'SUPPLIED_DATE_INVALID'::text]))))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalog_lot_import_row\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.catalog_product",
+    "label": "Create table \"catalog_product\"",
+    "summary": "Creates table \"catalog_product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalog_product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalog_product\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_product\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalog_product\"",
+        "sql": "CREATE TABLE \"public\".\"catalog_product\" (\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"description\" jsonb,\n  \"id\" BIGSERIAL NOT NULL,\n  \"internal_code\" text NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"kit_code_base\" text,\n  \"name\" jsonb NOT NULL,\n  \"regulatory_status\" text NOT NULL,\n  \"updated_at\" timestamptz(3) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"catalog_product_description_has_both_languages\" CHECK (((description IS NULL) OR ((jsonb_typeof(description) = 'object'::text) AND (jsonb_typeof((description -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((description -> 'en'::text)) = 'string'::text)))),\n  CONSTRAINT \"catalog_product_internal_code_length\" CHECK ((char_length(internal_code) <= 64)),\n  CONSTRAINT \"catalog_product_kit_code_base_length\" CHECK (((kit_code_base IS NULL) OR (char_length(kit_code_base) <= 32))),\n  CONSTRAINT \"catalog_product_name_has_both_languages\" CHECK (((jsonb_typeof(name) = 'object'::text) AND (jsonb_typeof((name -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((name -> 'en'::text)) = 'string'::text))),\n  CONSTRAINT \"catalog_product_regulatory_status_is_known\" CHECK ((regulatory_status = ANY (ARRAY['IVD'::text, 'RUO'::text])))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalog_product\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_product\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.catalog_catalog_number.catalog_number_unique",
+    "label": "Add unique constraint on \"catalog_catalog_number\" (catalog_number)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "catalog_number_unique",
+        "table": "catalog_catalog_number"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"catalog_number_unique\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_number_unique",
+          "public",
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"catalog_number_unique\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_catalog_number\" ADD CONSTRAINT \"catalog_number_unique\" UNIQUE (\"catalog_number\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"catalog_number_unique\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_number_unique",
+          "public",
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.catalog_lot.lot_unique_per_catalog_number",
+    "label": "Add unique constraint on \"catalog_lot\" (catalog_number_id, lot_number)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "lot_unique_per_catalog_number",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"lot_unique_per_catalog_number\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "lot_unique_per_catalog_number",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"lot_unique_per_catalog_number\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot\" ADD CONSTRAINT \"lot_unique_per_catalog_number\" UNIQUE (\"catalog_number_id\", \"lot_number\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"lot_unique_per_catalog_number\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "lot_unique_per_catalog_number",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.catalog_lot_import_row.lot_import_row_unique",
+    "label": "Add unique constraint on \"catalog_lot_import_row\" (lot_import_id, row_number)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "lot_import_row_unique",
+        "table": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"lot_import_row_unique\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "lot_import_row_unique",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"lot_import_row_unique\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot_import_row\" ADD CONSTRAINT \"lot_import_row_unique\" UNIQUE (\"lot_import_id\", \"row_number\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"lot_import_row_unique\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "lot_import_row_unique",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.catalog_product.product_unique_identity",
+    "label": "Add unique constraint on \"catalog_product\" (internal_code, regulatory_status)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "product_unique_identity",
+        "table": "catalog_product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"product_unique_identity\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "product_unique_identity",
+          "public",
+          "\"public\".\"catalog_product\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"product_unique_identity\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_product\" ADD CONSTRAINT \"product_unique_identity\" UNIQUE (\"internal_code\", \"regulatory_status\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"product_unique_identity\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "product_unique_identity",
+          "public",
+          "\"public\".\"catalog_product\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_catalog_number.catalog_catalog_number_product_idx",
+    "label": "Create index \"catalog_catalog_number_product_idx\" on \"catalog_catalog_number\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_catalog_number_product_idx",
+        "table": "catalog_catalog_number"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_catalog_number_product_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_catalog_number_product_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_catalog_number_product_idx\"",
+        "sql": "CREATE INDEX \"catalog_catalog_number_product_idx\" ON \"public\".\"catalog_catalog_number\" (\"product_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_catalog_number_product_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_catalog_number_product_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot.catalog_lot_catalog_number_id_idx_2e984c6f",
+    "label": "Create index \"catalog_lot_catalog_number_id_idx_2e984c6f\" on \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_catalog_number_id_idx_2e984c6f",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_catalog_number_id_idx_2e984c6f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_catalog_number_id_idx_2e984c6f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_catalog_number_id_idx_2e984c6f\"",
+        "sql": "CREATE INDEX \"catalog_lot_catalog_number_id_idx_2e984c6f\" ON \"public\".\"catalog_lot\" (\"catalog_number_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_catalog_number_id_idx_2e984c6f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_catalog_number_id_idx_2e984c6f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot.catalog_lot_lot_import_idx",
+    "label": "Create index \"catalog_lot_lot_import_idx\" on \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_lot_import_idx",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_lot_import_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_lot_import_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_lot_import_idx\"",
+        "sql": "CREATE INDEX \"catalog_lot_lot_import_idx\" ON \"public\".\"catalog_lot\" (\"lot_import_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_lot_import_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_lot_import_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot.lot_number_idx",
+    "label": "Create index \"lot_number_idx\" on \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "lot_number_idx",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"lot_number_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"lot_number_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"lot_number_idx\"",
+        "sql": "CREATE INDEX \"lot_number_idx\" ON \"public\".\"catalog_lot\" (\"lot_number\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"lot_number_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"lot_number_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot_import.catalog_lot_import_product_id_idx_22a2b7d2",
+    "label": "Create index \"catalog_lot_import_product_id_idx_22a2b7d2\" on \"catalog_lot_import\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_import_product_id_idx_22a2b7d2",
+        "table": "catalog_lot_import"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_import_product_id_idx_22a2b7d2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_import_product_id_idx_22a2b7d2\"",
+        "sql": "CREATE INDEX \"catalog_lot_import_product_id_idx_22a2b7d2\" ON \"public\".\"catalog_lot_import\" (\"product_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_import_product_id_idx_22a2b7d2\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot_import.catalog_lot_import_source_hash_idx",
+    "label": "Create index \"catalog_lot_import_source_hash_idx\" on \"catalog_lot_import\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_import_source_hash_idx",
+        "table": "catalog_lot_import"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_import_source_hash_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_source_hash_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_import_source_hash_idx\"",
+        "sql": "CREATE INDEX \"catalog_lot_import_source_hash_idx\" ON \"public\".\"catalog_lot_import\" (\"source_hash\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_import_source_hash_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_source_hash_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot_import_row.catalog_lot_import_row_lot_idx",
+    "label": "Create index \"catalog_lot_import_row_lot_idx\" on \"catalog_lot_import_row\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_import_row_lot_idx",
+        "table": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_import_row_lot_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row_lot_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_import_row_lot_idx\"",
+        "sql": "CREATE INDEX \"catalog_lot_import_row_lot_idx\" ON \"public\".\"catalog_lot_import_row\" (\"lot_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_import_row_lot_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row_lot_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalog_lot_import_row.catalog_lot_import_row_lot_import_id_idx_9c2a267d",
+    "label": "Create index \"catalog_lot_import_row_lot_import_id_idx_9c2a267d\" on \"catalog_lot_import_row\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalog_lot_import_row_lot_import_id_idx_9c2a267d",
+        "table": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalog_lot_import_row_lot_import_id_idx_9c2a267d\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row_lot_import_id_idx_9c2a267d\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalog_lot_import_row_lot_import_id_idx_9c2a267d\"",
+        "sql": "CREATE INDEX \"catalog_lot_import_row_lot_import_id_idx_9c2a267d\" ON \"public\".\"catalog_lot_import_row\" (\"lot_import_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalog_lot_import_row_lot_import_id_idx_9c2a267d\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalog_lot_import_row_lot_import_id_idx_9c2a267d\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_catalog_number.catalog_catalog_number_product_fk",
+    "label": "Add foreign key \"catalog_catalog_number_product_fk\" on \"catalog_catalog_number\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_catalog_number_product_fk",
+        "table": "catalog_catalog_number"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_catalog_number_product_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_catalog_number_product_fk",
+          "public",
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_catalog_number_product_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_catalog_number\"\nADD CONSTRAINT \"catalog_catalog_number_product_fk\"\nFOREIGN KEY (\"product_id\")\nREFERENCES \"public\".\"catalog_product\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_catalog_number_product_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_catalog_number_product_fk",
+          "public",
+          "\"public\".\"catalog_catalog_number\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_lot.catalog_lot_catalog_number_fk",
+    "label": "Add foreign key \"catalog_lot_catalog_number_fk\" on \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_lot_catalog_number_fk",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_lot_catalog_number_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_catalog_number_fk",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_lot_catalog_number_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot\"\nADD CONSTRAINT \"catalog_lot_catalog_number_fk\"\nFOREIGN KEY (\"catalog_number_id\")\nREFERENCES \"public\".\"catalog_catalog_number\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_lot_catalog_number_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_catalog_number_fk",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_lot.catalog_lot_lot_import_fk",
+    "label": "Add foreign key \"catalog_lot_lot_import_fk\" on \"catalog_lot\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_lot_lot_import_fk",
+        "table": "catalog_lot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_lot_lot_import_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_lot_import_fk",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_lot_lot_import_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot\"\nADD CONSTRAINT \"catalog_lot_lot_import_fk\"\nFOREIGN KEY (\"lot_import_id\")\nREFERENCES \"public\".\"catalog_lot_import\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_lot_lot_import_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_lot_import_fk",
+          "public",
+          "\"public\".\"catalog_lot\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_lot_import.catalog_lot_import_product_fk",
+    "label": "Add foreign key \"catalog_lot_import_product_fk\" on \"catalog_lot_import\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_lot_import_product_fk",
+        "table": "catalog_lot_import"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_lot_import_product_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_product_fk",
+          "public",
+          "\"public\".\"catalog_lot_import\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_lot_import_product_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot_import\"\nADD CONSTRAINT \"catalog_lot_import_product_fk\"\nFOREIGN KEY (\"product_id\")\nREFERENCES \"public\".\"catalog_product\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_lot_import_product_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_product_fk",
+          "public",
+          "\"public\".\"catalog_lot_import\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_lot_import_row.catalog_lot_import_row_lot_import_fk",
+    "label": "Add foreign key \"catalog_lot_import_row_lot_import_fk\" on \"catalog_lot_import_row\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_lot_import_row_lot_import_fk",
+        "table": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_lot_import_row_lot_import_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_row_lot_import_fk",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_lot_import_row_lot_import_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot_import_row\"\nADD CONSTRAINT \"catalog_lot_import_row_lot_import_fk\"\nFOREIGN KEY (\"lot_import_id\")\nREFERENCES \"public\".\"catalog_lot_import\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_lot_import_row_lot_import_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_row_lot_import_fk",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalog_lot_import_row.catalog_lot_import_row_lot_fk",
+    "label": "Add foreign key \"catalog_lot_import_row_lot_fk\" on \"catalog_lot_import_row\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalog_lot_import_row_lot_fk",
+        "table": "catalog_lot_import_row"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalog_lot_import_row_lot_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_row_lot_fk",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalog_lot_import_row_lot_fk\"",
+        "sql": "ALTER TABLE \"public\".\"catalog_lot_import_row\"\nADD CONSTRAINT \"catalog_lot_import_row_lot_fk\"\nFOREIGN KEY (\"lot_id\")\nREFERENCES \"public\".\"catalog_lot\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalog_lot_import_row_lot_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalog_lot_import_row_lot_fk",
+          "public",
+          "\"public\".\"catalog_lot_import_row\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_product_refuse_delete",
+    "label": "Create trigger \"catalog_product_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_product_refuse_delete\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_product_refuse_delete' AND tgrelid = to_regclass('public.catalog_product')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_product_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"catalog_product_refuse_delete\" BEFORE DELETE ON \"public\".\"catalog_product\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_product_refuse_delete\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_product_refuse_delete' AND tgrelid = to_regclass('public.catalog_product')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_product_refuse_truncate",
+    "label": "Create trigger \"catalog_product_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_product_refuse_truncate\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_product_refuse_truncate' AND tgrelid = to_regclass('public.catalog_product')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_product_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"catalog_product_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"catalog_product\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_product_refuse_truncate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_product_refuse_truncate' AND tgrelid = to_regclass('public.catalog_product')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_catalog_number_refuse_delete",
+    "label": "Create trigger \"catalog_catalog_number_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_catalog_number_refuse_delete\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_catalog_number_refuse_delete' AND tgrelid = to_regclass('public.catalog_catalog_number')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_catalog_number_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"catalog_catalog_number_refuse_delete\" BEFORE DELETE ON \"public\".\"catalog_catalog_number\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_catalog_number_refuse_delete\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_catalog_number_refuse_delete' AND tgrelid = to_regclass('public.catalog_catalog_number')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_catalog_number_refuse_truncate",
+    "label": "Create trigger \"catalog_catalog_number_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_catalog_number_refuse_truncate\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_catalog_number_refuse_truncate' AND tgrelid = to_regclass('public.catalog_catalog_number')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_catalog_number_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"catalog_catalog_number_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"catalog_catalog_number\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_catalog_number_refuse_truncate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_catalog_number_refuse_truncate' AND tgrelid = to_regclass('public.catalog_catalog_number')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_refuse_delete",
+    "label": "Create trigger \"catalog_lot_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_refuse_delete\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_refuse_delete\" BEFORE DELETE ON \"public\".\"catalog_lot\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_refuse_delete\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_refuse_truncate",
+    "label": "Create trigger \"catalog_lot_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_refuse_truncate\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"catalog_lot\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_refuse_truncate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_import_refuse_delete",
+    "label": "Create trigger \"catalog_lot_import_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_import_refuse_delete\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot_import')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_import_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_import_refuse_delete\" BEFORE DELETE ON \"public\".\"catalog_lot_import\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_import_refuse_delete\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot_import')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_import_refuse_truncate",
+    "label": "Create trigger \"catalog_lot_import_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_import_refuse_truncate\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot_import')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_import_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_import_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"catalog_lot_import\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_import_refuse_truncate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot_import')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_import_row_refuse_delete",
+    "label": "Create trigger \"catalog_lot_import_row_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_import_row_refuse_delete\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_row_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot_import_row')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_import_row_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_import_row_refuse_delete\" BEFORE DELETE ON \"public\".\"catalog_lot_import_row\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_import_row_refuse_delete\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_row_refuse_delete' AND tgrelid = to_regclass('public.catalog_lot_import_row')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.catalog_lot_import_row_refuse_truncate",
+    "label": "Create trigger \"catalog_lot_import_row_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"catalog_lot_import_row_refuse_truncate\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_row_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot_import_row')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"catalog_lot_import_row_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"catalog_lot_import_row_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"catalog_lot_import_row\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"catalog_lot_import_row_refuse_truncate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'catalog_lot_import_row_refuse_truncate' AND tgrelid = to_regclass('public.catalog_lot_import_row')) AS \"result\"",
+        "params": []
+      }
+    ]
+  }
+]

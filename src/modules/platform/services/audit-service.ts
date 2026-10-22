@@ -15,13 +15,22 @@ import { findRequestContext } from "@/lib/request-context";
 
 import { type JsonObject, insertAuditRecord } from "../repositories/audit-repository";
 
-/** The actions of release 1 that the items mark as audited, as `<module>.<entity>.<verb>`. */
+/** The actions of release 1 that the items mark as audited (the nine of the catalog: B2 contract, **Data**), as `<module>.<entity>.<verb>`. */
 export type AuditActionCode =
   | "identity.user.created"
   | "identity.user.invited"
   | "identity.user.deactivated"
   | "identity.role_assignment.granted"
-  | "identity.role_assignment.revoked";
+  | "identity.role_assignment.revoked"
+  | "catalog.product.created"
+  | "catalog.product.changed"
+  | "catalog.product.deactivated"
+  | "catalog.catalog_number.created"
+  | "catalog.catalog_number.changed"
+  | "catalog.catalog_number.deactivated"
+  | "catalog.lot.registered"
+  | "catalog.lot.manufacturing_date_corrected"
+  | "catalog.lot_import.committed";
 
 export type AuditActor = { readonly type: "USER"; readonly userId: string } | { readonly type: "SYSTEM" };
 
