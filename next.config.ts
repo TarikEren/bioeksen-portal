@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // The server does not tell which framework it runs.
   poweredByHeader: false,
+  // CAT-60, DEC-051: the form of a LOT import takes a file of 5 MiB. The limit
+  // counts the bytes of the multipart parts too, so the action also checks the
+  // size of the file itself (`toLotImportInput`).
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {
