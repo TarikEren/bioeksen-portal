@@ -28,6 +28,8 @@ loop of `bioeksen-sds:sds-planning`. The main session writes
 `docs/plans/test_plan.md` for the stage. `qa-engineer` writes the acceptance
 tests from the criteria, and does not read the product code.
 
+While `crisis_mode.md` is in force (DEC-136), it replaces this build loop.
+
 ## Commands
 
 FND-01 adds the scripts that do not exist yet.

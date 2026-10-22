@@ -30,12 +30,12 @@ The text follows ASD-STE-100 (Simplified Technical English).
 - The items `IFU` are in `eifu.md`.
 - The items `ACD` are in `academy.md`.
 - Each decision is in the file of its subject:
-  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-135.
+  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-136.
   - `catalog.md`: DEC-040 to DEC-053.
   - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-091.
   - `academy.md`: DEC-100 to DEC-112.
 - A new decision takes the next free number of its file's block. The free
-  numbers are 129 and 136 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
+  numbers are 129 and 137 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
   099 for `eifu.md` and 113 to 119 for `academy.md`. Change the list above
   when you add a decision. Do not use the number 086 again.
 
@@ -205,6 +205,10 @@ B0 Foundation
 | **B6 Academy foundation** | ACD-10, ACD-20, ACC-60 | Release 2: the outline items of `academy.md` have their full detail. A course version moves from `DRAFT` to `PUBLISHED` with the approval of a second person. |
 | **B7 Learning** | ACD-30, ACD-40, ACD-50 | A learner with an assigned course completes its lessons and passes its assessment. |
 | **B8 Certificates and Training Studio** | ACD-60, ACD-70, ACD-80 | A learner gets a certificate that verifies publicly. An author builds a course in the Training Studio. |
+
+**Crisis mode.** While DEC-136 is in force, B1 to B4 follow the loop of
+`crisis_mode.md`. The test phase of B0 to B4 follows B4. B5 follows the test
+phase.
 
 **The B1 order.** As the table lists it: the audit records and the mail come
 first, because the creation of a user needs both.
