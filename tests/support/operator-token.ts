@@ -4,7 +4,7 @@
  *
  * Each token is an RS256 JWT with the claims of `credentials.md`, **Required
  * claims**. A trusted token is signed with the key of the local issuer
- * (`tests/support/global-setup/jwks.ts`); a forged one with a key the app does
+ * (`tests/support/token-issuer.ts`); a forged one with a key the app does
  * not trust, under the same `kid`, so the app finds the key and the signature
  * check fails.
  */
@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 
 import { type JWK, type JWTPayload, SignJWT, generateKeyPair, importJWK } from "jose";
 
-import type { TestIssuer } from "./global-setup/jwks";
+import type { TestIssuer } from "./token-issuer";
 import {
   TEST_AUDIENCE,
   TEST_CLOCK_SKEW_SECONDS,
@@ -140,7 +140,7 @@ function claimsFor(kind: TokenKind, nowSeconds: number): Claims {
 /**
  * Mints a token of the kind.
  *
- * @param issuer The local issuer, from `inject("testIssuer")`.
+ * @param issuer The local issuer, from `inject("testIssuer")` or the e2e fixture.
  * @param now The time the token is made, in milliseconds. Default: now.
  */
 export async function mintToken(issuer: TestIssuer, kind: TokenKind, now: number = Date.now()): Promise<string> {

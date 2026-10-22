@@ -1,6 +1,9 @@
 /**
  * Fixtures of the end-to-end tier.
  *
+ * `tokenIssuer` starts a local issuer of operator tokens once for each worker
+ * (`tests/support/token-issuer.ts`).
+ *
  * `configuredApp` starts the production build once for each worker, with every
  * setting of FND-03 rule 2 (`tests/support/test-environment.ts`) and nothing
  * from the shell or from `.env` (`tests/support/spawn-app.ts`):
@@ -8,8 +11,8 @@
  *   that ends in `_e2e`); the Playwright global setup recreated it and applied
  *   the migrations;
  * - Redis is `TEST_REDIS_URL`, else the local Redis;
- * - the issuer of operator tokens points to a port where nothing listens:
- *   no end-to-end test sends one.
+ * - the issuer of operator tokens is the worker's `tokenIssuer`, so a test can
+ *   send an operator token with `mintToken(tokenIssuer, "operator")`.
  */
 import { test as base } from "@playwright/test";
 
@@ -17,6 +20,7 @@ import { assertDisposableDatabase } from "../support/db-guard";
 import { closedPort, freePort } from "../support/ports";
 import { type SpawnedApp, spawnApp } from "../support/spawn-app";
 import { type AppEnvironment, appEnvironment, testRedisUrl } from "../support/test-environment";
+import { type TestIssuer, startTokenIssuer } from "../support/token-issuer";
 
 /** The disposable e2e database, checked by the guard. */
 export function e2eDatabaseUrl(): string {
@@ -28,25 +32,39 @@ export function e2eDatabaseUrl(): string {
   return connectionString;
 }
 
-/** A complete test environment for an app that listens on the port. */
-export async function configuredEnvironment(port: number): Promise<AppEnvironment> {
+/**
+ * A complete test environment for an app that listens on the port.
+ *
+ * @param jwksUri The JWKS of the issuer the app trusts. Default: a port where
+ *   nothing listens, for a test that sends no token.
+ */
+export async function configuredEnvironment(port: number, jwksUri?: string): Promise<AppEnvironment> {
   return appEnvironment({
     databaseUrl: e2eDatabaseUrl(),
     redisUrl: testRedisUrl(),
-    jwksUri: `http://127.0.0.1:${String(await closedPort())}/keys`,
+    jwksUri: jwksUri ?? `http://127.0.0.1:${String(await closedPort())}/keys`,
     publicBaseUrl: `http://127.0.0.1:${String(port)}`,
   });
 }
 
 interface WorkerFixtures {
+  tokenIssuer: TestIssuer;
   configuredApp: SpawnedApp;
 }
 
 export const test = base.extend<object, WorkerFixtures>({
-  configuredApp: [
+  tokenIssuer: [
     async ({}, use) => {
+      const running = await startTokenIssuer();
+      await use(running.issuer);
+      await running.close();
+    },
+    { scope: "worker" },
+  ],
+  configuredApp: [
+    async ({ tokenIssuer }, use) => {
       const port = await freePort();
-      const app = await spawnApp({ port, env: await configuredEnvironment(port) });
+      const app = await spawnApp({ port, env: await configuredEnvironment(port, tokenIssuer.jwksUri) });
       await use(app);
       await app.stop();
     },

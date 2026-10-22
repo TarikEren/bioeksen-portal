@@ -8,14 +8,13 @@
  */
 import { randomBytes } from "node:crypto";
 
-import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { GET as getHealthLive } from "@/app/api/health/live/route";
 import { GET as getHealth } from "@/app/api/health/route";
 import { POST as postEcho } from "@/app/api/test/echo/route";
 
-import { hasTailPair } from "../support/log-records";
+import { type LogStore, openLogStore } from "../support/log-store";
 import { REQUEST_ID_FORMAT, call, describeAnswer, detailFields, expectEnvelope, readBody } from "../support/route";
 
 /** The body limit of FND-05 rule 7: 1 MiB. */
@@ -33,30 +32,15 @@ function echoBody(valueLength: number): string {
   return JSON.stringify({ value: "a".repeat(valueLength) });
 }
 
-let database: Client;
+let store: LogStore;
 
 beforeAll(async () => {
-  database = new Client({ connectionString: process.env["DATABASE_URL"] });
-  await database.connect();
+  store = await openLogStore();
 });
 
 afterAll(async () => {
-  await database.end();
+  await store.close();
 });
-
-interface StoredRecord {
-  readonly code: string | null;
-  readonly message: string;
-}
-
-/** The records of one request in the local store (`request=<id>` in the tail). */
-async function recordsOfRequest(requestId: string): Promise<StoredRecord[]> {
-  const result = await database.query<StoredRecord>(
-    "SELECT code, message FROM platform_log_record WHERE message LIKE $1 ORDER BY id",
-    [`%request=${requestId}%`],
-  );
-  return result.rows.filter((row) => hasTailPair(row.message, "request", requestId));
-}
 
 describe("FND-05 request id", () => {
   /** A request without X-Request-Id gets an answer with a new request id. */
@@ -105,13 +89,13 @@ describe("FND-05 request id", () => {
 describe("FND-05 failure codes in the log", () => {
   async function expectLoggedWithCode(requestId: string, code: string): Promise<void> {
     await expect
-      .poll(async () => (await recordsOfRequest(requestId)).map((record) => record.code), {
+      .poll(async () => (await store.recordsOfRequest(requestId)).map((record) => record.code), {
         timeout: 10_000,
         interval: 200,
         message: `a record with request=${requestId} and the code ${code} is in platform_log_record`,
       })
       .toContain(code);
-    const otherCodes = (await recordsOfRequest(requestId))
+    const otherCodes = (await store.recordsOfRequest(requestId))
       .map((record) => record.code)
       .filter((logged) => logged !== null && logged !== code);
     expect(otherCodes, "no record of the request carries another code").toEqual([]);
@@ -190,6 +174,19 @@ describe("FND-05 request bodies", () => {
       body: '{"value": "qa"',
     });
     await expectEnvelope(response, 400, "VAL-4000");
+  });
+
+  // Contract case "Invalid field value" (sds-logging, code-prefixes.md step 19). Review 2, R-026.
+  /** A body field of the wrong type gets 400 VAL-4006, and details names the field. */
+  it("FND-05 rule 2, sds-logging selection procedure, step 19: a body field of the wrong type", async () => {
+    const response = await call(postEcho, "/api/test/echo", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ value: 42 }),
+    });
+    const envelope = await expectEnvelope(response, 400, "VAL-4006");
+
+    expect(detailFields(envelope)).toEqual(["value"]);
   });
 
   /** A body of exactly 1 MiB is inside the limit: the seam echoes it. */

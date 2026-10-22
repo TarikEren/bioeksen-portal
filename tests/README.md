@@ -105,20 +105,22 @@ refuse. A suite the guard refuses is not run.
 |---|---|
 | `support/db-guard.ts` | Accepts a disposable database or refuses it (FND-06 rule 4). Never writes a connection string |
 | `support/global-setup/database.ts`, `vitest.ts`, `playwright.ts` | Recreate the disposable database of the tier and apply the migrations, after the guard. The Prisma CLI gets the connection string only in `DATABASE_URL`, never as an argument; `redactConnection` removes it and its password, encoded and decoded, from any output |
-| `support/global-setup/jwks.ts` | Integration global setup: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1. The workers read it with `inject("testIssuer")` |
+| `support/token-issuer.ts` | `startTokenIssuer()`: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1, until `close()` |
+| `support/global-setup/jwks.ts` | Integration global setup: starts one token issuer. The workers read it with `inject("testIssuer")` |
 | `support/setup/integration-env.ts` | Each integration worker: the guard again, then every app setting with a test value. PostgreSQL and Redis answer; the object store and the mail relay point to closed ports; `ENTRA_JWKS_URI` is the local issuer; the test seams are on |
 | `support/test-environment.ts` | The test values of every setting of FND-03 rule 2 (`appEnvironment`, `productionEnvironment`, `without`), and the issuer, audience, tenant and operator scope that tokens carry |
 | `support/operator-token.ts` | `mintToken(issuer, kind)`: an operator token, a person without the role, a role without the scope, an app-only token, an expired token, an expired forged token, a wrong signature, a wrong audience, issuer or tenant, an unknown `kid` |
 | `support/route.ts` | Calls a route handler with a `NextRequest`; `expectEnvelope` asserts the error envelope of `sds-api-design`; `detailFields` reads the fields of `details` |
 | `support/spawn-app.ts` | `spawnApp({ env })`: starts `next start` on a free port with exactly the given settings (no shell variables, no `.env`), gives the base URL, the stdout and stderr lines and the log records, and stops the app. `waitForRecord` waits for a log record |
 | `support/log-records.ts` | Reads log records from stdout lines, in the JSON form or the rendered form of `sds-logging` (`log-record.md`) |
+| `support/log-store.ts` | `openLogStore()`: reads the local store `platform_log_record` of the integration database: the records of one request, a wait for a record, and the count of records that hold a text (for the secrets that no record may hold) |
 | `support/ports.ts` | A free port, a closed port, and a wait for a port without an HTTP request |
 | `support/repo-copy.ts` | `copyRepository({ linkNodeModules })`: a copy of the files git would check out, in a temporary directory; runs `pnpm` there; writes fixtures; removes the copy (it unlinks the linked `node_modules` first) |
 | `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline (`isSoftGate`): `continue-on-error`, `set +e`, each `\|\|` that does not exit with a failure, and an `if:` on the job or the step other than `success()`, `always()` or `!cancelled()`. `commitCheckGates` finds the commit check of the kit (`KIT_COMMIT_CHECK`, its path in the CI image) in the commits job, as a gate |
 | `support/contrast.ts` | The contrast table of the `sds-nextjs-frontend` reference page, computed in Node.js from HeroUI's default theme and `src/app/globals.css`: the cascade of custom properties, `oklch()` and `color-mix()`, the paint on a canvas, and the WCAG ratio. Checked against the reference page in Chromium on 2026-10-22 |
 | `support/language.ts` | Chooses a language with the language switch, by role and accessible name, with the labels of the dictionaries |
 | `support/results.ts` | The results-only interface, `pnpm run test:results` |
-| `e2e/fixtures.ts` | `configuredApp`: one production app for each Playwright worker, with every setting valid and the e2e database |
+| `e2e/fixtures.ts` | `tokenIssuer`: one token issuer for each Playwright worker. `configuredApp`: one production app for each worker, with every setting valid, the e2e database, and `tokenIssuer` as its issuer. `configuredEnvironment(port, jwksUri)` gives the same settings for an app that a test starts itself |
 | `support/paths.ts` | The root of the repository |
 
 ## Coverage of stage B0
@@ -132,7 +134,11 @@ refuse. A suite the guard refuses is not run.
 | FND-03 | AC1, AC2, AC3, AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
 | FND-04 | AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
 | FND-04 | AC2, AC3, AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
-| FND-05 | AC1, AC2, AC3, AC5 | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
+| FND-04 | rule 1: the list contract of `GET /api/admin/logs` (contract cases) | integration | `integration/fnd-04-admin-logs.test.ts` |
+| FND-04 | AC4, and rule 1: 405 `RES-4500` after the credential check, 503 `SYS-5500` (contract cases) | e2e | `e2e/fnd-04-methods-and-readiness.spec.ts` |
+| FND-05 | AC1, AC2, AC3, AC5, and rule 2: `VAL-4006` (contract case) | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
+| FND-05 | rules 1 and 5: severity, type and prose of a failure record, no bearer token in a record (contract cases) | integration | `integration/fnd-05-log-records.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
+| FND-05 | FND-03 rules 2 and 3: `LOG_LEVEL` (contract cases) | e2e | `e2e/fnd-05-log-level.spec.ts` |
 | FND-06 | AC1, AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
 | DEC-005 | none: the raw object `platform_refuse_delete()` of FND-06 rule 5 (review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
 | FND-07 | AC1, AC2, AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
@@ -145,6 +151,27 @@ refuse. A suite the guard refuses is not run.
 The AC4 test of FND-07 is in the e2e tier, not in the integration tier of
 the stage plan: the Next.js origin check of server actions runs in the server before
 the action, so only a request to a running app reaches it.
+
+## The conformance check of the standard endpoints
+
+`sds-testing` ships `scripts/check_service.py`, which checks the four standard
+endpoints of a running app against `sds-api-design` (`openapi.yaml`). It is
+not a test of a tier: it needs Python with the packages of its
+`requirements.txt`. Run it against the production build, with an operator
+token of a token issuer that the app trusts, given only in
+`BIOEKSEN_OPERATOR_TOKEN`:
+
+```bash
+python <sds-testing>/scripts/check_service.py --base-url http://127.0.0.1:<port>
+```
+
+Start the app with `support/spawn-app.ts` and the settings of
+`configuredEnvironment(port, issuer.jwksUri)`. The JWKS server of the issuer
+must keep answering while the check runs, so do not start the check with a
+call that blocks the process that runs the issuer.
+
+Last run: 2026-10-22, on the branch of the second review's test fixes, with
+an operator token: exit 0, 14 of 14 checks passed.
 
 ## Cases not run
 
