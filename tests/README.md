@@ -111,7 +111,7 @@ refuse. A suite the guard refuses is not run.
 | `support/log-records.ts` | Reads log records from stdout lines, in the JSON form or the rendered form of `sds-logging` (`log-record.md`) |
 | `support/ports.ts` | A free port, a closed port, and a wait for a port without an HTTP request |
 | `support/repo-copy.ts` | `copyRepository({ linkNodeModules })`: a copy of the files git would check out, in a temporary directory; runs `pnpm` there; writes fixtures; removes the copy (it unlinks the linked `node_modules` first) |
-| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline (`isSoftGate`): `continue-on-error`, `set +e`, each `\|\|` that does not exit with a failure, and an `if:` on the job or the step other than `success()`, `always()` or `!cancelled()` |
+| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline (`isSoftGate`): `continue-on-error`, `set +e`, each `\|\|` that does not exit with a failure, and an `if:` on the job or the step other than `success()`, `always()` or `!cancelled()`. `commitCheckGates` finds the commit check of the kit (`KIT_COMMIT_CHECK`, its path in the CI image) in the commits job, as a gate |
 | `support/contrast.ts` | The contrast table of the `sds-nextjs-frontend` reference page, computed in Node.js from HeroUI's default theme and `src/app/globals.css`: the cascade of custom properties, `oklch()` and `color-mix()`, the paint on a canvas, and the WCAG ratio. Checked against the reference page in Chromium on 2026-10-22 |
 | `support/language.ts` | Chooses a language with the language switch, by role and accessible name, with the labels of the dictionaries |
 | `support/results.ts` | The results-only interface, `pnpm run test:results` |
@@ -142,6 +142,12 @@ refuse. A suite the guard refuses is not run.
 FND-07.AC4 is in the e2e tier, not in the integration tier of the stage
 plan: the Next.js origin check of server actions runs in the server before
 the action, so only a request to a running app reaches it.
+
+## Cases not run
+
+| Case | Why | What makes it runnable |
+|---|---|---|
+| FND-02, the second sentence of AC3: the commit check, run on two commit messages that break `sds-commit` (one with a `Change-Id` without the software id), fails | Release 0.9.0 of the `bioeksen-sds` kit has no commit-check script. The CI proposal names `/opt/bioeksen-sds/${SDS_TAG}/skills/sds-commit/scripts/check_commits.py` as a placeholder, and the pipeline test requires that path in the commits job | A release of the kit with `check_commits.py`: then a pipeline test runs it on the two messages, and expects a failure, after a control run on a good message |
 
 ## Known defects
 

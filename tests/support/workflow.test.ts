@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { isSoftGate, parseYaml, pullRequestWorkflows, runCommands } from "./workflow";
+import { commitCheckGates, isSoftGate, parseYaml, pullRequestWorkflows, runCommands } from "./workflow";
 
 // Source: sds-ci, "Workflow definitions" and "The jobs". The reader that FND-02 and FND-07.AC5 use.
 const SAMPLE = `name: ci # the pipeline
@@ -170,5 +170,49 @@ describe("the soft-gate check", () => {
       "the default condition": false,
       always: false,
     });
+  });
+});
+
+// Source: sds-ci, "The jobs" (the commits job runs the kit's checks from /opt/bioeksen-sds/{tag}/) and review 2,
+// R-040: only the kit's commit check, in the commits job, as a gate.
+const COMMIT_CHECKS = `on:
+  pull_request:
+jobs:
+  commits:
+    steps:
+      - name: the kit's check
+        run: python "/opt/bioeksen-sds/\${SDS_TAG}/skills/sds-commit/scripts/check_commits.py" --base "$BASE"
+      - name: a pinned literal tag
+        run: python3 /opt/bioeksen-sds/0.10.0/skills/sds-commit/scripts/check_commits.py
+      - name: the minting script
+        run: python /opt/bioeksen-sds/\${SDS_TAG}/skills/sds-commit/scripts/mint_change_id.py
+      - name: an echo
+        run: echo "bioeksen-sds commit check"
+      - name: a soft check
+        run: python /opt/bioeksen-sds/\${SDS_TAG}/skills/sds-commit/scripts/check_commits.py || true
+  checks:
+    steps:
+      - name: in another job
+        run: python /opt/bioeksen-sds/\${SDS_TAG}/skills/sds-commit/scripts/check_commits.py
+`;
+
+describe("the commit-check finder", () => {
+  let root: string;
+
+  beforeAll(() => {
+    root = mkdtempSync(path.join(os.tmpdir(), "qa-workflow-commits-"));
+    mkdirSync(path.join(root, ".forgejo", "workflows"), { recursive: true });
+    writeFileSync(path.join(root, ".forgejo", "workflows", "commits.yml"), COMMIT_CHECKS);
+    writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: {} }));
+  });
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("finds the kit's commit check, by its path and name, in the commits job, as a gate", () => {
+    const found = commitCheckGates(runCommands(pullRequestWorkflows(root), root)).map((command) => command.step.name);
+
+    expect(found).toEqual(["the kit's check", "a pinned literal tag"]);
   });
 });

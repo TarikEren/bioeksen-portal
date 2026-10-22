@@ -372,6 +372,25 @@ export function isSoftGate(command: RunCommand): boolean {
   );
 }
 
+/**
+ * The commit check of the `bioeksen-sds` kit, by its path in the CI image and
+ * its name (`sds-ci`, **The jobs**). The tag segment is the pinned release,
+ * written as a variable or as a literal.
+ */
+export const KIT_COMMIT_CHECK = /\/opt\/bioeksen-sds\/[^/\s]+\/skills\/sds-commit\/scripts\/check_commits\.py\b/;
+
+/** True when the command is in the commits job (`sds-ci`, **The jobs**): a job whose id names commits. */
+export function isCommitsJob(command: RunCommand): boolean {
+  return /\bcommits?\b/i.test(command.job.id.replace(/[-_]/g, " "));
+}
+
+/** The steps of the commits job that run the commit check of the kit and are gates. */
+export function commitCheckGates(commands: readonly RunCommand[]): RunCommand[] {
+  return commands.filter(
+    (command) => isCommitsJob(command) && KIT_COMMIT_CHECK.test(command.expanded) && !isSoftGate(command),
+  );
+}
+
 /** A list of the workflow files, for a failure message. */
 export function describeWorkflows(): string {
   const all = loadWorkflows();

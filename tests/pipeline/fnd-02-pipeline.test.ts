@@ -15,7 +15,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { repositoryRoot } from "../support/paths";
 import { type RepositoryCopy, copyRepository, tail } from "../support/repo-copy";
-import { type RunCommand, describeWorkflows, isSoftGate, pullRequestWorkflows, runCommands } from "../support/workflow";
+import {
+  KIT_COMMIT_CHECK,
+  type RunCommand,
+  commitCheckGates,
+  describeWorkflows,
+  isCommitsJob,
+  isSoftGate,
+  pullRequestWorkflows,
+  runCommands,
+} from "../support/workflow";
 
 function pullRequestCommands(): RunCommand[] {
   return runCommands(pullRequestWorkflows());
@@ -82,15 +91,19 @@ describe("FND-02 pull request pipeline", () => {
     expect(uncovered, `acceptance folders that --tests ${folders.join(" ")} leaves out`).toEqual([]);
   });
 
-  /** The pipeline runs the commit check of the bioeksen-sds kit. */
-  it("FND-02.AC3: the pull request pipeline runs the commit check of the bioeksen-sds kit", () => {
-    const check = findCommand(/bioeksen-sds/);
-    const commitCheck = pullRequestCommands().find(
-      (command) => /bioeksen-sds/.test(command.expanded) && /commit/i.test(command.expanded),
-    );
+  // sds-ci, "The jobs": the commits job runs the CI image's copy of the kit, under /opt/bioeksen-sds/{tag}/. Release
+  // 0.9.0 of the kit has no commit-check script yet; the CI proposal names check_commits.py of sds-commit.
+  /** The pipeline runs the commit check of the bioeksen-sds kit as a gate. */
+  it("FND-02.AC3: the commits job of the pull request pipeline runs the commit check of the kit as a gate", () => {
+    const commands = pullRequestCommands();
+    const inCommitsJob = commands.filter(isCommitsJob);
+    expect(inCommitsJob.length, `no pull request job is the commits job. Steps:\n${describeCommands()}`).toBeGreaterThan(0);
 
-    expect(check, `no pull request step runs the bioeksen-sds kit. Steps:\n${describeCommands()}`).toBeDefined();
-    expect(commitCheck, `no pull request step runs the commit check of the kit. Steps:\n${describeCommands()}`).toBeDefined();
+    const gates = commitCheckGates(commands);
+    expect(
+      gates.map((command) => `${command.job.id} > ${command.step.name}`),
+      `no step of the commits job runs ${KIT_COMMIT_CHECK.source} as a gate. Steps:\n${describeCommands()}`,
+    ).not.toEqual([]);
   });
 });
 
