@@ -18,8 +18,11 @@ The developers' own unit and component tests are beside the code in `src/`.
 | integration | `tests/integration/` | Vitest, Node, one file at a time | `pnpm run test:integration` | Route handlers called directly, with a real disposable PostgreSQL 16, a real Redis and the local token issuer |
 | pipeline | `tests/pipeline/` | Vitest, Node, 600 s for each test | `pnpm run test:pipeline` | The toolchain on a copy of the repository: install, type check, lint rules, build, drift check, the forge workflow |
 | e2e | `tests/e2e/` | Playwright, Chromium | `pnpm run test:e2e` (after `pnpm run build`) | The production build with `next start`: headers, pages, languages, configuration at start |
+| smoke | `tests/smoke/` | Playwright, no browser page | `pnpm run test:smoke` | The test environment that IT deployed from a release tag (DEC-128). Its own configuration, `tests/smoke/playwright.config.ts`: no global setup, no web server, base URL from `TEST_ENVIRONMENT_URL`. The pull request pipeline does not run it; the main session runs it at the stage exit (stage plan B0, task T2) |
 
-The runner configuration is `vitest.config.ts` and `playwright.config.ts`.
+The runner configuration is `vitest.config.ts`, `playwright.config.ts` and
+`tests/smoke/playwright.config.ts`. `pnpm run test:e2e` never runs the smoke
+tier.
 Each claim is tested at the lowest tier that can prove it.
 
 ## How a test cites its criterion
@@ -69,7 +72,7 @@ No tier reads `.env`. The variables come from the shell.
 | `TEST_DATABASE_HOSTS` | integration, e2e, pipeline | The hosts a suite may reset a database on, comma separated. Default: loopback only |
 | `TEST_REDIS_URL` | integration, e2e | A Redis 7. Default: `redis://127.0.0.1:6379` |
 | `E2E_PORT` | e2e | The port of the Playwright web server. Default: 3100 |
-| `TEST_ENVIRONMENT_URL` | e2e (FND-02.AC4 only) | The base URL of the test environment that IT deployed. Without it, that test fails and says so |
+| `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed. Without it, the smoke test fails and says so |
 | `SDS_PLANNING_CHECKER` | pipeline (FND-02.AC2) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
 | `PYTHON` | pipeline (FND-02.AC2) | The Python command. Default: `python` on Windows, `python3` elsewhere |
 
@@ -111,7 +114,7 @@ database of `DATABASE_URL`. A suite the guard refuses is not run.
 | FND-01.AC1 | pipeline | `pipeline/fnd-01-toolchain.test.ts` |
 | FND-01.AC2, FND-01.AC3, FND-01.AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
 | FND-02.AC1, FND-02.AC2, FND-02.AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
-| FND-02.AC4 | e2e (stage exit) | `e2e/fnd-02-test-environment.spec.ts` |
+| FND-02.AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
 | FND-03.AC1, FND-03.AC2, FND-03.AC3, FND-03.AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
 | FND-04.AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
 | FND-04.AC2, FND-04.AC3, FND-04.AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |

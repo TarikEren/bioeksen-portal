@@ -10,6 +10,7 @@
     "test:integration": "vitest run --project integration",
     "test:pipeline": "vitest run --project pipeline",
     "test:e2e": "playwright test",
+    "test:smoke": "playwright test --config tests/smoke/playwright.config.ts",
     "test:results": "node --no-warnings tests/support/results.ts",
     "prebuild": "prisma contract emit",
     "build": "next build",
