@@ -16,7 +16,10 @@
     "start": "next start",
     "contract:emit": "prisma contract emit",
     "db:migrate": "prisma db migrate",
-    "db:check": "node --no-warnings src/scripts/db-check.ts"
+    "db:check": "node --no-warnings src/scripts/db-check.ts",
+    "specs:check": "node --no-warnings src/scripts/specs-check.ts",
+    "deps:audit": "pnpm audit --audit-level high",
+    "toolchain:check": "node --no-warnings src/scripts/toolchain-check.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
