@@ -79,6 +79,17 @@ export async function findLotById(executor: Executor, id: bigint, lock: RowLock 
   return row === null ? null : toLotRow(row);
 }
 
+/** The LOTs with the ids, in the order of the ids. */
+export async function findLotsByIds(executor: Executor, ids: readonly bigint[]): Promise<LotRow[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const rows = await executor.orm.public.CatalogLot.where((lot) => lot.id.in([...ids]))
+    .orderBy((lot) => lot.id.asc())
+    .all();
+  return rows.map(toLotRow);
+}
+
 /** The LOT of a catalog number with the LOT number, or `null` (`lot_unique_per_catalog_number`). */
 export async function findLotByNumber(executor: Executor, catalogNumberId: bigint, lotNumber: string): Promise<LotRow | null> {
   const row = await executor.orm.public.CatalogLot.where({ catalogNumberId, lotNumber }).first();

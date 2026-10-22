@@ -76,6 +76,17 @@ export async function findCatalogNumberById(
   return row === null ? null : toCatalogNumberRow(row);
 }
 
+/** The catalog numbers with the ids, in the order of the ids. */
+export async function findCatalogNumbersByIds(executor: Executor, ids: readonly bigint[]): Promise<CatalogNumberRow[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const rows = await executor.orm.public.CatalogCatalogNumber.where((number) => number.id.in([...ids]))
+    .orderBy((number) => number.id.asc())
+    .all();
+  return rows.map(toCatalogNumberRow);
+}
+
 /** The catalog numbers with these exact values, in the order of the ids (CAT-20 rule 2: the match is exact). */
 export async function findCatalogNumbersByValues(executor: Executor, values: readonly string[]): Promise<CatalogNumberRow[]> {
   if (values.length === 0) {

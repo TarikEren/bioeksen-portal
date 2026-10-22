@@ -6,8 +6,9 @@
  *
  * A read answers `null` for an id that names no record, and the caller decides
  * what that means. Each function checks the permission of the actor. A person
- * who may see a document or manage an override sees the product and the LOT that
- * the document or the override names, so those permissions are in the list.
+ * who may see, change, publish, withdraw or correct a document, or manage an
+ * override, sees the product and the LOT that the document or the override names,
+ * so those permissions are in the list.
  */
 import "server-only";
 
@@ -17,8 +18,8 @@ import type { LotRef, ProductRef } from "@/lib/schemas/catalog";
 import type { PermissionCode } from "@/lib/schemas/identity";
 import { readExecutor } from "@/lib/transaction";
 
-import { findCatalogNumberById } from "../repositories/catalog-number-repository";
-import { findLotById } from "../repositories/lot-repository";
+import { findCatalogNumberById, findCatalogNumbersByIds } from "../repositories/catalog-number-repository";
+import { findLotById, findLotsByIds } from "../repositories/lot-repository";
 import { type ProductRow, findProductById, findProductsByIds } from "../repositories/product-repository";
 import { parseCatalogId } from "./catalog-views";
 
@@ -28,6 +29,9 @@ const REFERENCE_READERS: readonly PermissionCode[] = [
   "catalog.lot.view",
   "eifu.document.view",
   "eifu.document.manage",
+  "eifu.document.publish",
+  "eifu.document.withdraw",
+  "eifu.document.replace_published_file",
   "eifu.lot_override.manage",
 ];
 
@@ -110,4 +114,43 @@ export async function findLotRef(actor: SessionActor, id: string): Promise<LotRe
     productId: String(product.id),
     product: toProductRef(product),
   };
+}
+
+/**
+ * The LOTs with the ids, each with its catalog number and its product, by id. An
+ * id that names no LOT is not in the map. Three reads serve any number of ids.
+ *
+ * @throws AppError `PERM-4150`; `DB-5000` when a LOT has no catalog number or no product (the store is broken).
+ */
+export async function findLotRefs(actor: SessionActor, ids: readonly string[]): Promise<Map<string, LotRef>> {
+  requireReader(actor);
+  const keys = ids.flatMap((id) => {
+    const key = parseCatalogId(id);
+    return key === null ? [] : [key];
+  });
+  const executor = readExecutor();
+  const lots = await findLotsByIds(executor, keys);
+  const catalogNumbers = await findCatalogNumbersByIds(executor, [...new Set(lots.map((lot) => lot.catalogNumberId))]);
+  const products = await findProductsByIds(executor, [...new Set(catalogNumbers.map((row) => row.productId))]);
+  const numberById = new Map(catalogNumbers.map((row) => [row.id, row]));
+  const productById = new Map(products.map((row) => [row.id, row]));
+  const refs = new Map<string, LotRef>();
+  for (const lot of lots) {
+    const catalogNumber = numberById.get(lot.catalogNumberId);
+    const product = catalogNumber === undefined ? undefined : productById.get(catalogNumber.productId);
+    if (catalogNumber === undefined || product === undefined) {
+      throw new AppError("DB-5000", CODE_MEANINGS["DB-5000"], { reason: "a LOT has no catalog number or no product" });
+    }
+    refs.set(String(lot.id), {
+      id: String(lot.id),
+      lotNumber: lot.lotNumber,
+      manufacturingDate: lot.manufacturingDate,
+      hasDateConflict: lot.hasDateConflict,
+      catalogNumberId: String(catalogNumber.id),
+      catalogNumber: catalogNumber.catalogNumber,
+      productId: String(product.id),
+      product: toProductRef(product),
+    });
+  }
+  return refs;
 }

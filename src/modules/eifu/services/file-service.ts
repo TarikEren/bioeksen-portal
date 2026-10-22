@@ -43,7 +43,7 @@ import {
   requireVersion,
   toFileView,
   toReplacementView,
-} from "./eifu-views";
+} from "./mock-views";
 
 /** The SHA-256 of the bytes, in lowercase hexadecimal. */
 function sha256Of(bytes: Uint8Array): string {

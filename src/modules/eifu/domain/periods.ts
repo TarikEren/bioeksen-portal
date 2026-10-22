@@ -35,7 +35,7 @@ export interface PeriodDates {
 }
 
 /** Whether the period holds the date (DEC-061: `effectiveFrom` is inside, `effectiveTo` is not). */
-export function periodContains(period: PeriodDates, date: string): boolean {
+export function periodContains(period: Pick<PeriodDates, "effectiveFrom" | "effectiveTo">, date: string): boolean {
   return period.effectiveFrom <= date && (period.effectiveTo === null || date < period.effectiveTo);
 }
 

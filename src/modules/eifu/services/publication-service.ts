@@ -31,7 +31,7 @@ import {
   requireVersion,
   toPeriodView,
   toVersionDetail,
-} from "./eifu-views";
+} from "./mock-views";
 
 /**
  * Publishes a `DRAFT` version, in the order of IFU-30 rule 3:

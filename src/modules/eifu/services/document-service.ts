@@ -2,22 +2,20 @@
  * Documents and their versions (IFU-10).
  *
  * Each function checks the permission of the actor first (DEC-029). A change
- * writes one audit row (PLT-40). The system never deletes a document or a
- * version (DEC-010). A product or a LOT is read only through a catalog service
- * (DEC-004).
+ * runs in one transaction with its audit row (PLT-40). The system never deletes
+ * a document or a version (DEC-010). A product or a LOT is read only through a
+ * catalog service (DEC-004).
  *
- * MOCK: IFU-10. The functions read and write the mock store. Step 4 moves the
- * work to the repositories and one transaction for each change, with the same
- * signatures. The lock of the stem and the status of a product (IFU-10 rule 5)
- * is a trigger of the migration of step 4 (DEC-096).
+ * The lock of the stem and the status of a product (IFU-10 rule 5) is the
+ * trigger `product_identity_is_settled` of the migration `eifu_documents`
+ * (DEC-096), and the catalog service maps its refusal. The lock of the product
+ * of a document (IFU-10 rule 2) is the trigger `document_product_is_settled`.
  */
 import "server-only";
 
 import { type SessionActor, requirePermission } from "@/lib/auth/session";
 import { now } from "@/lib/clock";
-import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { validationError } from "@/lib/http/validation";
-import { getEifuMock } from "@/lib/mock/eifu";
 import {
   type CreateDocumentInput,
   type CreateVersionInput,
@@ -29,24 +27,42 @@ import {
   type UpdateVersionInput,
   type VersionDetail,
 } from "@/lib/schemas/eifu";
+import { readExecutor, runTransaction, violatedConstraint } from "@/lib/transaction";
 
+import {
+  findDocumentById,
+  insertDocument,
+  listDocumentRows,
+  updateDocumentRow,
+} from "../repositories/document-repository";
+import {
+  findVersionById,
+  hasPublishedVersion,
+  insertVersion,
+  listVersionsOfDocuments,
+  updateProposedEffectiveFrom,
+} from "../repositories/version-repository";
 import {
   alreadyExists,
   blankTitleFaults,
-  hasPublishedVersion,
+  loadDocumentDetail,
+  loadVersionDetail,
+  loadVersionParts,
   notAllowedInState,
+  notFound,
   pageOf,
+  parseEifuId,
   recordAudit,
-  requireDocument,
-  requireStoredProduct,
+  requireEifuKey,
   requireStoredProducts,
-  requireVersion,
   resolveProduct,
-  toDocumentDetail,
   toDocumentSummary,
-  toVersionDetail,
-  versionsOfDocument,
 } from "./eifu-views";
+
+/** The constraint and the trigger rules that the database names for the refusals of this file. */
+const DOCUMENT_NUMBER_RULE = "document_number_unique";
+const REVISION_RULE = "document_version_unique_revision";
+const PRODUCT_SETTLED_RULE = "document_product_is_settled";
 
 /** Whether the text is in the document number or in the title of either language. */
 function matchesText(documentNumber: string, title: Readonly<Record<"tr" | "en", string>>, needle: string): boolean {
@@ -62,23 +78,37 @@ function matchesText(documentNumber: string, title: Readonly<Record<"tr" | "en",
  */
 export async function listDocuments(actor: SessionActor, query: DocumentListQuery): Promise<DocumentListPage> {
   requirePermission(actor, "eifu.document.view");
-  // MOCK: IFU-10 (list, search)
+  const executor = readExecutor();
   const needle = query.q === null ? null : query.q.toLocaleLowerCase("tr");
-  const matching = [...getEifuMock().documents.values()]
-    .filter((document) => query.productId === null || document.productId === query.productId)
-    .filter((document) => needle === null || matchesText(document.documentNumber, document.title, needle))
-    .sort((left, right) => left.documentNumber.localeCompare(right.documentNumber) || Number(left.id) - Number(right.id));
+  const productKey = query.productId === null ? null : parseEifuId(query.productId);
+  if (query.productId !== null && productKey === null) {
+    // An id of a wrong form names no product, so no document names it.
+    return { page: query.page, count: 0, totalCount: 0, documents: [], filterParams: query };
+  }
+  const matching = (await listDocumentRows(executor, productKey)).filter(
+    (document) => needle === null || matchesText(document.documentNumber, document.title, needle),
+  );
   const { slice, totalCount } = pageOf(matching, query);
   const products = await requireStoredProducts(
     actor,
-    slice.map((document) => document.productId),
+    slice.map((document) => String(document.productId)),
   );
+  const versions = await listVersionsOfDocuments(
+    executor,
+    slice.map((document) => document.id),
+  );
+  const parts = await loadVersionParts(executor, versions);
   const documents = slice.map((document) => {
-    const product = products.get(document.productId);
+    const product = products.get(String(document.productId));
     if (product === undefined) {
-      throw new AppError("DB-5000", CODE_MEANINGS["DB-5000"], { reason: "a document has no product" });
+      throw new Error("The product of a listed document is missing after the check");
     }
-    return toDocumentSummary(document, product);
+    return toDocumentSummary(
+      document,
+      product,
+      versions.filter((version) => version.documentId === document.id),
+      parts,
+    );
   });
   return { page: query.page, count: documents.length, totalCount, documents, filterParams: query };
 }
@@ -100,33 +130,28 @@ export async function createDocument(actor: SessionActor, input: CreateDocumentI
   if (product === null) {
     throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: EIFU_ISSUES.productNotFound } }]);
   }
-  // MOCK: IFU-10 (create)
-  const state = getEifuMock();
-  const documentNumber = input.documentNumber.trim();
-  // A second creation with the same number between this check and the insert
-  // fails on `document_number_unique` with the same `RES-4300`.
-  if ([...state.documents.values()].some((document) => document.documentNumber === documentNumber)) {
-    throw alreadyExists("a document has the document number");
-  }
-  const created = now();
-  const document = {
-    id: String(state.nextDocumentId),
-    documentNumber,
-    title: { tr: input.title.tr.trim(), en: input.title.en.trim() },
-    productId: product.id,
-    createdAt: created,
-    updatedAt: created,
-  };
-  state.nextDocumentId += 1;
-  state.documents.set(document.id, document);
-  recordAudit(actor, {
-    actionCode: "eifu.document.created",
-    entityType: "eifu_document",
-    entityId: document.id,
-    stateBefore: null,
-    stateAfter: { documentNumber, title: document.title, productId: document.productId },
+  return runTransaction(async (tx) => {
+    // The number is checked by the constraint, so two creations at once give one winner.
+    let document;
+    try {
+      document = await insertDocument(tx, {
+        documentNumber: input.documentNumber.trim(),
+        title: { tr: input.title.tr.trim(), en: input.title.en.trim() },
+        productId: BigInt(product.id),
+        now: now(),
+      });
+    } catch (error) {
+      throw violatedConstraint(error) === DOCUMENT_NUMBER_RULE ? alreadyExists("a document has the document number") : error;
+    }
+    await recordAudit(tx, actor, {
+      actionCode: "eifu.document.created",
+      entityType: "eifu_document",
+      entityId: String(document.id),
+      stateBefore: null,
+      stateAfter: { documentNumber: document.documentNumber, title: document.title, productId: String(document.productId) },
+    });
+    return loadDocumentDetail(actor, tx, document);
   });
-  return toDocumentDetail(document, product);
 }
 
 /**
@@ -136,9 +161,12 @@ export async function createDocument(actor: SessionActor, input: CreateDocumentI
  */
 export async function getDocument(actor: SessionActor, id: string): Promise<DocumentDetail> {
   requirePermission(actor, "eifu.document.view");
-  // MOCK: IFU-10 (read)
-  const document = requireDocument(id);
-  return toDocumentDetail(document, await requireStoredProduct(actor, document.productId));
+  const executor = readExecutor();
+  const document = await findDocumentById(executor, requireEifuKey(id));
+  if (document === null) {
+    throw notFound();
+  }
+  return loadDocumentDetail(actor, executor, document);
 }
 
 /**
@@ -153,44 +181,53 @@ export async function getDocument(actor: SessionActor, id: string): Promise<Docu
  */
 export async function updateDocument(actor: SessionActor, id: string, patch: UpdateDocumentInput): Promise<DocumentDetail> {
   requirePermission(actor, "eifu.document.manage");
-  // MOCK: IFU-10 (change)
-  const document = requireDocument(id);
-  const title = {
-    tr: (patch.title?.tr ?? document.title.tr).trim(),
-    en: (patch.title?.en ?? document.title.en).trim(),
-  };
-  const titleFaults = blankTitleFaults(title);
-  if (titleFaults.length > 0) {
-    throw validationError(titleFaults);
-  }
-  const productId = patch.productId ?? document.productId;
-  let product = await requireStoredProduct(actor, document.productId);
-  if (productId !== document.productId) {
-    // IFU-10 rule 2: the product changes only until the first publication. The trigger `document_product_is_settled` holds the rule in the database.
-    if (hasPublishedVersion(document.id)) {
-      throw notAllowedInState("the product of a document with a published version");
+  const key = requireEifuKey(id);
+  return runTransaction(async (tx) => {
+    // A publication locks the same row first, so a publication and a change of the product run one after the other.
+    const document = await findDocumentById(tx, key, "no-key-update");
+    if (document === null) {
+      throw notFound();
     }
-    const next = await resolveProduct(actor, productId);
-    if (next === null) {
-      throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: EIFU_ISSUES.productNotFound } }]);
+    const title = {
+      tr: (patch.title?.tr ?? document.title.tr).trim(),
+      en: (patch.title?.en ?? document.title.en).trim(),
+    };
+    const titleFaults = blankTitleFaults(title);
+    if (titleFaults.length > 0) {
+      throw validationError(titleFaults);
     }
-    product = next;
-  }
-  const before = { title: document.title, productId: document.productId };
-  const after = { title, productId };
-  if (JSON.stringify(before) !== JSON.stringify(after)) {
-    document.title = title;
-    document.productId = productId;
-    document.updatedAt = now();
-    recordAudit(actor, {
-      actionCode: "eifu.document.changed",
-      entityType: "eifu_document",
-      entityId: document.id,
-      stateBefore: before,
-      stateAfter: after,
-    });
-  }
-  return toDocumentDetail(document, product);
+    const productId = patch.productId === undefined ? document.productId : BigInt(patch.productId);
+    if (productId !== document.productId) {
+      // IFU-10 rule 2: the product changes only until the first publication. The trigger `document_product_is_settled` holds the rule in the database.
+      if (await hasPublishedVersion(tx, document.id)) {
+        throw notAllowedInState("the product of a document with a published version");
+      }
+      if ((await resolveProduct(actor, String(productId))) === null) {
+        throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: EIFU_ISSUES.productNotFound } }]);
+      }
+    }
+    const before = { title: document.title, productId: String(document.productId) };
+    const after = { title, productId: String(productId) };
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      const at = now();
+      try {
+        await updateDocumentRow(tx, document.id, { title, productId, now: at });
+      } catch (error) {
+        throw violatedConstraint(error) === PRODUCT_SETTLED_RULE
+          ? notAllowedInState("the product of a document with a published version")
+          : error;
+      }
+      await recordAudit(tx, actor, {
+        actionCode: "eifu.document.changed",
+        entityType: "eifu_document",
+        entityId: String(document.id),
+        stateBefore: before,
+        stateAfter: after,
+      });
+      return loadDocumentDetail(actor, tx, { ...document, title, productId, updatedAt: at });
+    }
+    return loadDocumentDetail(actor, tx, document);
+  });
 }
 
 /**
@@ -201,40 +238,37 @@ export async function updateDocument(actor: SessionActor, id: string, patch: Upd
  */
 export async function createVersion(actor: SessionActor, documentId: string, input: CreateVersionInput): Promise<VersionDetail> {
   requirePermission(actor, "eifu.document.manage");
-  // MOCK: IFU-10 (create a version)
-  const state = getEifuMock();
-  const document = requireDocument(documentId);
-  const revision = input.revision.trim();
-  // A second creation with the same label fails on `document_version_unique_revision` with the same `RES-4300`.
-  if (versionsOfDocument(document.id).some((version) => version.revision === revision)) {
-    throw alreadyExists("the document has the revision label");
-  }
-  const created = now();
-  const version = {
-    id: String(state.nextVersionId),
-    documentId: document.id,
-    revision,
-    status: "DRAFT" as const,
-    proposedEffectiveFrom: input.proposedEffectiveFrom ?? null,
-    publishedAt: null,
-    publishedByUserId: null,
-    supersededAt: null,
-    withdrawnAt: null,
-    withdrawnByUserId: null,
-    withdrawalReason: null,
-    createdAt: created,
-    updatedAt: created,
-  };
-  state.nextVersionId += 1;
-  state.versions.set(version.id, version);
-  recordAudit(actor, {
-    actionCode: "eifu.document_version.created",
-    entityType: "eifu_document_version",
-    entityId: version.id,
-    stateBefore: null,
-    stateAfter: { documentId: document.id, revision, status: version.status, proposedEffectiveFrom: version.proposedEffectiveFrom },
+  const key = requireEifuKey(documentId);
+  return runTransaction(async (tx) => {
+    const document = await findDocumentById(tx, key);
+    if (document === null) {
+      throw notFound();
+    }
+    let version;
+    try {
+      version = await insertVersion(tx, {
+        documentId: document.id,
+        revision: input.revision.trim(),
+        proposedEffectiveFrom: input.proposedEffectiveFrom ?? null,
+        now: now(),
+      });
+    } catch (error) {
+      throw violatedConstraint(error) === REVISION_RULE ? alreadyExists("the document has the revision label") : error;
+    }
+    await recordAudit(tx, actor, {
+      actionCode: "eifu.document_version.created",
+      entityType: "eifu_document_version",
+      entityId: String(version.id),
+      stateBefore: null,
+      stateAfter: {
+        documentId: String(document.id),
+        revision: version.revision,
+        status: version.status,
+        proposedEffectiveFrom: version.proposedEffectiveFrom,
+      },
+    });
+    return loadVersionDetail(actor, tx, version);
   });
-  return toVersionDetail(actor, version);
 }
 
 /**
@@ -244,8 +278,12 @@ export async function createVersion(actor: SessionActor, documentId: string, inp
  */
 export async function getVersion(actor: SessionActor, id: string): Promise<VersionDetail> {
   requirePermission(actor, "eifu.document.view");
-  // MOCK: IFU-10 (read a version)
-  return toVersionDetail(actor, requireVersion(id));
+  const executor = readExecutor();
+  const version = await findVersionById(executor, requireEifuKey(id));
+  if (version === null) {
+    throw notFound();
+  }
+  return loadVersionDetail(actor, executor, version);
 }
 
 /**
@@ -257,24 +295,31 @@ export async function getVersion(actor: SessionActor, id: string): Promise<Versi
  */
 export async function updateVersion(actor: SessionActor, id: string, patch: UpdateVersionInput): Promise<VersionDetail> {
   requirePermission(actor, "eifu.document.manage");
-  // MOCK: IFU-10 (change a version)
-  const version = requireVersion(id);
-  if (patch.proposedEffectiveFrom !== undefined) {
+  const key = requireEifuKey(id);
+  return runTransaction(async (tx) => {
+    // The row stays locked until the commit, so a publication cannot slip in between the check and the write.
+    const version = await findVersionById(tx, key, "no-key-update");
+    if (version === null) {
+      throw notFound();
+    }
+    if (patch.proposedEffectiveFrom === undefined) {
+      return loadVersionDetail(actor, tx, version);
+    }
     if (version.status !== "DRAFT") {
       throw notAllowedInState("a field of a version that is not a draft");
     }
-    if (patch.proposedEffectiveFrom !== version.proposedEffectiveFrom) {
-      const before = { proposedEffectiveFrom: version.proposedEffectiveFrom };
-      version.proposedEffectiveFrom = patch.proposedEffectiveFrom;
-      version.updatedAt = now();
-      recordAudit(actor, {
-        actionCode: "eifu.document_version.changed",
-        entityType: "eifu_document_version",
-        entityId: version.id,
-        stateBefore: before,
-        stateAfter: { proposedEffectiveFrom: version.proposedEffectiveFrom },
-      });
+    if (patch.proposedEffectiveFrom === version.proposedEffectiveFrom) {
+      return loadVersionDetail(actor, tx, version);
     }
-  }
-  return toVersionDetail(actor, version);
+    const at = now();
+    await updateProposedEffectiveFrom(tx, version.id, patch.proposedEffectiveFrom, at);
+    await recordAudit(tx, actor, {
+      actionCode: "eifu.document_version.changed",
+      entityType: "eifu_document_version",
+      entityId: String(version.id),
+      stateBefore: { proposedEffectiveFrom: version.proposedEffectiveFrom },
+      stateAfter: { proposedEffectiveFrom: patch.proposedEffectiveFrom },
+    });
+    return loadVersionDetail(actor, tx, { ...version, proposedEffectiveFrom: patch.proposedEffectiveFrom, updatedAt: at });
+  });
 }
