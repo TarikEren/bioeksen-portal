@@ -7,6 +7,10 @@
  * Security Policy has a nonce that is new for each answer (FND-07 rule 1), and
  * a prerendered page cannot carry it, so the browser would block its scripts.
  *
+ * `LocaleProvider` is the one provider of the app (`sds-nextjs-frontend` §5). It
+ * gives client components the active language, and HeroUI the same locale, so
+ * that the server and the browser format alike (R-023).
+ *
  * The faces of DEC-016 come from the `@fontsource` packages, so that the app
  * serves them from its own origin, in the weights 400, 500 and 600 and the
  * subsets `latin` and `latin-ext` (Turkish letters are in `latin-ext`).
@@ -31,6 +35,7 @@ import "./globals.css";
 import "./fonts.css";
 
 import { dictionaries } from "@/lib/i18n";
+import { LocaleProvider } from "@/lib/i18n/locale-provider";
 import { getActiveLanguage } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,7 +48,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang={language}>
-      <body>{children}</body>
+      <body>
+        <LocaleProvider language={language}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }
