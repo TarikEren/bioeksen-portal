@@ -37,8 +37,9 @@ export function proxy(request: NextRequest): NextResponse {
 export const config = {
   matcher: [
     {
-      // Everything except the API, the build files and the icon.
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      // Everything except the API, the build files and the icon. `api` is a whole
+      // path segment: a page such as /apis still gets its policy.
+      source: "/((?!api(?:/|$)|_next/static|_next/image|favicon.ico).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
