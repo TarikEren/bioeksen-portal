@@ -159,6 +159,31 @@ server actions.
 | 6 Fix | Developers | Only a finding that blocks B4, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
+**Carried from step 2 to step 4** (step 2 is `dbf6eef`, `ba46e00`, `5173d18`).
+- The language part of the file key: `storeDocumentFile` and `signedDownloadUrl`
+  of `src/modules/platform/services/file-service.ts` accept only `^[a-z]{2}$`,
+  which refuses `sr-Latn-RS` (IFU-20.AC6). Step 4 widens the pattern to the
+  language codes of DEC-069.
+- The case of a language code: the system stores the canonical form of the tag
+  (`Intl.getCanonicalLocales`, for example `sr-Latn-RS`), so that
+  `document_file_one_active_per_language` compares one form.
+- The trigger `product_identity_is_settled` (DEC-096) and the 409 `RES-4302` of
+  the catalog service; the comment "B3 adds the check of the documents here" in
+  `updateProduct` goes.
+- The mock-only code of `eifu-views.ts` (`MOCK_PRODUCTS`, `MOCK_LOTS`, the seed
+  fallbacks) and every `MOCK:` line.
+
+**Filled by step 2.** The catalog reads for eifu (`catalog-reads.ts`) accept a
+catalog view permission or an eifu permission, because the eifu service checks
+its own permission first. A `productId` or a `documentVersionId` that names no
+record gives 400 `VAL-4006` on its field (DEC-013). A withdrawal with reopen
+also gives 409 `RES-4302` when no live period ends at the start of the
+version's period (the system does not guess, DEC-064). A replacement of an
+inactive file gives 409 `RES-4302`; a replacement with the bytes of an older
+file of the same language gives 409 `RES-4300` (the store never replaces an
+object, DEC-032). The issue phrases are one `as const` set, `EIFU_ISSUES` in
+`src/lib/schemas/eifu.ts` (review 5, R-071).
+
 **Choices the specs left open.** The owner accepted them on 2026-10-22, and
 they are Default decisions now: DEC-092 (the file upload with `fetch`),
 DEC-093 (the signed download URL for a manager), DEC-094 (the LOT page and the
