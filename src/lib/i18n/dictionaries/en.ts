@@ -243,7 +243,6 @@ export const en: Dictionary = {
     },
   },
   catalog: {
-    mockNotice: "This screen works on sample data. Your changes are not kept.",
     regulatoryStatus: {
       IVD: "IVD",
       RUO: "RUO",

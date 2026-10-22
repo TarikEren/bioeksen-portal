@@ -258,7 +258,6 @@ export const tr = {
     },
   },
   catalog: {
-    mockNotice: "Bu ekran örnek veriyle çalışır. Yaptığınız değişiklikler kalıcı değildir.",
     regulatoryStatus: {
       IVD: "IVD",
       RUO: "RUO",

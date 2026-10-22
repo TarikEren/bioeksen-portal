@@ -1,0 +1,20 @@
+{
+  "$comment": "The vectors of CAT-30 rule 5, in docs/specs/catalog.md, Data. This is one data file. The tests of transport cleanup and of date reading read it. A character that the spec marks is written as an escape: U+0020 for the space, U+00A0 for the no-break space, U+FEFF for the BOM.",
+  "valid": [
+    { "input": "B2603091224GHPVV", "date": "2026-03-09" },
+    { "input": "B240101X", "date": "2024-01-01" },
+    { "input": "B991231ZZZZ", "date": "2099-12-31" },
+    { "input": "B000101A", "date": "2000-01-01" },
+    { "input": "B2402290000", "date": "2024-02-29" }
+  ],
+  "formatInvalid": ["B260309", "2603091224GHPVV", "b2603091224GHPVV", "BX603091224GHP", "B26030", ""],
+  "dateInvalid": ["B269909XXXX", "B260032XXXX", "B260000XXXX", "B250229XXXX"],
+  "cleanup": [
+    { "input": " B2603091224GHPVV ", "result": "B2603091224GHPVV" },
+    { "input": "\tB2603091224GHPVV\r\n", "result": "B2603091224GHPVV" },
+    { "input": "﻿B2603091224GHPVV", "result": "B2603091224GHPVV" },
+    { "input": "\"B2603091224GHPVV\"", "result": "B2603091224GHPVV" },
+    { "input": " B2603091224GHPVV ", "result": "B2603091224GHPVV" }
+  ],
+  "kept": ["b2603091224ghpvv", "B26-03-09-1224GHPVV", "B260309 1224GHPVV"]
+}
