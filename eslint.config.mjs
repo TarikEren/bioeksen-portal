@@ -164,6 +164,8 @@ const eslintConfig = defineConfig([
     "test-results/**",
     "playwright-report/**",
     "coverage/**",
+    // The worktrees of the agents: each one is a copy of the repository.
+    ".claude/worktrees/**",
   ]),
 ]);
 
