@@ -146,6 +146,21 @@ The sidebar gains the group *e-IFU* with *Product catalog*
 | 6 Fix | Developers | Only a finding that blocks B3, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
+**Carried from step 2 to step 4** (step 2 is `768fcb7`, `864e4d8`). The real
+XLSX reading (DEC-055; the reader gives three sample rows for an XLSX file now)
+and the template download (it answers 500 `SYS-5000` now). The nine catalog
+actions in `AuditActionCode` of `src/modules/platform/services/audit-service.ts`
+(the mock keeps its audit rows in the mock store). The migration, the
+repositories and the services on the database. The domain functions and the
+planner are real already.
+
+**Filled by step 2.** A blank name entry, a blank reason and a blank LOT number
+give 400 `VAL-4001` with a `details` entry (CAT-10.AC3, CAT-41.AC2). A LOT with
+a date conflict has the source `PARSED_FROM_LOT`, because its stored date is the
+encoded date (CAT-40 rule 3 names no source). `PATCH` takes `application/json`
+or `application/merge-patch+json`. The `Location` of a catalog number and of a
+LOT names the member (`catalog-numbers/{id}`, `lots/{id}`), which has no `GET`.
+
 **Choices the specs left open.** The owner accepted them on 2026-10-22, and
 they are Default decisions now: DEC-054 (the `multipart/form-data` input),
 DEC-055 (`exceljs` and the `TextDecoder` of Node), DEC-056 (the list of the
