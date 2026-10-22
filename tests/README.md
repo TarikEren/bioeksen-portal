@@ -66,7 +66,9 @@ tier with tests could not run (`NOT RUN`, with the reason).
 
 ## Variables of each tier
 
-No tier reads `.env`. The variables come from the shell. The e2e tier has no
+No tier takes a setting from `.env`. The variables come from the shell. Only
+the guard opens the `.env` files, to compare their `DATABASE_URL` with the
+target, and it never writes the value. The e2e tier has no
 Playwright web server and no base URL: each test file starts the production
 build with `support/spawn-app.ts`, on a free port, with exactly the settings
 of the test.
@@ -88,7 +90,11 @@ are PostgreSQL 16 and Redis 7 on the loopback address, for example from
 
 The guard (`tests/support/db-guard.ts`) refuses a database whose name does
 not end in the suffix of the tier, a host that is not allowed, and the
-database of `DATABASE_URL`. A suite the guard refuses is not run.
+database of `DATABASE_URL`, in the shell or in a `.env` file of the
+repository (`.env`, `.env.local`, and the `.env.<mode>` files that Next.js
+loads; not `.env.example`). `localhost`, `127.0.0.1` and `::1` are one host
+for that comparison. A `DATABASE_URL` that the guard cannot read makes it
+refuse. A suite the guard refuses is not run.
 
 ## Helpers
 
