@@ -3,11 +3,11 @@
  * of the landing page).
  *
  * It shows the public header (brand and language switch), the heading
- * `home.title` with a short introduction, and one card with the link to the
- * sign-in page (stage B1). The public lookup comes with stage B4, and its card
- * comes with it: an entry arrives with its screen. The server component reads the
- * dictionary of the active language. The page is dynamic because it reads the
- * language cookie (see the root layout). The link to the sign-in page is an
+ * `home.title` with a short introduction, and two cards: the public lookup of the
+ * instructions for use (`/eifu`, IFU-70 rule 1, stage B4) and the sign-in (stage
+ * B1). The lookup comes first, because most visitors have no account. The server
+ * component reads the dictionary of the active language. The page is dynamic
+ * because it reads the language cookie (see the root layout). The links are
  * `AppButtonLink`: `Button` has no `href`, and a link is the right element for a
  * navigation (`sds-nextjs-frontend` §5, R-059).
  */
@@ -29,15 +29,28 @@ export default async function PublicHomePage() {
         </Typography.Heading>
         <Typography.Paragraph color="muted">{text.home.intro}</Typography.Paragraph>
       </div>
-      <Card className="max-w-md">
-        <Card.Header>
-          <Card.Title>{text.home.signInTitle}</Card.Title>
-          <Card.Description>{text.home.signInDescription}</Card.Description>
-        </Card.Header>
-        <Card.Footer>
-          <AppButtonLink href="/sign-in">{text.home.signIn}</AppButtonLink>
-        </Card.Footer>
-      </Card>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Card>
+          <Card.Header>
+            <Card.Title>{text.home.lookupTitle}</Card.Title>
+            <Card.Description>{text.home.lookupDescription}</Card.Description>
+          </Card.Header>
+          <Card.Footer>
+            <AppButtonLink href="/eifu">{text.home.lookup}</AppButtonLink>
+          </Card.Footer>
+        </Card>
+        <Card>
+          <Card.Header>
+            <Card.Title>{text.home.signInTitle}</Card.Title>
+            <Card.Description>{text.home.signInDescription}</Card.Description>
+          </Card.Header>
+          <Card.Footer>
+            <AppButtonLink href="/sign-in" variant="secondary">
+              {text.home.signIn}
+            </AppButtonLink>
+          </Card.Footer>
+        </Card>
+      </div>
     </main>
   );
 }
