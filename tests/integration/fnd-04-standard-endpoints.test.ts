@@ -15,6 +15,7 @@ import { GET as getHealth } from "@/app/api/health/route";
 
 import { type TokenKind, bearer, mintToken } from "../support/operator-token";
 import { type RouteHandler, call, describeAnswer, expectEnvelope, readBody } from "../support/route";
+import { TEST_CLOCK_SKEW_SECONDS } from "../support/test-environment";
 
 const issuer = inject("testIssuer");
 
@@ -117,6 +118,50 @@ describe("FND-04 standard endpoints, operator credential", () => {
         await expectRejection(await call(handler, path, { headers: await withToken(kind) }), 403, "PERM-4151");
       });
     }
+  }
+});
+
+describe("FND-04 standard endpoints, clock skew", () => {
+  // Source: sds-auth, credentials.md (Validation: the clock skew tolerance applies to exp and iat; beyond it the
+  // token is expired). The tolerance is the app's configured AUTH_CLOCK_SKEW_SECONDS. The margin keeps each case
+  // clear of the boundary while the test runs.
+  const MARGIN_SECONDS = 10;
+  const nowSeconds = (): number => Math.floor(Date.now() / 1000);
+
+  async function withTimes(times: { iat?: number; nbf?: number; exp?: number }): Promise<Record<string, string>> {
+    return { authorization: bearer(await mintToken(issuer, "operator", Date.now(), times)) };
+  }
+
+  for (const [path, handler] of PROTECTED) {
+    /** A token whose exp passed less than the skew allowance ago is still accepted. */
+    it(`FND-04.AC3: ${path}, sds-auth credentials.md (Validation): an expiry inside the clock skew is accepted`, async () => {
+      const exp = nowSeconds() - (TEST_CLOCK_SKEW_SECONDS - MARGIN_SECONDS);
+      const response = await call(handler, path, { headers: await withTimes({ exp }) });
+      const body = await readBody(response);
+
+      expect(response.status, describeAnswer(response, body)).toBe(200);
+    });
+
+    /** A token whose exp passed more than the skew allowance ago gets 401 AUTH-4102. */
+    it(`FND-04.AC3: ${path}, sds-auth credentials.md (Validation): an expiry beyond the clock skew is refused`, async () => {
+      const exp = nowSeconds() - (TEST_CLOCK_SKEW_SECONDS + MARGIN_SECONDS);
+      await expectRejection(await call(handler, path, { headers: await withTimes({ exp }) }), 401, "AUTH-4102");
+    });
+
+    /** A token issued less than the skew allowance in the future is accepted. */
+    it(`FND-04.AC3: ${path}, sds-auth credentials.md (Required claims): an iat inside the clock skew is accepted`, async () => {
+      const iat = nowSeconds() + (TEST_CLOCK_SKEW_SECONDS - MARGIN_SECONDS);
+      const response = await call(handler, path, { headers: await withTimes({ iat, nbf: iat }) });
+      const body = await readBody(response);
+
+      expect(response.status, describeAnswer(response, body)).toBe(200);
+    });
+
+    /** A token issued more than the skew allowance in the future is not accepted: 401 AUTH-4101. */
+    it(`FND-04.AC3: ${path}, sds-auth credentials.md (Required claims): an iat beyond the clock skew is refused`, async () => {
+      const iat = nowSeconds() + (TEST_CLOCK_SKEW_SECONDS + MARGIN_SECONDS);
+      await expectRejection(await call(handler, path, { headers: await withTimes({ iat, nbf: iat }) }), 401, "AUTH-4101");
+    });
   }
 });
 

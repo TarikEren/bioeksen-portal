@@ -137,15 +137,28 @@ function claimsFor(kind: TokenKind, nowSeconds: number): Claims {
   }
 }
 
+/** Times that replace the ones of the kind, in seconds since the epoch, for the cases of the clock skew. */
+export interface TokenTimes {
+  readonly iat?: number;
+  readonly nbf?: number;
+  readonly exp?: number;
+}
+
 /**
  * Mints a token of the kind.
  *
  * @param issuer The local issuer, from `inject("testIssuer")` or the e2e fixture.
  * @param now The time the token is made, in milliseconds. Default: now.
+ * @param times Times that replace the ones of the kind.
  */
-export async function mintToken(issuer: TestIssuer, kind: TokenKind, now: number = Date.now()): Promise<string> {
+export async function mintToken(
+  issuer: TestIssuer,
+  kind: TokenKind,
+  now: number = Date.now(),
+  times: TokenTimes = {},
+): Promise<string> {
   const nowSeconds = Math.floor(now / 1000);
-  const claims = claimsFor(kind, nowSeconds);
+  const claims = { ...claimsFor(kind, nowSeconds), ...times };
   const forged = kind === "wrong-signature" || kind === "expired-and-forged" || kind === "unknown-kid";
   const kid = kind === "unknown-kid" ? "qa-unknown-key" : issuer.kid;
   const key = forged ? await untrustedPrivateKey() : await trustedPrivateKey(issuer);
