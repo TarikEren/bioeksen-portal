@@ -172,6 +172,8 @@ red criterion. The owner changes the file before the exit.
 - The agents still write those tests; `typecheck` and `lint` check them. At
   the B0 exit, each of the two tiers is reported as "not run (owner
   decision)", never as passed.
+- No general code review runs until the e-IFU is built. The review record
+  lists the commits that no review checked (`docs/review_findings/README.md`).
 
 ## Answers to the test questions (2026-10-22)
 

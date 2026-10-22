@@ -78,6 +78,18 @@ coverage, the questions, the test gaps and the strengths.
 | [R-047](review_2.md#r-047--an-http-method-that-nextjs-does-not-know-gets-a-bare-400-under-api) | An HTTP method that Next.js does not know gets a bare 400 under /api | Note | **Open** — found in review 2 |
 | [R-048](review_2.md#r-048--no-test-uses-the-playwright-web-server-and-it-reads-the-shell-and-env) | No test uses the Playwright web server, and it reads the shell and .env | Note | **Open** — found in review 2 |
 
+### Fixes not yet checked
+
+A finding becomes `Fixed` only when a later review checks the fix. These
+commits claim a fix of a review-2 finding, and no review has checked them
+(owner decision 2026-10-22, see *Coverage*): R-025 `ce29ef4`, R-026
+`e07db45`, R-027 `c4175ec`, R-028 `8fbd126`, R-029 `688780b`, R-030 and
+R-033 and the rest of R-015 `505705d`, R-031 `5c50622`, R-032 `249846c`,
+R-034 `0bfd87c`, R-035 `99bb424`, R-036 `369391d`, R-037 `39040bb`, R-038
+`83d6870`, R-039 `dcd2a59`, R-040 `a84b85d`, R-041 `792181a`, R-042
+`f4d4208`, R-043 `88242d5`, R-044 `c6b597b`, R-048 `dbbb65d`. No commit
+claims R-046. R-047 waits for IT (`docs/required_changes.md`, RC-12).
+
 ## Coverage
 
 | Area | Reviewed in |
@@ -88,7 +100,8 @@ coverage, the questions, the test gaps and the strengths.
 | `src/app/layout.tsx`, `src/app/fonts.css`, `src/app/(public)/**`, `src/lib/i18n/dictionaries/**` | 1 (read in full; HeroUI and React Aria sources read where cited) |
 | `tests/**`, `vitest.config.ts`, `playwright.config.ts` | 2 (read in full; the checker run; the unit and component tiers run; the integration, pipeline and e2e tiers not run) |
 | `src/**`, anti-overfitting pass | 2 (searched for fixture values, test-only names and seam paths) |
-| `src/app/globals.css` | Not reviewed: the owner's change is not committed |
+| `src/app/globals.css` | Not reviewed: the owner's palette (DEC-015); FND-09.AC2 measures it |
+| The commits `a4c0d57..ee293cf`: the fixes of review 2, the demo of DEC-135 (`c445391`, `db2a720` `Dockerfile`, `4299cdc` `compose.demo.yaml`), `2775b51`, `ee293cf` | **Not reviewed.** Review 3 started and was stopped. Owner decision 2026-10-22: no general review until the e-IFU is built |
 
 ## Questions for the author
 
