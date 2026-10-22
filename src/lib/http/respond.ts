@@ -1,12 +1,26 @@
 /**
- * The answer of a failure from a route handler (FND-05 rule 2).
+ * The answers of a route handler (FND-05 rule 2, `sds-api-design`).
  *
- * Skeleton of stage B0: the status and the envelope only. The headers that
- * every answer carries (`X-Request-Id`, FND-05 rule 4, and `Cache-Control` of
- * the standard endpoints, FND-04) come with the route wrapper.
+ * The headers that every answer carries (`X-Request-Id`, `Cache-Control`, and
+ * the headers of FND-07) come from the route wrapper (`./route.ts`).
  */
 import { type AppError, failureEnvelope } from "@/lib/errors";
 
-export function failureResponse(error: AppError): Response {
-  return Response.json(failureEnvelope(error), { status: error.status });
+const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
+/** A JSON answer with the status given. */
+export function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("Content-Type", JSON_CONTENT_TYPE);
+  return new Response(JSON.stringify(body), { status, headers: responseHeaders });
+}
+
+/** The success envelope: `status` `ok` and the payload beside it (`app-endpoints.md`). */
+export function okResponse(payload: object = {}, status = 200): Response {
+  return jsonResponse({ status: "ok", ...payload }, status);
+}
+
+/** The failure envelope, with the HTTP status of the code. */
+export function failureResponse(error: AppError, headers?: HeadersInit): Response {
+  return jsonResponse(failureEnvelope(error), error.status, headers);
 }
