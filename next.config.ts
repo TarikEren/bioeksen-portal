@@ -29,8 +29,14 @@ const nextConfig: NextConfig = {
   // FND-07 rule 2: every answer carries these headers, an API answer and a file
   // of the build too. The Content Security Policy needs a nonce for each answer,
   // so `src/proxy.ts` sets it.
+  // IFU-70.AC9: the lookup page `/eifu` is not for search engines. The page
+  // has the robots tag too. The path never changes after it is printed on a
+  // package (DEC-075).
   headers() {
-    return Promise.resolve([{ source: "/:path*", headers: SECURITY_HEADERS.map(({ key, value }) => ({ key, value })) }]);
+    return Promise.resolve([
+      { source: "/:path*", headers: SECURITY_HEADERS.map(({ key, value }) => ({ key, value })) },
+      { source: "/eifu", headers: [{ key: "X-Robots-Tag", value: "noindex" }] },
+    ]);
   },
 };
 
