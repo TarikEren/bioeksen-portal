@@ -18,7 +18,8 @@
  *    `SECURITY`;
  * 5. for a route with a body: the size (413 `VAL-4550`), the media type (415
  *    `VAL-4600`), the parse (400 `VAL-4000`) and the strict schema (400
- *    `VAL-4001`, `VAL-4002`, `VAL-4006`, `VAL-4007`);
+ *    `VAL-4001`, `VAL-4002`, `VAL-4006`, `VAL-4007`). A route with a file takes
+ *    `multipart/form-data` in the same order (`defineMultipartRoute`, DEC-054);
  * 6. calls the handler;
  * 7. maps an error to the failure envelope, logs it with the same code, and
  *    sets `X-Request-Id`, `Cache-Control: no-store` and the headers of FND-07 on
@@ -49,7 +50,15 @@ import type { PermissionCode } from "@/lib/schemas/identity";
 import { REQUEST_ID_HEADER, resolveRequestId, runWithRequestContext } from "@/lib/request-context";
 import { applySecurityHeaders, isAllowedOrigin } from "@/lib/security";
 
-import { assertDeclaredLength, assertJsonMediaType, parseJsonBytes, readBoundedBody } from "./body";
+import {
+  assertDeclaredLength,
+  assertJsonMediaType,
+  assertMultipartMediaType,
+  formDataToObject,
+  parseJsonBytes,
+  parseMultipartBytes,
+  readBoundedBody,
+} from "./body";
 import { failureResponse } from "./respond";
 import { bodyValidationError } from "./validation";
 
@@ -90,6 +99,16 @@ export type JsonRouteSpec<TBody> = RouteSpec & {
   readonly bodySchema: z.ZodType<TBody>;
   /** The body limit in bytes. Default: `DEFAULT_BODY_LIMIT_BYTES`. */
   readonly bodyLimitBytes?: number;
+  /** The media types that the route takes. Default: `application/json`. A `PATCH` route adds `application/merge-patch+json`. */
+  readonly mediaTypes?: readonly string[];
+};
+
+/** A route whose body is `multipart/form-data` (DEC-054). The schema reads the fields; a file is a `File`. */
+export type MultipartRouteSpec<TBody> = RouteSpec & {
+  /** The strict schema of the fields. An empty field is absent (`formDataToObject`). */
+  readonly bodySchema: z.ZodType<TBody>;
+  /** The body limit in bytes, counted as the body arrives. It is not optional: a file route sets its own limit. */
+  readonly bodyLimitBytes: number;
 };
 
 /** The values of the `[param]` folders of the path. Each one is untrusted input. */
@@ -249,11 +268,40 @@ export function defineJsonRoute<TBody>(
       // is counted as it arrives, so it is read before the media type is checked.
       assertDeclaredLength(request, limit);
       const bytes = await readBoundedBody(request, limit);
-      assertJsonMediaType(request.headers.get("content-type"));
+      assertJsonMediaType(request.headers.get("content-type"), spec.mediaTypes);
       const parsed = parseJsonBytes(bytes);
       const result = spec.bodySchema.safeParse(parsed);
       if (!result.success) {
         throw bodyValidationError(parsed, result.error);
+      }
+      return { request, body: result.data, ...credential };
+    },
+    handler,
+  );
+}
+
+/**
+ * Wraps the handler of a route that takes a `multipart/form-data` body (DEC-054,
+ * CAT-60). The order is the one of the JSON route: the size (413 `VAL-4550`,
+ * counted as the body arrives), then the media type (415 `VAL-4600`), then the
+ * parse (400 `VAL-4000`), then the strict schema of the fields.
+ */
+export function defineMultipartRoute<TBody>(
+  spec: MultipartRouteSpec<TBody>,
+  handler: (input: RouteInput<TBody>) => Promise<Response>,
+): RouteHandler {
+  return wrap(
+    spec,
+    async (request, credential) => {
+      assertDeclaredLength(request, spec.bodyLimitBytes);
+      const bytes = await readBoundedBody(request, spec.bodyLimitBytes);
+      const contentType = request.headers.get("content-type");
+      assertMultipartMediaType(contentType);
+      const form = await parseMultipartBytes(bytes, contentType ?? "");
+      const fields = formDataToObject(form);
+      const result = spec.bodySchema.safeParse(fields);
+      if (!result.success) {
+        throw bodyValidationError(fields, result.error);
       }
       return { request, body: result.data, ...credential };
     },

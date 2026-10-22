@@ -17,14 +17,21 @@ function tooLarge(limit: number): AppError {
   return new AppError("VAL-4550", `Request body too large (at most ${String(limit)} bytes)`);
 }
 
-/** Refuses a media type that is not JSON in UTF-8. */
-export function assertJsonMediaType(contentType: string | null): void {
-  const unsupported = new AppError("VAL-4600", "Unsupported media type (use application/json)");
+/** The media type of a JSON body. */
+const JSON_MEDIA_TYPE = "application/json";
+
+/**
+ * Refuses a media type that is not one of `accepted`, in UTF-8. A route accepts
+ * `application/json`; a `PATCH` route also accepts `application/merge-patch+json`
+ * (RFC 7396).
+ */
+export function assertJsonMediaType(contentType: string | null, accepted: readonly string[] = [JSON_MEDIA_TYPE]): void {
+  const unsupported = new AppError("VAL-4600", `Unsupported media type (use ${accepted.join(" or ")})`);
   if (contentType === null) {
     throw unsupported;
   }
   const [mediaType, ...parameters] = contentType.split(";").map((part) => part.trim().toLowerCase());
-  if (mediaType !== "application/json") {
+  if (mediaType === undefined || !accepted.includes(mediaType)) {
     throw unsupported;
   }
   for (const parameter of parameters) {
@@ -32,6 +39,28 @@ export function assertJsonMediaType(contentType: string | null): void {
     if (name === "charset" && value?.replace(/"/g, "") !== "utf-8") {
       throw unsupported;
     }
+  }
+}
+
+/**
+ * Refuses a media type that is not `multipart/form-data` with a boundary
+ * (DEC-054). The check comes after the size (`code-prefixes.md`, step 11 before
+ * step 12).
+ *
+ * @throws AppError `VAL-4600`.
+ */
+export function assertMultipartMediaType(contentType: string | null): void {
+  const unsupported = new AppError("VAL-4600", "Unsupported media type (use multipart/form-data)");
+  if (contentType === null) {
+    throw unsupported;
+  }
+  const [mediaType, ...parameters] = contentType.split(";").map((part) => part.trim());
+  if (mediaType?.toLowerCase() !== "multipart/form-data") {
+    throw unsupported;
+  }
+  const hasBoundary = parameters.some((parameter) => /^boundary=.+$/i.test(parameter));
+  if (!hasBoundary) {
+    throw unsupported;
   }
 }
 
@@ -49,7 +78,7 @@ export function assertDeclaredLength(request: Request, limit: number): void {
  * @throws AppError `VAL-4550` as soon as the bytes that arrived pass the limit.
  * The rest of the stream is not read.
  */
-export async function readBoundedBody(request: Request, limit: number): Promise<Uint8Array> {
+export async function readBoundedBody(request: Request, limit: number): Promise<Uint8Array<ArrayBuffer>> {
   assertDeclaredLength(request, limit);
   if (request.body === null) {
     return new Uint8Array(0);
@@ -91,4 +120,35 @@ export function parseJsonBytes(bytes: Uint8Array): unknown {
   } catch {
     throw new AppError("VAL-4000", "Request body malformed (it is not JSON)");
   }
+}
+
+/**
+ * Parses the bytes of a `multipart/form-data` body.
+ *
+ * @throws AppError `VAL-4000` when the parts are malformed.
+ */
+export async function parseMultipartBytes(bytes: Uint8Array<ArrayBuffer>, contentType: string): Promise<FormData> {
+  try {
+    return await new Response(new Blob([bytes]), { headers: { "Content-Type": contentType } }).formData();
+  } catch {
+    throw new AppError("VAL-4000", "Request body malformed (it is not multipart/form-data)");
+  }
+}
+
+/**
+ * The fields of a form as one plain object, for a strict schema. An empty text
+ * and an empty file input are absent fields: a browser sends them for a field
+ * that the person left empty. A field that appears twice becomes an array, which
+ * the schema refuses. A server action takes the same form (DEC-054).
+ */
+export function formDataToObject(form: FormData): Record<string, unknown> {
+  const values = new Map<string, FormDataEntryValue[]>();
+  for (const [name, value] of form.entries()) {
+    const empty = typeof value === "string" ? value === "" : value.size === 0 && value.name === "";
+    if (!empty) {
+      values.set(name, [...(values.get(name) ?? []), value]);
+    }
+  }
+  // `Object.fromEntries` defines each key, so a field named `__proto__` stays a field.
+  return Object.fromEntries([...values].map(([name, list]) => [name, list.length === 1 ? list[0] : list]));
 }

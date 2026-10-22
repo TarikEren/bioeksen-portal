@@ -1,10 +1,26 @@
 export { runAction } from "./action";
-export { assertDeclaredLength, assertJsonMediaType, parseJsonBytes, readBoundedBody } from "./body";
+export {
+  assertDeclaredLength,
+  assertJsonMediaType,
+  assertMultipartMediaType,
+  formDataToObject,
+  parseJsonBytes,
+  parseMultipartBytes,
+  readBoundedBody,
+} from "./body";
 export { failureResponse, jsonResponse, okResponse } from "./respond";
 export { readPathParam } from "./params";
-export { DEFAULT_BODY_LIMIT_BYTES, defineJsonRoute, defineMethodNotAllowed, defineNotFound, defineRoute } from "./route";
+export {
+  DEFAULT_BODY_LIMIT_BYTES,
+  defineJsonRoute,
+  defineMethodNotAllowed,
+  defineMultipartRoute,
+  defineNotFound,
+  defineRoute,
+} from "./route";
 export type {
   JsonRouteSpec,
+  MultipartRouteSpec,
   RouteHandler,
   RouteHandlerContext,
   RouteInput,
