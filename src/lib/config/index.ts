@@ -150,14 +150,16 @@ export function getLogLevel(): Severity {
 }
 
 /**
- * Whether this process is the development server (`next dev`, which sets
- * `NODE_ENV` to `development`). The Content Security Policy allows what only the
- * development server needs (FND-07 rule 1). `APP_ENV` has no part in this: a
- * production build started with `APP_ENV=development` is not a development
- * server.
+ * Whether this build is the development server (`next dev`). The Content
+ * Security Policy allows what only the development server needs (FND-07 rule 1).
+ *
+ * The test is the literal `process.env.NODE_ENV`, which `next dev` and
+ * `next build` replace in the code when they compile it. A production build
+ * holds the text `"production"` there, so a value of `NODE_ENV` that is set when
+ * `next start` runs cannot add `'unsafe-eval'`. `APP_ENV` has no part in this.
  */
 export function isDevelopmentServer(): boolean {
-  return environment()["NODE_ENV"] === "development";
+  return process.env.NODE_ENV === "development";
 }
 
 /**

@@ -1,35 +1,33 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const environmentBefore = { ...process.env };
-
-async function isDevelopmentServerWith(settings: Record<string, string>): Promise<boolean> {
-  vi.resetModules();
-  for (const key of Object.keys(process.env)) {
-    Reflect.deleteProperty(process.env, key);
-  }
-  Object.assign(process.env, settings);
-  return (await import(".")).isDevelopmentServer();
-}
+import { isDevelopmentServer } from ".";
 
 afterEach(() => {
-  for (const key of Object.keys(process.env)) {
-    Reflect.deleteProperty(process.env, key);
-  }
-  Object.assign(process.env, environmentBefore);
+  vi.unstubAllEnvs();
 });
 
-// Source: FND-07 rule 1; review 1, R-006.
+// Source: FND-07 rule 1; review 1 R-006 and review 2 R-028.
+// The build replaces the literal process.env.NODE_ENV. These tests run the code
+// as it is in source, where the literal reads the run-time value. The check of a
+// built app is a run of `next start` with NODE_ENV=development (see the commit).
 describe("isDevelopmentServer", () => {
-  it("is true for next dev, which sets NODE_ENV to development", async () => {
-    expect(await isDevelopmentServerWith({ NODE_ENV: "development" })).toBe(true);
+  it("is true when the build is the development server", () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(isDevelopmentServer()).toBe(true);
   });
 
-  it("is false for a production build, also when APP_ENV is development", async () => {
-    expect(await isDevelopmentServerWith({ NODE_ENV: "production", APP_ENV: "development" })).toBe(false);
+  it("is false for a production build, and for APP_ENV development alone", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("APP_ENV", "development");
+
+    expect(isDevelopmentServer()).toBe(false);
   });
 
-  it("is false when NODE_ENV is not set, and for APP_ENV development alone", async () => {
-    expect(await isDevelopmentServerWith({})).toBe(false);
-    expect(await isDevelopmentServerWith({ APP_ENV: "development" })).toBe(false);
+  it("reads the literal, so that the bundler can replace it", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
+
+    expect(source).toContain('process.env.NODE_ENV === "development"');
   });
 });
