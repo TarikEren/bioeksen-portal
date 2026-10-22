@@ -491,7 +491,10 @@ through an emailed invitation.
 5. A holder of `organization.users.view` can list users. A holder of
    `organization.users.manage` can create, re-invite and deactivate users
    (ACC-30).
-6. The system audits each creation, invitation and deactivation (PLT-40).
+6. The system audits each creation, invitation and deactivation (PLT-40). A
+   creation writes one audit record, `identity.user.created`. The first
+   invitation is part of the creation. A re-invitation writes
+   `identity.user.invited`.
 
 **Data.** `identity_user`: the email address (unique without regard to
 letter case), the first name, the last name, the preferred language (`tr` or
@@ -622,10 +625,10 @@ password reset.
 
 4. The roles of release 1:
 
-| Role | TR | Holds |
-|---|---|---|
-| IFU Manager | *IFU Yöneticisi* | Every `catalog.*` and `eifu.*` permission, except `eifu.access_record.view_raw` |
-| Platform Administrator | *Platform Yöneticisi* | Every permission of the registry |
+| Role | Code | TR | Holds |
+|---|---|---|---|
+| IFU Manager | `IFU_MANAGER` | *IFU Yöneticisi* | Every `catalog.*` and `eifu.*` permission, except `eifu.access_record.view_raw` |
+| Platform Administrator | `PLATFORM_ADMINISTRATOR` | *Platform Yöneticisi* | Every permission of the registry |
 
 **Data.** `identity_permission` (the code, unique), `identity_role` (the
 code, the name) and `identity_role_permission`. `identity_role_assignment`

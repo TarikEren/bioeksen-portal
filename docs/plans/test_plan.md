@@ -72,7 +72,12 @@ One migration `identity_and_audit` (`prisma migration plan`, never
 Audited actions: `identity.user.created`, `identity.user.invited`,
 `identity.user.deactivated`, `identity.role_assignment.granted`,
 `identity.role_assignment.revoked`. The audit row and its `AUDIT` log record
-are in the transaction of the change (DEC-014, PLT-40).
+are in the transaction of the change (DEC-014, PLT-40). A creation writes
+`identity.user.created` only; a re-invitation writes `identity.user.invited`
+(ACC-10 rule 6, owner answer 2026-10-22).
+
+Role codes (ACC-30 rule 4, owner answer 2026-10-22): `IFU_MANAGER` and
+`PLATFORM_ADMINISTRATOR`.
 
 **Redis.** Sessions: key from the SHA-256 of the session id, with `userId`,
 `createdAt`, `lastSeenAt`; a set of sessions for each user; 60 minutes idle
@@ -141,6 +146,13 @@ The language of a signed-in user is the user's `preferredLanguage`
 | 5 Phase review | `code-reviewer` | The commits of B1, against the items above |
 | 6 Fix | Developers | Critical and Major findings fixed |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
+
+**Carried from step 2 to step 4** (step 2 is `34f0fbe`). The Origin check
+(FND-07.AC3), the rate limits and 429 `RATE-4400`, and the test seams. A
+`SECURITY` log record for each granted session request, as the operator path
+writes one. The bundled list of DEC-137 replaces the mock list of
+`common-passwords.ts`. A re-invitation of an inactive user gives 409
+`RES-4302` (DEC-013).
 
 **Choices the specs left open.** The owner accepted them on 2026-10-22, and
 they are Default decisions now: DEC-129 (`scrypt` hashes), DEC-137 (the
