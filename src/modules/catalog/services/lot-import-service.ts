@@ -101,15 +101,28 @@ interface PlanningData {
  * exact (cleaned) value, the products of those, and the LOTs that the rows
  * name. It reads through `executor`: the commit passes its transaction, so the
  * plan sees what is registered at the commit (CAT-60.AC12, AC13).
+ *
+ * The commit passes `lock: "share"`. The catalog numbers and then the products
+ * are locked in the order of their ids until the commit, as `registerLot` does:
+ * a move of a catalog number (CAT-20 rule 3, CAT-60 rule 5) and a change of the
+ * stem or the status of a product (CAT-10 rule 3) wait for the commit, and see
+ * its LOTs. A preview takes no lock. The product of an import for one product is
+ * locked with them.
  */
-async function loadPlanningData(executor: Executor, rows: readonly ImportRow[], productId: bigint | null): Promise<PlanningData> {
+async function loadPlanningData(
+  executor: Executor,
+  rows: readonly ImportRow[],
+  productId: bigint | null,
+  lock: "none" | "share",
+): Promise<PlanningData> {
   const catalogValues = unique(
     rows.map((row) => (row.catalogNumberCell === null ? "" : cleanTransport(row.catalogNumberCell))).filter((value) => value !== ""),
   );
-  const catalogNumbers = await findCatalogNumbersByValues(executor, catalogValues);
+  const catalogNumbers = await findCatalogNumbersByValues(executor, catalogValues, lock);
   const productRows = await findProductsByIds(
     executor,
-    unique(catalogNumbers.map((row) => row.productId)),
+    unique([...catalogNumbers.map((row) => row.productId), ...(productId === null ? [] : [productId])]),
+    lock,
   );
   const products = new Map(productRows.map((row) => [String(row.id), row]));
   const lotValues = unique(rows.map((row) => cleanTransport(row.lotCell)).filter((value) => value !== ""));
@@ -157,11 +170,16 @@ function productKeyOf(input: LotImportInput): bigint | null {
  *
  * @throws AppError `VAL-4006` when `productId` names no product.
  */
-async function planOn(executor: Executor, rows: readonly ImportRow[], productKey: bigint | null): Promise<PlannedInput> {
+async function planOn(
+  executor: Executor,
+  rows: readonly ImportRow[],
+  productKey: bigint | null,
+  lock: "none" | "share" = "none",
+): Promise<PlannedInput> {
   if (productKey !== null && (await findProductById(executor, productKey)) === null) {
     throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: "is not a product" } }]);
   }
-  const { context, products } = await loadPlanningData(executor, rows, productKey);
+  const { context, products } = await loadPlanningData(executor, rows, productKey, lock);
   return { planned: planRows(rows, context), products };
 }
 
@@ -269,7 +287,8 @@ export async function commitImport(actor: SessionActor, input: LotImportInput): 
   };
   try {
     return await runTransaction(async (tx) => {
-      const { planned } = await planOn(tx, rows, productKey);
+      // The commit locks the catalog numbers and the products of the rows before it plans (R-065).
+      const { planned } = await planOn(tx, rows, productKey, "share");
       const counts: ImportCounts = countOutcomes(planned);
       const processing = await insertProcessingImport(tx, {
         sourceFilename: frame.sourceFilename,

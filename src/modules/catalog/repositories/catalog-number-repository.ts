@@ -87,14 +87,25 @@ export async function findCatalogNumbersByIds(executor: Executor, ids: readonly 
   return rows.map(toCatalogNumberRow);
 }
 
-/** The catalog numbers with these exact values, in the order of the ids (CAT-20 rule 2: the match is exact). */
-export async function findCatalogNumbersByValues(executor: Executor, values: readonly string[]): Promise<CatalogNumberRow[]> {
+/**
+ * The catalog numbers with these exact values, in the order of the ids (CAT-20
+ * rule 2: the match is exact). `share` locks the rows in that order until the end
+ * of the transaction, as a LOT registration does: the commit of an import takes
+ * it, so a move of a catalog number waits for the commit (R-065). A lock needs a
+ * transaction.
+ */
+export async function findCatalogNumbersByValues(
+  executor: Executor,
+  values: readonly string[],
+  lock: RowLock = "none",
+): Promise<CatalogNumberRow[]> {
   if (values.length === 0) {
     return [];
   }
-  const rows = await executor.orm.public.CatalogCatalogNumber.where((number) => number.catalogNumber.in([...values]))
-    .orderBy((number) => number.id.asc())
-    .all();
+  const ordered = executor.orm.public.CatalogCatalogNumber.where((number) => number.catalogNumber.in([...values])).orderBy((number) =>
+    number.id.asc(),
+  );
+  const rows = await (lock === "update" ? ordered.forUpdate() : lock === "share" ? ordered.forShare() : ordered).all();
   return rows.map(toCatalogNumberRow);
 }
 

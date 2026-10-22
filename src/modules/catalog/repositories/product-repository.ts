@@ -94,14 +94,18 @@ export async function findProductByIdentity(
   return row === null ? null : toProductRow(row);
 }
 
-/** The products with the ids, in the order of the ids. */
-export async function findProductsByIds(executor: Executor, ids: readonly bigint[]): Promise<ProductRow[]> {
+/**
+ * The products with the ids, in the order of the ids. `share` locks the rows in
+ * that order until the end of the transaction: the commit of an import takes it,
+ * so a change of the stem or the status waits for the commit (CAT-10 rule 3,
+ * R-065). A lock needs a transaction.
+ */
+export async function findProductsByIds(executor: Executor, ids: readonly bigint[], lock: RowLock = "none"): Promise<ProductRow[]> {
   if (ids.length === 0) {
     return [];
   }
-  const rows = await executor.orm.public.CatalogProduct.where((product) => product.id.in([...ids]))
-    .orderBy((product) => product.id.asc())
-    .all();
+  const ordered = executor.orm.public.CatalogProduct.where((product) => product.id.in([...ids])).orderBy((product) => product.id.asc());
+  const rows = await (lock === "update" ? ordered.forUpdate() : lock === "share" ? ordered.forShare() : ordered).all();
   return rows.map(toProductRow);
 }
 
