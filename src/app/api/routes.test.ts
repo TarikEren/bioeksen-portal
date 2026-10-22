@@ -9,6 +9,23 @@ vi.mock("@/lib/logging", () => ({
   findLogRecords: () => Promise.reject(new Error("no store in this test")),
 }));
 
+// Nothing here reaches PostgreSQL or Redis: the answers come before any probe.
+// The real modules load the Prisma runtime and the Redis client, which take 1 s
+// or more to import when the disk is cold. The first test paid that cost in its
+// hook and ran into the time limit under load. Fakes with the same signatures
+// keep the import small and the test deterministic.
+vi.mock("@/lib/db", () => ({
+  getDb: () => {
+    throw new Error("no database in this test");
+  },
+  getPoolStats: () => ({ open: 0, inUse: 0, idle: 0 }),
+  pingDatabase: () => Promise.resolve(false),
+  toDatabaseError: (error: unknown) => error,
+}));
+vi.mock("@/lib/cache", () => ({
+  pingCache: () => Promise.resolve(false),
+}));
+
 interface Handlers {
   readonly [method: string]: ((request: NextRequest) => Promise<Response>) | undefined;
 }
