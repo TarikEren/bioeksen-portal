@@ -5,6 +5,7 @@
  *
  * This file is pure. It reads nothing from the process.
  */
+import { truncateAddressesIn } from "./client-address";
 
 /** The message of a record holds at most this many characters. */
 export const MAX_MESSAGE_LENGTH = 8192;
@@ -34,9 +35,12 @@ const PATTERNS: readonly (readonly [RegExp, string])[] = [
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g, "[redacted-email]"],
 ];
 
-/** Removes what the forbidden list of `sds-logging` names from free text. */
+/**
+ * Removes what the forbidden list of `sds-logging` names from free text. A full
+ * client address becomes its part (DEC-139, FND-05 rule 5).
+ */
 export function redactText(text: string): string {
-  return PATTERNS.reduce((current, [pattern, replacement]) => current.replace(pattern, replacement), text);
+  return truncateAddressesIn(PATTERNS.reduce((current, [pattern, replacement]) => current.replace(pattern, replacement), text));
 }
 
 /** One line: every control character, the newline included, becomes a space. */

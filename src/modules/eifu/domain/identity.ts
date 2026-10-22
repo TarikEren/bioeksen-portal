@@ -94,6 +94,20 @@ function configuredPepper(): string {
 }
 
 /**
+ * The id of the first key of the ring: the key that a write uses (IFU-90 rule 3).
+ * The job that moves the rows to the first key compares each row with it.
+ *
+ * @throws AppError `CFG-5000` when the ring is not set or has no key.
+ */
+export function newestKeyId(ring: readonly IdentityKey[] = configuredKeyRing()): string {
+  const [newest] = ring;
+  if (newest === undefined) {
+    throw new AppError("CFG-5000", "Required configuration missing", { reason: "the identity key ring is empty" });
+  }
+  return newest.id;
+}
+
+/**
  * Encrypts an identity value (an email address or a client address) with the
  * first key of the ring.
  *
