@@ -8,8 +8,10 @@
  * against it. The migrations apply in the order of the on-disk graph, as they
  * apply in every other environment.
  *
- * Nothing here writes a connection string. The output of the child process is
- * cleaned of the connection string and the password before an error carries it.
+ * Nothing here writes a connection string. The child process gets it only in
+ * `DATABASE_URL`, never in its arguments. Its output is cleaned of the
+ * connection string and of the password, encoded and decoded, before an error
+ * carries it.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -27,9 +29,34 @@ export const TIER_VARIABLES: Readonly<Record<DisposableTier, string>> = {
   e2e: "TEST_E2E_DATABASE_URL",
 };
 
-function redact(text: string, secrets: readonly string[]): string {
-  return secrets
+/** The forms of a connection string's secrets that a tool can print. */
+function secretsOf(connectionString: string): string[] {
+  const secrets = [connectionString];
+  let url: URL | undefined;
+  try {
+    url = new URL(connectionString);
+  } catch {
+    return secrets;
+  }
+  // The URL holds the password percent-encoded; a tool may print it encoded or decoded.
+  secrets.push(url.password);
+  try {
+    secrets.push(decodeURIComponent(url.password));
+  } catch {
+    // A password that does not decode has only its encoded form.
+  }
+  return secrets;
+}
+
+/**
+ * Removes the connection string and its password, encoded and decoded, from
+ * a text. The longest secret goes first, so the whole URL goes before the
+ * password inside it.
+ */
+export function redactConnection(text: string, connectionString: string): string {
+  return [...new Set(secretsOf(connectionString))]
     .filter((secret) => secret !== "")
+    .sort((a, b) => b.length - a.length)
     .reduce((result, secret) => result.split(secret).join("<redacted>"), text);
 }
 
@@ -55,15 +82,15 @@ async function recreateDatabase(connectionString: string, name: string): Promise
 function applyMigrations(connectionString: string): void {
   const require = createRequire(path.join(repositoryRoot, "package.json"));
   const binary = path.join(path.dirname(require.resolve("prisma/package.json")), "dist", "prisma.js");
-  const result = spawnSync(process.execPath, [binary, "db", "migrate", "--db", connectionString, "--no-interactive"], {
+  // The connection string goes only through DATABASE_URL, which the config of
+  // the CLI reads (prisma.config.ts). An argument would show in the process list.
+  const result = spawnSync(process.execPath, [binary, "db", "migrate", "--no-interactive"], {
     cwd: repositoryRoot,
-    // The config of the CLI reads DATABASE_URL. It must name the disposable database.
     env: { ...process.env, DATABASE_URL: connectionString },
     encoding: "utf8",
   });
   if (result.status !== 0) {
-    const secrets = [connectionString, new URL(connectionString).password];
-    const output = redact(`${result.stdout}\n${result.stderr}`, secrets);
+    const output = redactConnection(`${result.stdout}\n${result.stderr}`, connectionString);
     throw new Error(`prisma db migrate failed with exit code ${String(result.status)}.\n${output}`);
   }
 }

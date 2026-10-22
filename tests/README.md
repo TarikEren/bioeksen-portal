@@ -95,7 +95,7 @@ database of `DATABASE_URL`. A suite the guard refuses is not run.
 | Helper | Does |
 |---|---|
 | `support/db-guard.ts` | Accepts a disposable database or refuses it (FND-06 rule 4). Never writes a connection string |
-| `support/global-setup/database.ts`, `vitest.ts`, `playwright.ts` | Recreate the disposable database of the tier and apply the migrations, after the guard |
+| `support/global-setup/database.ts`, `vitest.ts`, `playwright.ts` | Recreate the disposable database of the tier and apply the migrations, after the guard. The Prisma CLI gets the connection string only in `DATABASE_URL`, never as an argument; `redactConnection` removes it and its password, encoded and decoded, from any output |
 | `support/global-setup/jwks.ts` | Integration global setup: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1. The workers read it with `inject("testIssuer")` |
 | `support/setup/integration-env.ts` | Each integration worker: the guard again, then every app setting with a test value. PostgreSQL and Redis answer; the object store and the mail relay point to closed ports; `ENTRA_JWKS_URI` is the local issuer; the test seams are on |
 | `support/test-environment.ts` | The test values of every setting of FND-03 rule 2 (`appEnvironment`, `productionEnvironment`, `without`), and the issuer, audience, tenant and operator scope that tokens carry |
