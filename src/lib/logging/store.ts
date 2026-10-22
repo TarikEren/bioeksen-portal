@@ -10,7 +10,7 @@ import "server-only";
 import { and } from "@prisma/orm-postgres/orm-client";
 import type { TimestamptzString } from "@prisma/orm-postgres/target/codec-types";
 
-import { getDb, toDatabaseError } from "@/lib/db";
+import { type Executor, getDb, toDatabaseError } from "@/lib/db";
 
 import type { LogType, Severity } from "./severities";
 
@@ -60,9 +60,13 @@ function asColumnInstant(instant: string): TimestamptzString<3> {
 /** The rows that one insert statement carries at most. */
 const INSERT_BATCH_SIZE = 100;
 
-/** Writes records. One statement for each batch of at most `INSERT_BATCH_SIZE`. */
-export async function insertLogRecords(records: readonly StoredLogRecord[]): Promise<void> {
-  const collection = getDb().orm.public.PlatformLogRecord;
+/**
+ * Writes records. One statement for each batch of at most `INSERT_BATCH_SIZE`.
+ * An `AUDIT` record passes the transaction of its change as `executor`, so the
+ * record rolls back with the change (PLT-40.AC2).
+ */
+export async function insertLogRecords(records: readonly StoredLogRecord[], executor: Executor = getDb()): Promise<void> {
+  const collection = executor.orm.public.PlatformLogRecord;
   for (let start = 0; start < records.length; start += INSERT_BATCH_SIZE) {
     const batch = records.slice(start, start + INSERT_BATCH_SIZE);
     await collection.createAll(

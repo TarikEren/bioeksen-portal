@@ -16,6 +16,7 @@
 import "server-only";
 
 import { getConfigState, getLogLevel, readSoftwareId } from "@/lib/config";
+import type { Executor } from "@/lib/db";
 import { AppError, type ErrorCode } from "@/lib/errors";
 import { findRequestContext } from "@/lib/request-context";
 
@@ -57,6 +58,9 @@ export interface LogEntry {
   readonly tail?: Readonly<Record<string, TailValue>>;
 }
 
+/** The entry of an `AUDIT` record: the type is fixed, and so is the severity. */
+export type AuditLogEntry = Omit<LogEntry, "severity" | "type" | "code">;
+
 export interface FailureOptions {
   /** Pairs for the tail, beside `request=`. */
   readonly tail?: Readonly<Record<string, TailValue>>;
@@ -74,6 +78,16 @@ export interface Logger {
    * the prose, so the record and the answer of the same failure carry one code.
    */
   failure(code: ErrorCode, options?: FailureOptions): void;
+  /**
+   * Writes one `AUDIT` record into the local store through `executor`, the
+   * transaction of the change, so the record commits or rolls back with it
+   * (DEC-014, PLT-40.AC2). It returns the function that prints the record to
+   * stdout, which the caller runs after the commit. The record is never filtered
+   * by `LOG_LEVEL`: an `AUDIT` record is kept for ever (`sds-logging`).
+   *
+   * @throws AppError The failure of the store. The change must not commit without its record.
+   */
+  writeAudit(entry: AuditLogEntry, executor: Executor): Promise<() => void>;
   /** Waits until the queue has reached the local store. Tests and `GET /api/admin/logs` use it. */
   flush(): Promise<void>;
 }
@@ -158,54 +172,77 @@ function storeIsConfigured(): boolean {
 
 const SEVERITY_RANK: Readonly<Record<Severity, number>> = { DEBUG: 0, INFO: 1, WARNING: 2, ERROR: 3, FATAL: 4 };
 
+/**
+ * The record of an entry, or `null` when the entry is refused or no record can be
+ * labeled. The refusal goes to the local error channel.
+ */
+function buildRecord(entry: LogEntry): LogRecord | null {
+  if ((entry.severity === "ERROR" || entry.severity === "FATAL") && entry.code === undefined) {
+    writeLocalError("LOG-4000", `record refused: ${entry.severity} without a code`);
+    return null;
+  }
+  if (!SEVERITIES.includes(entry.severity) || !LOG_TYPES.includes(entry.type)) {
+    writeLocalError("LOG-4000", "record refused: severity or type outside the closed sets");
+    return null;
+  }
+
+  let softwareId: string;
+  try {
+    softwareId = readSoftwareId();
+  } catch (error) {
+    // Without the id, no record can be labeled. The local error channel gets the failure.
+    writeLocalError(
+      error instanceof AppError ? error.code : "SYS-5000",
+      `record not written: the software id of .bioeksen/software-id cannot be read (${entry.code ?? entry.severity})`,
+    );
+    return null;
+  }
+
+  const context = findRequestContext();
+  const tail = context === undefined ? { ...entry.tail } : { request: context.requestId, ...entry.tail };
+  return {
+    id: softwareId,
+    timestamp: new Date().toISOString(),
+    severity: entry.severity,
+    type: entry.type,
+    code: entry.code ?? null,
+    message: buildMessage(entry.message, tail),
+  };
+}
+
+function toStored(record: LogRecord): StoredLogRecord {
+  return {
+    softwareId: record.id,
+    timestamp: record.timestamp,
+    severity: record.severity,
+    type: record.type,
+    code: record.code,
+    message: record.message,
+  };
+}
+
+function printRecord(record: LogRecord): void {
+  try {
+    process.stdout.write(`${JSON.stringify(record)}
+`);
+  } catch (error) {
+    writeLocalError("SYS-5000", `logger failed error=${JSON.stringify(describeError(error).error)}`);
+  }
+}
+
 function write(entry: LogEntry): void {
   try {
     if (SEVERITY_RANK[entry.severity] < SEVERITY_RANK[getLogLevel()]) {
       return;
     }
-    if ((entry.severity === "ERROR" || entry.severity === "FATAL") && entry.code === undefined) {
-      writeLocalError("LOG-4000", `record refused: ${entry.severity} without a code`);
+    const record = buildRecord(entry);
+    if (record === null) {
       return;
     }
-    if (!SEVERITIES.includes(entry.severity) || !LOG_TYPES.includes(entry.type)) {
-      writeLocalError("LOG-4000", "record refused: severity or type outside the closed sets");
-      return;
-    }
-
-    let softwareId: string;
-    try {
-      softwareId = readSoftwareId();
-    } catch (error) {
-      // Without the id, no record can be labeled. The local error channel gets the failure.
-      writeLocalError(
-        error instanceof AppError ? error.code : "SYS-5000",
-        `record not written: the software id of .bioeksen/software-id cannot be read (${entry.code ?? entry.severity})`,
-      );
-      return;
-    }
-
-    const context = findRequestContext();
-    const tail = context === undefined ? { ...entry.tail } : { request: context.requestId, ...entry.tail };
-    const record: LogRecord = {
-      id: softwareId,
-      timestamp: new Date().toISOString(),
-      severity: entry.severity,
-      type: entry.type,
-      code: entry.code ?? null,
-      message: buildMessage(entry.message, tail),
-    };
-
-    process.stdout.write(`${JSON.stringify(record)}\n`);
-
+    process.stdout.write(`${JSON.stringify(record)}
+`);
     if (storeIsConfigured()) {
-      enqueue({
-        softwareId: record.id,
-        timestamp: record.timestamp,
-        severity: record.severity,
-        type: record.type,
-        code: record.code,
-        message: record.message,
-      });
+      enqueue(toStored(record));
     }
   } catch (error) {
     // Logging never fails the operation being logged.
@@ -213,8 +250,20 @@ function write(entry: LogEntry): void {
   }
 }
 
+async function writeAudit(entry: AuditLogEntry, executor: Executor): Promise<() => void> {
+  const record = buildRecord({ ...entry, severity: "INFO", type: "AUDIT" });
+  if (record === null) {
+    throw new AppError("LOG-4000", "Log record malformed", { reason: "the audit record could not be built" });
+  }
+  await insertLogRecords([toStored(record)], executor);
+  return () => {
+    printRecord(record);
+  };
+}
+
 export const logger: Logger = {
   write,
+  writeAudit,
 
   failure(code: ErrorCode, options: FailureOptions = {}): void {
     const errorTail = options.error === undefined ? {} : describeError(options.error);

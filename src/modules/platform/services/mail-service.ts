@@ -14,9 +14,12 @@
 import "server-only";
 
 import { getConfig } from "@/lib/config";
+import type { Transaction } from "@/lib/transaction";
+import { AppError, type ErrorCode } from "@/lib/errors";
 import type { Language } from "@/lib/i18n/languages";
-import { identityMock } from "@/lib/mock/identity";
-import type { MockTransaction } from "@/lib/mock/transaction";
+import { logger } from "@/lib/logging";
+
+import { type OutgoingMail, getMailTransport } from "./mail-transport";
 
 export type MailTemplate = "invitation" | "passwordReset";
 
@@ -68,16 +71,45 @@ export function renderMail(message: MailMessage, publicBaseUrl: string): Rendere
   return TEXTS[message.template][message.language](link);
 }
 
+/** The code of a failed send. A refusal or an unusable answer is `UP-5000`, a relay that is not there `UP-5500`, a late relay `UP-5501`. */
+function codeOfFailure(error: unknown): ErrorCode {
+  return error instanceof AppError && (error.code === "UP-5500" || error.code === "UP-5501") ? error.code : "UP-5000";
+}
+
 /**
- * Puts a message in the transaction. It goes out after the commit.
+ * Sends one message now. It never throws: a failed send is logged with its
+ * `UP-` code and without the email address of the recipient, and the business
+ * change stays (PLT-20.AC2, AC3). The log record holds the template and a fixed
+ * reason, never the recipient and never the text of the relay, which can name it.
+ *
+ * @returns Whether the relay took the message.
+ */
+export async function deliverMail(template: MailTemplate, mail: OutgoingMail): Promise<boolean> {
+  try {
+    await getMailTransport().send(mail);
+    return true;
+  } catch (error) {
+    logger.failure(codeOfFailure(error), {
+      tail: {
+        template,
+        reason: error instanceof AppError && error.reason !== null ? error.reason : "the relay did not take the message",
+      },
+    });
+    return false;
+  }
+}
+
+/**
+ * Puts a message in the transaction. It goes out after the commit, and a
+ * rollback drops it (DEC-033).
  *
  * @param tx The transaction of the change.
  */
-// MOCK: PLT-20
-export function queueMail(tx: MockTransaction, message: MailMessage): Promise<void> {
+export function queueMail(tx: Transaction, message: MailMessage): Promise<void> {
   const rendered = renderMail(message, getConfig().PUBLIC_BASE_URL);
-  tx.afterCommit(() => {
-    identityMock().outbox.push({ to: message.to, subject: rendered.subject, text: rendered.text, sentAt: new Date() });
+  const mail: OutgoingMail = { to: message.to, subject: rendered.subject, text: rendered.text };
+  tx.afterCommit(async () => {
+    await deliverMail(message.template, mail);
   });
   return Promise.resolve();
 }

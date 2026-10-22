@@ -29,3 +29,140 @@ model PlatformLogRecord {
   @@index([type, severity], map: "platform_log_record_type_severity_idx")
   @@map("platform_log_record")
 }
+
+// identity_user: one person, one account (ACC-10, DEC-023). `email_normalized`
+// holds the email address in lower case and is unique, so the address is unique
+// without regard to letter case (ACC-10.AC2). `password_hash` is null until the
+// person opens the invitation (ACC-10.AC1), and then holds a `scrypt` hash
+// (DEC-129). The row is never deleted (DEC-010): the triggers of the migration
+// `identity_and_audit` refuse DELETE and TRUNCATE.
+model IdentityUser {
+  id                BigInt                @id @default(autoincrement())
+  email             String
+  emailNormalized   String                @unique(map: "identity_user_email_unique") @map("email_normalized")
+  firstName         String                @map("first_name")
+  lastName          String                @map("last_name")
+  preferredLanguage String                @map("preferred_language")
+  isActive          Boolean               @default(true) @map("is_active")
+  passwordHash      String?               @map("password_hash")
+  passwordChangedAt TimestamptzString(3)? @map("password_changed_at")
+  createdAt         TimestamptzString(3)  @map("created_at")
+  updatedAt         TimestamptzString(3)  @map("updated_at")
+
+  tokens             IdentityAuthToken[]      @relation("TokenUser")
+  createdTokens      IdentityAuthToken[]      @relation("TokenCreator")
+  assignments        IdentityRoleAssignment[] @relation("AssignmentUser")
+  grantedAssignments IdentityRoleAssignment[] @relation("AssignmentGranter")
+  revokedAssignments IdentityRoleAssignment[] @relation("AssignmentRevoker")
+
+  @@check(expression: sql`(preferred_language = ANY (ARRAY['tr'::text, 'en'::text]))`, map: "identity_user_preferred_language_is_known")
+  @@check(expression: sql`(email_normalized = lower(email_normalized))`, map: "identity_user_email_normalized_is_lower")
+  @@map("identity_user")
+}
+
+// identity_auth_token: an invitation link or a reset link (ACC-10 rule 2,
+// ACC-11, DEC-123). The row keeps the SHA-256 of the token, never the token.
+// A user has one unused token for each purpose (partial unique index).
+model IdentityAuthToken {
+  id              BigInt                @id @default(autoincrement())
+  userId          BigInt                @map("user_id")
+  purpose         String
+  tokenHash       String                @unique(map: "identity_auth_token_hash_unique") @map("token_hash")
+  expiresAt       TimestamptzString(3)  @map("expires_at")
+  usedAt          TimestamptzString(3)? @map("used_at")
+  endedAt         TimestamptzString(3)? @map("ended_at")
+  createdByUserId BigInt?               @map("created_by_user_id")
+  createdAt       TimestamptzString(3)  @map("created_at")
+
+  user      IdentityUser  @relation("TokenUser", fields: [userId], references: [id], map: "identity_auth_token_user_fk")
+  createdBy IdentityUser? @relation("TokenCreator", fields: [createdByUserId], references: [id], map: "identity_auth_token_created_by_fk")
+
+  @@check(expression: sql`(purpose = ANY (ARRAY['INVITATION'::text, 'PASSWORD_RESET'::text]))`, map: "identity_auth_token_purpose_is_known")
+  @@index([userId, purpose], where: sql`((used_at IS NULL) AND (ended_at IS NULL))`, unique: true, map: "identity_auth_token_one_unused_unique")
+  @@map("identity_auth_token")
+}
+
+// identity_permission: the permission registry of ACC-30. Bootstrap fills it.
+model IdentityPermission {
+  id   BigInt @id @default(autoincrement())
+  code String @unique(map: "identity_permission_code_unique")
+
+  roles IdentityRolePermission[]
+
+  @@map("identity_permission")
+}
+
+// identity_role: a named bundle of permissions (DEC-029). `name` holds the name
+// in both languages (DEC-011).
+model IdentityRole {
+  id   BigInt @id @default(autoincrement())
+  code String @unique(map: "identity_role_code_unique")
+  name Jsonb
+
+  permissions IdentityRolePermission[]
+  assignments IdentityRoleAssignment[]
+
+  @@check(expression: sql`((jsonb_typeof(name) = 'object'::text) AND (jsonb_typeof((name -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((name -> 'en'::text)) = 'string'::text))`, map: "identity_role_name_has_both_languages")
+  @@map("identity_role")
+}
+
+model IdentityRolePermission {
+  id           BigInt @id @default(autoincrement())
+  roleId       BigInt @map("role_id")
+  permissionId BigInt @map("permission_id")
+
+  role       IdentityRole       @relation(fields: [roleId], references: [id], map: "identity_role_permission_role_fk")
+  permission IdentityPermission @relation(fields: [permissionId], references: [id], map: "identity_role_permission_permission_fk")
+
+  @@unique([roleId, permissionId], map: "identity_role_permission_pair_unique")
+  @@map("identity_role_permission")
+}
+
+// identity_role_assignment: a grant of a role to a user (ACC-31). A revoked
+// assignment stays with `is_active` false (DEC-010). A user holds a role once
+// at a time (partial unique index). The triggers of the migration refuse DELETE
+// and TRUNCATE.
+model IdentityRoleAssignment {
+  id              BigInt                @id @default(autoincrement())
+  userId          BigInt                @map("user_id")
+  roleId          BigInt                @map("role_id")
+  isActive        Boolean               @default(true) @map("is_active")
+  grantedByUserId BigInt?               @map("granted_by_user_id")
+  grantedAt       TimestamptzString(3)  @map("granted_at")
+  revokedByUserId BigInt?               @map("revoked_by_user_id")
+  revokedAt       TimestamptzString(3)? @map("revoked_at")
+
+  user      IdentityUser  @relation("AssignmentUser", fields: [userId], references: [id], map: "identity_role_assignment_user_fk")
+  role      IdentityRole  @relation(fields: [roleId], references: [id], map: "identity_role_assignment_role_fk")
+  grantedBy IdentityUser? @relation("AssignmentGranter", fields: [grantedByUserId], references: [id], map: "identity_role_assignment_granted_by_fk")
+  revokedBy IdentityUser? @relation("AssignmentRevoker", fields: [revokedByUserId], references: [id], map: "identity_role_assignment_revoked_by_fk")
+
+  @@index([userId, roleId], where: sql`is_active`, unique: true, map: "identity_role_assignment_one_active_unique")
+  @@index([userId], map: "identity_role_assignment_user_idx")
+  @@map("identity_role_assignment")
+}
+
+// platform_audit_record: the audit row of a controlled change (PLT-40, DEC-014).
+// It is append-only: the triggers of the migration refuse UPDATE, DELETE and
+// TRUNCATE. `actor_user_id` has no foreign key: the row is evidence that stays
+// whatever happens to the module that wrote it.
+model PlatformAuditRecord {
+  id          BigInt               @id @default(autoincrement())
+  occurredAt  TimestamptzString(3) @map("occurred_at")
+  actorType   String               @map("actor_type")
+  actorUserId BigInt?              @map("actor_user_id")
+  actionCode  String               @map("action_code")
+  entityType  String               @map("entity_type")
+  entityId    String               @map("entity_id")
+  stateBefore Jsonb?               @map("state_before")
+  stateAfter  Jsonb?               @map("state_after")
+  reason      String?
+  requestId   String?              @map("request_id")
+
+  @@check(expression: sql`(actor_type = ANY (ARRAY['USER'::text, 'SYSTEM'::text]))`, map: "audit_record_actor_type_is_known")
+  @@check(expression: sql`((actor_type = 'USER'::text) = (actor_user_id IS NOT NULL))`, map: "audit_record_actor_matches_type")
+  @@check(expression: sql`(action_code ~ '^[a-z][a-z0-9_]*[.][a-z][a-z0-9_]*[.][a-z][a-z0-9_]*$'::text)`, map: "audit_record_action_code_form")
+  @@index([entityType, entityId], map: "platform_audit_record_entity_idx")
+  @@index([occurredAt], map: "platform_audit_record_occurred_at_idx")
+  @@map("platform_audit_record")
+}

@@ -21,7 +21,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'5b66d4508fcbc247ae27a362a84135cc6cfc3ca1a49f77330d30b18f240615a5'>;
+  StorageHashBase<'eca4a59f5254f24a70d12d673bf8ae09b29ae0e6e05b9a0f87d1f7ee578e5675'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -236,6 +236,67 @@ type DefaultLiteralValue<CodecId extends string, Encoded> = CodecId extends keyo
 
 export type FieldOutputTypes = {
   readonly public: {
+    readonly IdentityAuthToken: {
+      readonly createdAt: TimestamptzString<3>;
+      readonly createdByUserId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly endedAt: TimestamptzString<3> | null;
+      readonly expiresAt: TimestamptzString<3>;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly purpose: CodecTypes['pg/text@1']['output'];
+      readonly tokenHash: CodecTypes['pg/text@1']['output'];
+      readonly usedAt: TimestamptzString<3> | null;
+      readonly userId: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly IdentityPermission: {
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly IdentityRole: {
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly name: CodecTypes['pg/jsonb@1']['output'];
+    };
+    readonly IdentityRoleAssignment: {
+      readonly grantedAt: TimestamptzString<3>;
+      readonly grantedByUserId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly isActive: CodecTypes['pg/bool@1']['output'];
+      readonly revokedAt: TimestamptzString<3> | null;
+      readonly revokedByUserId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly roleId: CodecTypes['pg/int8@1']['output'];
+      readonly userId: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly IdentityRolePermission: {
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly permissionId: CodecTypes['pg/int8@1']['output'];
+      readonly roleId: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly IdentityUser: {
+      readonly createdAt: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/text@1']['output'];
+      readonly emailNormalized: CodecTypes['pg/text@1']['output'];
+      readonly firstName: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly isActive: CodecTypes['pg/bool@1']['output'];
+      readonly lastName: CodecTypes['pg/text@1']['output'];
+      readonly passwordChangedAt: TimestamptzString<3> | null;
+      readonly passwordHash: CodecTypes['pg/text@1']['output'] | null;
+      readonly preferredLanguage: CodecTypes['pg/text@1']['output'];
+      readonly updatedAt: TimestamptzString<3>;
+    };
+    readonly PlatformAuditRecord: {
+      readonly actionCode: CodecTypes['pg/text@1']['output'];
+      readonly actorType: CodecTypes['pg/text@1']['output'];
+      readonly actorUserId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly entityId: CodecTypes['pg/text@1']['output'];
+      readonly entityType: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly occurredAt: TimestamptzString<3>;
+      readonly reason: CodecTypes['pg/text@1']['output'] | null;
+      readonly requestId: CodecTypes['pg/text@1']['output'] | null;
+      readonly stateAfter: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly stateBefore: CodecTypes['pg/jsonb@1']['output'] | null;
+    };
     readonly PlatformLogRecord: {
       readonly code: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/int8@1']['output'];
@@ -250,6 +311,67 @@ export type FieldOutputTypes = {
 };
 export type FieldInputTypes = {
   readonly public: {
+    readonly IdentityAuthToken: {
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdByUserId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly endedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly expiresAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly purpose: CodecTypes['pg/text@1']['input'];
+      readonly tokenHash: CodecTypes['pg/text@1']['input'];
+      readonly usedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly userId: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly IdentityPermission: {
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly IdentityRole: {
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly name: CodecTypes['pg/jsonb@1']['input'];
+    };
+    readonly IdentityRoleAssignment: {
+      readonly grantedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly grantedByUserId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly isActive: CodecTypes['pg/bool@1']['input'];
+      readonly revokedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly revokedByUserId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly roleId: CodecTypes['pg/int8@1']['input'];
+      readonly userId: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly IdentityRolePermission: {
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly permissionId: CodecTypes['pg/int8@1']['input'];
+      readonly roleId: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly IdentityUser: {
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/text@1']['input'];
+      readonly emailNormalized: CodecTypes['pg/text@1']['input'];
+      readonly firstName: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly isActive: CodecTypes['pg/bool@1']['input'];
+      readonly lastName: CodecTypes['pg/text@1']['input'];
+      readonly passwordChangedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly passwordHash: CodecTypes['pg/text@1']['input'] | null;
+      readonly preferredLanguage: CodecTypes['pg/text@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly PlatformAuditRecord: {
+      readonly actionCode: CodecTypes['pg/text@1']['input'];
+      readonly actorType: CodecTypes['pg/text@1']['input'];
+      readonly actorUserId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly entityId: CodecTypes['pg/text@1']['input'];
+      readonly entityType: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly occurredAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly reason: CodecTypes['pg/text@1']['input'] | null;
+      readonly requestId: CodecTypes['pg/text@1']['input'] | null;
+      readonly stateAfter: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly stateBefore: CodecTypes['pg/jsonb@1']['input'] | null;
+    };
     readonly PlatformLogRecord: {
       readonly code: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/int8@1']['input'];
@@ -264,6 +386,67 @@ export type FieldInputTypes = {
 };
 export type StorageColumnTypes = {
   readonly public: {
+    readonly identity_auth_token: {
+      readonly created_at: TimestamptzString<3>;
+      readonly created_by_user_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly ended_at: TimestamptzString<3> | null;
+      readonly expires_at: TimestamptzString<3>;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly purpose: CodecTypes['pg/text@1']['output'];
+      readonly token_hash: CodecTypes['pg/text@1']['output'];
+      readonly used_at: TimestamptzString<3> | null;
+      readonly user_id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly identity_permission: {
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly identity_role: {
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly name: CodecTypes['pg/jsonb@1']['output'];
+    };
+    readonly identity_role_assignment: {
+      readonly granted_at: TimestamptzString<3>;
+      readonly granted_by_user_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly is_active: CodecTypes['pg/bool@1']['output'];
+      readonly revoked_at: TimestamptzString<3> | null;
+      readonly revoked_by_user_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly role_id: CodecTypes['pg/int8@1']['output'];
+      readonly user_id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly identity_role_permission: {
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly permission_id: CodecTypes['pg/int8@1']['output'];
+      readonly role_id: CodecTypes['pg/int8@1']['output'];
+    };
+    readonly identity_user: {
+      readonly created_at: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/text@1']['output'];
+      readonly email_normalized: CodecTypes['pg/text@1']['output'];
+      readonly first_name: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly is_active: CodecTypes['pg/bool@1']['output'];
+      readonly last_name: CodecTypes['pg/text@1']['output'];
+      readonly password_changed_at: TimestamptzString<3> | null;
+      readonly password_hash: CodecTypes['pg/text@1']['output'] | null;
+      readonly preferred_language: CodecTypes['pg/text@1']['output'];
+      readonly updated_at: TimestamptzString<3>;
+    };
+    readonly platform_audit_record: {
+      readonly action_code: CodecTypes['pg/text@1']['output'];
+      readonly actor_type: CodecTypes['pg/text@1']['output'];
+      readonly actor_user_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly entity_id: CodecTypes['pg/text@1']['output'];
+      readonly entity_type: CodecTypes['pg/text@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly occurred_at: TimestamptzString<3>;
+      readonly reason: CodecTypes['pg/text@1']['output'] | null;
+      readonly request_id: CodecTypes['pg/text@1']['output'] | null;
+      readonly state_after: CodecTypes['pg/jsonb@1']['output'] | null;
+      readonly state_before: CodecTypes['pg/jsonb@1']['output'] | null;
+    };
     readonly platform_log_record: {
       readonly code: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/int8@1']['output'];
@@ -278,6 +461,67 @@ export type StorageColumnTypes = {
 };
 export type StorageColumnInputTypes = {
   readonly public: {
+    readonly identity_auth_token: {
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly created_by_user_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly ended_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly expires_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly purpose: CodecTypes['pg/text@1']['input'];
+      readonly token_hash: CodecTypes['pg/text@1']['input'];
+      readonly used_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly user_id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly identity_permission: {
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly identity_role: {
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly name: CodecTypes['pg/jsonb@1']['input'];
+    };
+    readonly identity_role_assignment: {
+      readonly granted_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly granted_by_user_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly is_active: CodecTypes['pg/bool@1']['input'];
+      readonly revoked_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly revoked_by_user_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly role_id: CodecTypes['pg/int8@1']['input'];
+      readonly user_id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly identity_role_permission: {
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly permission_id: CodecTypes['pg/int8@1']['input'];
+      readonly role_id: CodecTypes['pg/int8@1']['input'];
+    };
+    readonly identity_user: {
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/text@1']['input'];
+      readonly email_normalized: CodecTypes['pg/text@1']['input'];
+      readonly first_name: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly is_active: CodecTypes['pg/bool@1']['input'];
+      readonly last_name: CodecTypes['pg/text@1']['input'];
+      readonly password_changed_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly password_hash: CodecTypes['pg/text@1']['input'] | null;
+      readonly preferred_language: CodecTypes['pg/text@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
+    readonly platform_audit_record: {
+      readonly action_code: CodecTypes['pg/text@1']['input'];
+      readonly actor_type: CodecTypes['pg/text@1']['input'];
+      readonly actor_user_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly entity_id: CodecTypes['pg/text@1']['input'];
+      readonly entity_type: CodecTypes['pg/text@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly occurred_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly reason: CodecTypes['pg/text@1']['input'] | null;
+      readonly request_id: CodecTypes['pg/text@1']['input'] | null;
+      readonly state_after: CodecTypes['pg/jsonb@1']['input'] | null;
+      readonly state_before: CodecTypes['pg/jsonb@1']['input'] | null;
+    };
     readonly platform_log_record: {
       readonly code: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/int8@1']['input'];
@@ -292,6 +536,91 @@ export type StorageColumnInputTypes = {
 };
 
 export namespace Models {
+  export type public_IdentityAuthToken = {
+    createdAt: TimestamptzString<3>;
+    createdByUserId: CodecTypes['pg/int8@1']['output'] | null;
+    endedAt: TimestamptzString<3> | null;
+    expiresAt: TimestamptzString<3>;
+    id: CodecTypes['pg/int8@1']['output'];
+    purpose: CodecTypes['pg/text@1']['output'];
+    tokenHash: CodecTypes['pg/text@1']['output'];
+    usedAt: TimestamptzString<3> | null;
+    userId: CodecTypes['pg/int8@1']['output'];
+    createdBy: public_IdentityUser | null;
+    user: public_IdentityUser;
+    readonly [RelationKeys]?: 'createdBy' | 'user';
+  };
+  export type public_IdentityPermission = {
+    code: CodecTypes['pg/text@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    roles: public_IdentityRolePermission[];
+    readonly [RelationKeys]?: 'roles';
+  };
+  export type public_IdentityRole = {
+    code: CodecTypes['pg/text@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    name: CodecTypes['pg/jsonb@1']['output'];
+    assignments: public_IdentityRoleAssignment[];
+    permissions: public_IdentityRolePermission[];
+    readonly [RelationKeys]?: 'assignments' | 'permissions';
+  };
+  export type public_IdentityRoleAssignment = {
+    grantedAt: TimestamptzString<3>;
+    grantedByUserId: CodecTypes['pg/int8@1']['output'] | null;
+    id: CodecTypes['pg/int8@1']['output'];
+    isActive: CodecTypes['pg/bool@1']['output'];
+    revokedAt: TimestamptzString<3> | null;
+    revokedByUserId: CodecTypes['pg/int8@1']['output'] | null;
+    roleId: CodecTypes['pg/int8@1']['output'];
+    userId: CodecTypes['pg/int8@1']['output'];
+    grantedBy: public_IdentityUser | null;
+    revokedBy: public_IdentityUser | null;
+    role: public_IdentityRole;
+    user: public_IdentityUser;
+    readonly [RelationKeys]?: 'grantedBy' | 'revokedBy' | 'role' | 'user';
+  };
+  export type public_IdentityRolePermission = {
+    id: CodecTypes['pg/int8@1']['output'];
+    permissionId: CodecTypes['pg/int8@1']['output'];
+    roleId: CodecTypes['pg/int8@1']['output'];
+    permission: public_IdentityPermission;
+    role: public_IdentityRole;
+    readonly [RelationKeys]?: 'permission' | 'role';
+  };
+  export type public_IdentityUser = {
+    createdAt: TimestamptzString<3>;
+    email: CodecTypes['pg/text@1']['output'];
+    emailNormalized: CodecTypes['pg/text@1']['output'];
+    firstName: CodecTypes['pg/text@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    isActive: CodecTypes['pg/bool@1']['output'];
+    lastName: CodecTypes['pg/text@1']['output'];
+    passwordChangedAt: TimestamptzString<3> | null;
+    passwordHash: CodecTypes['pg/text@1']['output'] | null;
+    preferredLanguage: CodecTypes['pg/text@1']['output'];
+    updatedAt: TimestamptzString<3>;
+    assignments: public_IdentityRoleAssignment[];
+    createdTokens: public_IdentityAuthToken[];
+    grantedAssignments: public_IdentityRoleAssignment[];
+    revokedAssignments: public_IdentityRoleAssignment[];
+    tokens: public_IdentityAuthToken[];
+    readonly [RelationKeys]?:
+      'assignments' | 'createdTokens' | 'grantedAssignments' | 'revokedAssignments' | 'tokens';
+  };
+  export type public_PlatformAuditRecord = {
+    actionCode: CodecTypes['pg/text@1']['output'];
+    actorType: CodecTypes['pg/text@1']['output'];
+    actorUserId: CodecTypes['pg/int8@1']['output'] | null;
+    entityId: CodecTypes['pg/text@1']['output'];
+    entityType: CodecTypes['pg/text@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    occurredAt: TimestamptzString<3>;
+    reason: CodecTypes['pg/text@1']['output'] | null;
+    requestId: CodecTypes['pg/text@1']['output'] | null;
+    stateAfter: CodecTypes['pg/jsonb@1']['output'] | null;
+    stateBefore: CodecTypes['pg/jsonb@1']['output'] | null;
+    readonly [RelationKeys]?: never;
+  };
   export type public_PlatformLogRecord = {
     code: CodecTypes['pg/text@1']['output'] | null;
     id: CodecTypes['pg/int8@1']['output'];
@@ -307,6 +636,13 @@ export namespace Models {
 
 export declare const models: {
   public: {
+    IdentityAuthToken: Models.public_IdentityAuthToken;
+    IdentityPermission: Models.public_IdentityPermission;
+    IdentityRole: Models.public_IdentityRole;
+    IdentityRoleAssignment: Models.public_IdentityRoleAssignment;
+    IdentityRolePermission: Models.public_IdentityRolePermission;
+    IdentityUser: Models.public_IdentityUser;
+    PlatformAuditRecord: Models.public_PlatformAuditRecord;
     PlatformLogRecord: Models.public_PlatformLogRecord;
   };
 };
@@ -329,6 +665,592 @@ type ContractBase = Omit<
         readonly kind: 'postgres-schema';
         readonly entries: {
           readonly table: {
+            readonly identity_auth_token: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly created_by_user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly ended_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly expires_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly purpose: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly token_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly used_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['token_hash'];
+                  readonly name: 'identity_auth_token_hash_unique';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'identity_auth_token_created_by_user_id_idx_764eade2';
+                  readonly prefix: 'identity_auth_token_created_by_user_id_idx';
+                  readonly columns: readonly ['created_by_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'identity_auth_token_one_unused_unique';
+                  readonly columns: readonly ['user_id', 'purpose'];
+                  readonly where: '((used_at IS NULL) AND (ended_at IS NULL))';
+                  readonly unique: true;
+                },
+                {
+                  readonly name: 'identity_auth_token_user_id_idx_6c952402';
+                  readonly prefix: 'identity_auth_token_user_id_idx';
+                  readonly columns: readonly ['user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_auth_token';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_user';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_auth_token_user_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_auth_token';
+                    readonly columns: readonly ['created_by_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_user';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_auth_token_created_by_fk';
+                },
+              ];
+            };
+            readonly identity_permission: {
+              columns: {
+                readonly code: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['code'];
+                  readonly name: 'identity_permission_code_unique';
+                },
+              ];
+              indexes: readonly [];
+              foreignKeys: readonly [];
+            };
+            readonly identity_role: {
+              columns: {
+                readonly code: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                { readonly columns: readonly ['code']; readonly name: 'identity_role_code_unique' },
+              ];
+              indexes: readonly [];
+              foreignKeys: readonly [];
+            };
+            readonly identity_role_assignment: {
+              columns: {
+                readonly granted_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly granted_by_user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly is_active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly revoked_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly revoked_by_user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly role_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'identity_role_assignment_granted_by_user_id_idx_d055b00f';
+                  readonly prefix: 'identity_role_assignment_granted_by_user_id_idx';
+                  readonly columns: readonly ['granted_by_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'identity_role_assignment_one_active_unique';
+                  readonly columns: readonly ['user_id', 'role_id'];
+                  readonly where: 'is_active';
+                  readonly unique: true;
+                },
+                {
+                  readonly name: 'identity_role_assignment_revoked_by_user_id_idx_f61d96ba';
+                  readonly prefix: 'identity_role_assignment_revoked_by_user_id_idx';
+                  readonly columns: readonly ['revoked_by_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'identity_role_assignment_role_id_idx_d9467c50';
+                  readonly prefix: 'identity_role_assignment_role_id_idx';
+                  readonly columns: readonly ['role_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'identity_role_assignment_user_idx';
+                  readonly columns: readonly ['user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_assignment';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_user';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_assignment_user_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_assignment';
+                    readonly columns: readonly ['role_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_assignment_role_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_assignment';
+                    readonly columns: readonly ['granted_by_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_user';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_assignment_granted_by_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_assignment';
+                    readonly columns: readonly ['revoked_by_user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_user';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_assignment_revoked_by_fk';
+                },
+              ];
+            };
+            readonly identity_role_permission: {
+              columns: {
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly permission_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly role_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['role_id', 'permission_id'];
+                  readonly name: 'identity_role_permission_pair_unique';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'identity_role_permission_permission_id_idx_909cec36';
+                  readonly prefix: 'identity_role_permission_permission_id_idx';
+                  readonly columns: readonly ['permission_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'identity_role_permission_role_id_idx_d9467c50';
+                  readonly prefix: 'identity_role_permission_role_id_idx';
+                  readonly columns: readonly ['role_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_permission';
+                    readonly columns: readonly ['role_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_permission_role_fk';
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_role_permission';
+                    readonly columns: readonly ['permission_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'identity_permission';
+                    readonly columns: readonly ['id'];
+                  };
+                  readonly name: 'identity_role_permission_permission_fk';
+                },
+              ];
+            };
+            readonly identity_user: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly email: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly email_normalized: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly first_name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly is_active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly last_name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly password_changed_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly password_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly preferred_language: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['email_normalized'];
+                  readonly name: 'identity_user_email_unique';
+                },
+              ];
+              indexes: readonly [];
+              foreignKeys: readonly [];
+            };
+            readonly platform_audit_record: {
+              columns: {
+                readonly action_code: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly actor_type: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly actor_user_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly entity_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly entity_type: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly occurred_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly reason: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly request_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly state_after: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly state_before: {
+                  readonly dataType: 'pg/jsonb';
+                  readonly codecId: 'pg/jsonb@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'platform_audit_record_entity_idx';
+                  readonly columns: readonly ['entity_type', 'entity_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'platform_audit_record_occurred_at_idx';
+                  readonly columns: readonly ['occurred_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
+            };
             readonly platform_log_record: {
               columns: {
                 readonly code: {
@@ -417,6 +1339,34 @@ type ContractBase = Omit<
   readonly target: 'postgres';
   readonly targetFamily: 'sql';
   readonly roots: {
+    readonly identity_auth_token: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityAuthToken';
+    };
+    readonly identity_permission: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityPermission';
+    };
+    readonly identity_role: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityRole';
+    };
+    readonly identity_role_assignment: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityRoleAssignment';
+    };
+    readonly identity_role_permission: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityRolePermission';
+    };
+    readonly identity_user: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'IdentityUser';
+    };
+    readonly platform_audit_record: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'PlatformAuditRecord';
+    };
     readonly platform_log_record: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'PlatformLogRecord';
@@ -426,6 +1376,548 @@ type ContractBase = Omit<
     readonly namespaces: {
       readonly public: {
         readonly models: {
+          readonly IdentityAuthToken: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly createdByUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly endedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly expiresAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly purpose: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly tokenHash: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly usedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+            };
+            readonly relations: {
+              readonly createdBy: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityUser';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['createdByUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityUser';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_auth_token';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly createdByUserId: { readonly column: 'created_by_user_id' };
+                readonly endedAt: { readonly column: 'ended_at' };
+                readonly expiresAt: { readonly column: 'expires_at' };
+                readonly id: { readonly column: 'id' };
+                readonly purpose: { readonly column: 'purpose' };
+                readonly tokenHash: { readonly column: 'token_hash' };
+                readonly usedAt: { readonly column: 'used_at' };
+                readonly userId: { readonly column: 'user_id' };
+              };
+            };
+          };
+          readonly IdentityPermission: {
+            readonly fields: {
+              readonly code: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+            };
+            readonly relations: {
+              readonly roles: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRolePermission';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['permissionId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_permission';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly code: { readonly column: 'code' };
+                readonly id: { readonly column: 'id' };
+              };
+            };
+          };
+          readonly IdentityRole: {
+            readonly fields: {
+              readonly code: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+            };
+            readonly relations: {
+              readonly assignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['roleId'];
+                };
+              };
+              readonly permissions: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRolePermission';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['roleId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_role';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly code: { readonly column: 'code' };
+                readonly id: { readonly column: 'id' };
+                readonly name: { readonly column: 'name' };
+              };
+            };
+          };
+          readonly IdentityRoleAssignment: {
+            readonly fields: {
+              readonly grantedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly grantedByUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly isActive: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly revokedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly revokedByUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly roleId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+            };
+            readonly relations: {
+              readonly grantedBy: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityUser';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['grantedByUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly revokedBy: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityUser';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['revokedByUserId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly role: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRole';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['roleId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityUser';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_role_assignment';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly grantedAt: { readonly column: 'granted_at' };
+                readonly grantedByUserId: { readonly column: 'granted_by_user_id' };
+                readonly id: { readonly column: 'id' };
+                readonly isActive: { readonly column: 'is_active' };
+                readonly revokedAt: { readonly column: 'revoked_at' };
+                readonly revokedByUserId: { readonly column: 'revoked_by_user_id' };
+                readonly roleId: { readonly column: 'role_id' };
+                readonly userId: { readonly column: 'user_id' };
+              };
+            };
+          };
+          readonly IdentityRolePermission: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly permissionId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly roleId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+            };
+            readonly relations: {
+              readonly permission: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityPermission';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['permissionId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly role: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRole';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['roleId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_role_permission';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly permissionId: { readonly column: 'permission_id' };
+                readonly roleId: { readonly column: 'role_id' };
+              };
+            };
+          };
+          readonly IdentityUser: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly email: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly emailNormalized: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly firstName: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly isActive: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly lastName: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly passwordChangedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly passwordHash: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly preferredLanguage: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+            };
+            readonly relations: {
+              readonly assignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly createdTokens: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityAuthToken';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['createdByUserId'];
+                };
+              };
+              readonly grantedAssignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['grantedByUserId'];
+                };
+              };
+              readonly revokedAssignments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityRoleAssignment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['revokedByUserId'];
+                };
+              };
+              readonly tokens: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'IdentityAuthToken';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'identity_user';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly email: { readonly column: 'email' };
+                readonly emailNormalized: { readonly column: 'email_normalized' };
+                readonly firstName: { readonly column: 'first_name' };
+                readonly id: { readonly column: 'id' };
+                readonly isActive: { readonly column: 'is_active' };
+                readonly lastName: { readonly column: 'last_name' };
+                readonly passwordChangedAt: { readonly column: 'password_changed_at' };
+                readonly passwordHash: { readonly column: 'password_hash' };
+                readonly preferredLanguage: { readonly column: 'preferred_language' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly PlatformAuditRecord: {
+            readonly fields: {
+              readonly actionCode: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly actorType: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly actorUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly entityId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly entityType: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly occurredAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly reason: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly requestId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly stateAfter: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+              readonly stateBefore: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/jsonb@1' };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'platform_audit_record';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly actionCode: { readonly column: 'action_code' };
+                readonly actorType: { readonly column: 'actor_type' };
+                readonly actorUserId: { readonly column: 'actor_user_id' };
+                readonly entityId: { readonly column: 'entity_id' };
+                readonly entityType: { readonly column: 'entity_type' };
+                readonly id: { readonly column: 'id' };
+                readonly occurredAt: { readonly column: 'occurred_at' };
+                readonly reason: { readonly column: 'reason' };
+                readonly requestId: { readonly column: 'request_id' };
+                readonly stateAfter: { readonly column: 'state_after' };
+                readonly stateBefore: { readonly column: 'state_before' };
+              };
+            };
+          };
           readonly PlatformLogRecord: {
             readonly fields: {
               readonly code: {

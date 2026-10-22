@@ -12,7 +12,7 @@ import { type SessionActor, requirePermission } from "@/lib/auth/session";
 import { now } from "@/lib/clock";
 import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { type MockRoleAssignment, identityMock } from "@/lib/mock/identity";
-import { runMockTransaction } from "@/lib/mock/transaction";
+import { runTransaction } from "@/lib/transaction";
 import type { RoleAssignmentView, RoleCode, RoleView } from "@/lib/schemas/identity";
 import { appendAudit } from "@/modules/platform/services/audit-service";
 
@@ -65,7 +65,7 @@ export async function grantRole(actor: SessionActor, userId: string, roleCode: R
   if (activeAssignment(user.id, roleCode) !== undefined) {
     throw new AppError("RES-4300", CODE_MEANINGS["RES-4300"], { reason: "the user holds the role" });
   }
-  return runMockTransaction(async (tx) => {
+  return runTransaction(async (tx) => {
     const state = identityMock();
     const assignment: MockRoleAssignment = {
       id: String(state.nextAssignmentId++),
@@ -105,7 +105,7 @@ export async function revokeRole(actor: SessionActor, userId: string, roleCode: 
   if (user === null || assignment === undefined) {
     throw new AppError("RES-4200", CODE_MEANINGS["RES-4200"]);
   }
-  return runMockTransaction(async (tx) => {
+  return runTransaction(async (tx) => {
     assignment.isActive = false;
     assignment.revokedByUserId = actor.userId;
     assignment.revokedAt = now();

@@ -13,7 +13,7 @@ import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { logger } from "@/lib/logging";
 import { now } from "@/lib/clock";
 import { type MockUser, endMockSessionsOfUser, identityMock, issueMockToken } from "@/lib/mock/identity";
-import { runMockTransaction } from "@/lib/mock/transaction";
+import { runTransaction } from "@/lib/transaction";
 import {
   type CreateUserInput,
   type UserDetail,
@@ -92,7 +92,7 @@ export async function createUser(actor: SessionActor, input: CreateUserInput): P
   if (findUserByEmail(input.email) !== null) {
     throw new AppError("RES-4300", CODE_MEANINGS["RES-4300"], { reason: "the email address belongs to a user" });
   }
-  return runMockTransaction(async (tx) => {
+  return runTransaction(async (tx) => {
     const state = identityMock();
     const id = String(state.nextUserId++);
     const at = now();
@@ -149,7 +149,7 @@ export async function reinviteUser(actor: SessionActor, id: string): Promise<voi
       reason: user.hasPassword ? "the user has a password" : "the account is inactive",
     });
   }
-  await runMockTransaction(async (tx) => {
+  await runTransaction(async (tx) => {
     const token = issueMockToken(user.id, "INVITATION");
     await appendAudit(tx, {
       actor: { type: "USER", userId: actor.userId },
@@ -180,7 +180,7 @@ export async function deactivateUser(actor: SessionActor, id: string): Promise<v
   if (!user.isActive) {
     throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the account is inactive" });
   }
-  await runMockTransaction(async (tx) => {
+  await runTransaction(async (tx) => {
     user.isActive = false;
     user.updatedAt = now();
     endMockSessionsOfUser(user.id);

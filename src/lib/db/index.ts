@@ -13,6 +13,7 @@
 import "server-only";
 
 import postgres from "@prisma/orm-postgres/runtime";
+import type { TimestamptzString } from "@prisma/orm-postgres/target/codec-types";
 import { Pool } from "pg";
 
 import { getConfig } from "@/lib/config";
@@ -22,6 +23,16 @@ import type { Contract } from "@/prisma/contract.d";
 
 /** The typed client: `db.orm.public.PlatformLogRecord`, `db.sql`, `db.transaction`. */
 export type Db = ReturnType<typeof postgres<Contract>>;
+
+/**
+ * What a repository needs to run a query: the ORM of the client, or the ORM of a
+ * transaction (`@/lib/transaction`). A repository takes it as a parameter, so a
+ * service decides whether a call joins its transaction.
+ */
+export type Executor = Pick<Db, "orm">;
+
+/** The type of the context that `Db.transaction` gives its callback. */
+export type DbTransactionContext = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /** The seconds to wait for a connection, and for the answer of a probe. */
 const CONNECTION_TIMEOUT_MS = 2_000;
@@ -186,4 +197,27 @@ export function toDatabaseError(error: unknown, operation: "read" | "write" | "d
   return operation === "read"
     ? new AppError("DB-5000", "Query failed", { cause: error })
     : new AppError("DB-5001", "Write failed", { cause: error });
+}
+
+/**
+ * The value of a `timestamptz(3)` column for an instant. The column type carries
+ * PostgreSQL's own text (`TimestamptzString`), whose brand has no runtime form.
+ * This function and `fromColumnInstant` are the one place that makes and reads
+ * the brand, so a repository never builds a timestamp text by hand.
+ */
+export function toColumnInstant(instant: Date): TimestamptzString<3> {
+  if (Number.isNaN(instant.getTime())) {
+    throw new AppError("SYS-5000", "Unhandled error", { reason: "an invalid date was given to a timestamp column" });
+  }
+  return instant.toISOString() as TimestamptzString<3>;
+}
+
+/** The instant of a `timestamptz` column value (`2026-10-22 10:00:00.123+00`). */
+export function fromColumnInstant(stored: string): Date {
+  const normalized = stored.trim().replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+  const instant = new Date(normalized);
+  if (Number.isNaN(instant.getTime())) {
+    throw new AppError("DB-5000", "Query failed", { reason: "a timestamp column holds a text that is not an instant" });
+  }
+  return instant;
 }

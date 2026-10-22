@@ -21,7 +21,7 @@ import {
   findMockToken,
   issueMockToken,
 } from "@/lib/mock/identity";
-import { runMockTransaction } from "@/lib/mock/transaction";
+import { runTransaction } from "@/lib/transaction";
 import type { PasswordResetRequestInput, SetPasswordInput } from "@/lib/schemas/identity";
 import { queueMail } from "@/modules/platform/services/mail-service";
 
@@ -81,7 +81,7 @@ export async function requestPasswordReset(input: PasswordResetRequestInput): Pr
     logger.write({ severity: "INFO", type: "SECURITY", message: "password reset requested, no mail sent" });
     return;
   }
-  await runMockTransaction(async (tx) => {
+  await runTransaction(async (tx) => {
     const token = issueMockToken(user.id, "PASSWORD_RESET");
     await queueMail(tx, { template: "passwordReset", to: user.email, language: user.preferredLanguage, token });
   });
