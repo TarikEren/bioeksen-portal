@@ -111,7 +111,7 @@ refuse. A suite the guard refuses is not run.
 | `support/log-records.ts` | Reads log records from stdout lines, in the JSON form or the rendered form of `sds-logging` (`log-record.md`) |
 | `support/ports.ts` | A free port, a closed port, and a wait for a port without an HTTP request |
 | `support/repo-copy.ts` | `copyRepository({ linkNodeModules })`: a copy of the files git would check out, in a temporary directory; runs `pnpm` there; writes fixtures; removes the copy (it unlinks the linked `node_modules` first) |
-| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline |
+| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline (`isSoftGate`): `continue-on-error`, `set +e`, each `\|\|` that does not exit with a failure, and an `if:` on the job or the step other than `success()`, `always()` or `!cancelled()` |
 | `support/contrast.ts` | The contrast table of the `sds-nextjs-frontend` reference page, computed in Node.js from HeroUI's default theme and `src/app/globals.css`: the cascade of custom properties, `oklch()` and `color-mix()`, the paint on a canvas, and the WCAG ratio. Checked against the reference page in Chromium on 2026-10-22 |
 | `support/language.ts` | Chooses a language with the language switch, by role and accessible name, with the labels of the dictionaries |
 | `support/results.ts` | The results-only interface, `pnpm run test:results` |

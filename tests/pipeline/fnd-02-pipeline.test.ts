@@ -62,7 +62,7 @@ describe("FND-02 pull request pipeline", () => {
     expect(commands.length, describeWorkflows()).toBeGreaterThan(0);
 
     const soft = commands.filter(isSoftGate).map((command) => `${command.job.id} > ${command.step.name}`);
-    expect(soft, "steps whose failure does not fail the pipeline (continue-on-error, || true)").toEqual([]);
+    expect(soft, "steps whose failure does not fail the pipeline (continue-on-error, a || that does not exit with a failure, set +e, an if: that can skip the step)").toEqual([]);
   });
 
   /** The pipeline runs the sds-planning checker with --tests over the acceptance folders. */
