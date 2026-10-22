@@ -1,12 +1,17 @@
 /**
  * `GET /api/health/live`: the liveness probe (FND-04, `sds-api-design`).
  *
- * Skeleton of stage B0: answers 500 `SYS-5000`. It checks no dependency and
- * needs no credential when built.
+ * It checks no dependency and needs no credential. It answers while the
+ * configuration is unusable: the process is alive.
  */
-import { NotImplemented } from "@/lib/errors";
-import { failureResponse } from "@/lib/http";
+import { defineMethodNotAllowed, defineRoute, jsonResponse } from "@/lib/http";
+import { liveness } from "@/modules/platform/services/health-service";
 
-export function GET(): Response {
-  return failureResponse(new NotImplemented("GET /api/health/live"));
-}
+const SPEC = { principal: "none", probe: true, allow: ["GET"] } as const;
+
+export const GET = defineRoute(SPEC, () => Promise.resolve(jsonResponse(liveness())));
+
+export const POST = defineMethodNotAllowed(SPEC);
+export const PUT = defineMethodNotAllowed(SPEC);
+export const PATCH = defineMethodNotAllowed(SPEC);
+export const DELETE = defineMethodNotAllowed(SPEC);
