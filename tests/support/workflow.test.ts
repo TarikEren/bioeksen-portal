@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { commitCheckGates, isSoftGate, parseYaml, pullRequestWorkflows, runCommands } from "./workflow";
 
-// Source: sds-ci, "Workflow definitions" and "The jobs". The reader that FND-02 and FND-07.AC5 use.
+// Source: sds-ci, "Workflow definitions" and "The jobs". The reader that the tests of FND-02 and FND-07 use.
 const SAMPLE = `name: ci # the pipeline
 on:
   pull_request:

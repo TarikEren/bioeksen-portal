@@ -1,6 +1,6 @@
 /**
  * The contrast table of the `sds-nextjs-frontend` reference page
- * (`references/ui-reference.html`), computed without a browser (FND-09.AC2).
+ * (`references/ui-reference.html`), computed without a browser (FND-09).
  *
  * The reference page resolves each token in a browser and paints it on a
  * canvas. This module does the same steps in Node.js, so a unit test can read
@@ -20,7 +20,7 @@
  * The pairs, their minimums, the region rule (the page-level `--background`
  * pairs use `--surface` inside a scoped region) and the field-edge rule (a
  * border counts only when `--field-border-width` draws it) are copied from the
- * reference page, which FND-09.AC2 names as the source.
+ * reference page, which the contrast criterion of FND-09 names as the source.
  */
 
 // ---------------------------------------------------------------------------

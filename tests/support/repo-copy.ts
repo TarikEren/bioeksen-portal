@@ -1,6 +1,6 @@
 /**
  * A clean copy of the repository in a temporary directory, for the pipeline
- * tier (FND-01, FND-02, FND-06, FND-08.AC1).
+ * tier (FND-01, FND-02, FND-06, FND-08).
  *
  * The copy holds the files git tracks and the new files git does not ignore,
  * as they are in the working tree: what a clean checkout holds once the
@@ -8,7 +8,7 @@
  * or test output, because `.gitignore` ignores them.
  *
  * - `linkNodeModules: false` gives a copy with no dependencies, for
- *   `pnpm install --frozen-lockfile` (FND-01.AC1).
+ *   `pnpm install --frozen-lockfile` on a clean checkout (FND-01).
  * - `linkNodeModules: true` links the repository's `node_modules` into the
  *   copy (a junction on Windows), for a check that only reads the
  *   dependencies: lint, type check, build, the drift check. `remove()`

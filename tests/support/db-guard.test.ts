@@ -8,7 +8,7 @@ import { DatabaseGuardError, assertDisposableDatabase } from "./db-guard";
 
 const BASE = "postgresql://user:secret-value@localhost:5432";
 
-// Source: FND-06 rule 4 and AC2; sds-testing, "Test databases".
+// Source: FND-06 rule 4; sds-testing, "Test databases".
 describe("assertDisposableDatabase", () => {
   it("accepts a local database whose name ends in _integration", () => {
     expect(assertDisposableDatabase(`${BASE}/bioeksen_portal_main_integration`, "V", { env: {}, envFiles: [] })).toEqual({

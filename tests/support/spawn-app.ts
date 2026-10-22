@@ -1,6 +1,6 @@
 /**
  * Starts the production build with `next start` on a free port, with exactly
- * the environment a test gives (FND-03, FND-04.AC1, FND-07, FND-08).
+ * the environment a test gives (FND-03, FND-04, FND-07, FND-08).
  *
  * Build first: `pnpm run build`.
  *

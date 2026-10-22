@@ -40,14 +40,17 @@ Each claim is tested at the lowest tier that can prove it.
   the source document. For example, the auth cases of the operator
   endpoints cite `FND-04.AC3`, because FND-04 rule 1 adopts the principals of
   `sds-auth`.
-- A test never writes the id of a criterion that does not exist: the
-  `sds-planning` checker reads every file under `tests/`. A fixture that
-  needs such an id builds it at run time.
+- The `sds-planning` checker reads the test folders only (stage plan B0,
+  **Fixtures and helpers**), never this README or `tests/support/`. So an id
+  in a comment or a table there does not count as a test, and the helpers and
+  this README write no criterion id. A test never writes the id of a
+  criterion that does not exist; a fixture that needs one builds it at run
+  time.
 
 Check the citations:
 
 ```bash
-python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests --through B0
+python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests/unit tests/integration tests/pipeline tests/e2e tests/smoke --through B0
 ```
 
 ## The results-only interface
@@ -55,7 +58,7 @@ python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests --
 ```bash
 pnpm run test:results                       # every tier
 pnpm run test:results unit integration      # some tiers
-pnpm run test:results --grep 'FND-04\.AC3'  # one criterion
+pnpm run test:results --grep 'FND-04\.AC3'  # the tests of one criterion
 ```
 
 `tests/support/results.ts` runs the tiers with their JSON reporters. For each
@@ -80,8 +83,8 @@ of the test.
 | `TEST_DATABASE_HOSTS` | integration, e2e, pipeline | The hosts a suite may reset a database on, comma separated. Default: loopback only |
 | `TEST_REDIS_URL` | integration, e2e | A Redis 7. Default: `redis://127.0.0.1:6379` |
 | `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed. Without it, the smoke test fails and says so |
-| `SDS_PLANNING_CHECKER` | pipeline (FND-02.AC2) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
-| `PYTHON` | pipeline (FND-02.AC2) | The Python command. Default: `python` on Windows, `python3` elsewhere |
+| `SDS_PLANNING_CHECKER` | pipeline (FND-02, the checker) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
+| `PYTHON` | pipeline (FND-02, the checker) | The Python command. Default: `python` on Windows, `python3` elsewhere |
 
 Every setting of the app (FND-03 rule 2) comes from
 `tests/support/test-environment.ts`, never from the shell. The local services
@@ -120,27 +123,27 @@ refuse. A suite the guard refuses is not run.
 
 ## Coverage of stage B0
 
-| Criterion | Tier | File |
-|---|---|---|
-| FND-01.AC1 | pipeline | `pipeline/fnd-01-toolchain.test.ts` |
-| FND-01.AC2, FND-01.AC3, FND-01.AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
-| FND-02.AC1, FND-02.AC2, FND-02.AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
-| FND-02.AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
-| FND-03.AC1, FND-03.AC2, FND-03.AC3, FND-03.AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
-| FND-04.AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
-| FND-04.AC2, FND-04.AC3, FND-04.AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
-| FND-05.AC1, FND-05.AC2, FND-05.AC3, FND-05.AC5 | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
-| FND-06.AC1, FND-06.AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
-| DEC-005 (no criterion: the raw object `platform_refuse_delete()` of FND-06 rule 5; review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
-| FND-07.AC1, FND-07.AC2, FND-07.AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
-| FND-07.AC5 | pipeline | `pipeline/fnd-07-dependency-check.test.ts` |
-| FND-08.AC1 | pipeline | `pipeline/fnd-08-dictionaries.test.ts` |
-| FND-08.AC2, FND-08.AC3, FND-08.AC4 | e2e | `e2e/fnd-08-languages.spec.ts` |
-| FND-08.AC6 | unit | `unit/fnd-08-date-time.test.ts` |
-| FND-09.AC2 | unit | `unit/fnd-09-contrast.test.ts` |
+| Item | Criteria | Tier | File |
+|---|---|---|---|
+| FND-01 | AC1 | pipeline | `pipeline/fnd-01-toolchain.test.ts` |
+| FND-01 | AC2, AC3, AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
+| FND-02 | AC1, AC2, AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
+| FND-02 | AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
+| FND-03 | AC1, AC2, AC3, AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
+| FND-04 | AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
+| FND-04 | AC2, AC3, AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
+| FND-05 | AC1, AC2, AC3, AC5 | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
+| FND-06 | AC1, AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
+| DEC-005 | none: the raw object `platform_refuse_delete()` of FND-06 rule 5 (review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
+| FND-07 | AC1, AC2, AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
+| FND-07 | AC5 | pipeline | `pipeline/fnd-07-dependency-check.test.ts` |
+| FND-08 | AC1 | pipeline | `pipeline/fnd-08-dictionaries.test.ts` |
+| FND-08 | AC2, AC3, AC4 | e2e | `e2e/fnd-08-languages.spec.ts` |
+| FND-08 | AC6 | unit | `unit/fnd-08-date-time.test.ts` |
+| FND-09 | AC2 | unit | `unit/fnd-09-contrast.test.ts` |
 
-FND-07.AC4 is in the e2e tier, not in the integration tier of the stage
-plan: the Next.js origin check of server actions runs in the server before
+The AC4 test of FND-07 is in the e2e tier, not in the integration tier of
+the stage plan: the Next.js origin check of server actions runs in the server before
 the action, so only a request to a running app reaches it.
 
 ## Cases not run

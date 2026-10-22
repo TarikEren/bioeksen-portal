@@ -10,7 +10,7 @@
  * - PostgreSQL is the disposable database, and Redis is `TEST_REDIS_URL`
  *   (default: the local Redis). Both answer.
  * - The object store and the mail relay point to ports where nothing
- *   listens, so they do not answer (FND-04.AC2).
+ *   listens, so they do not answer (FND-04 rule 2).
  * - The issuer of operator tokens is the local JWKS server of the global
  *   setup (`tests/support/global-setup/jwks.ts`).
  * - `APP_ENV` is `test` and the test seams are on (FND-03 rule 4), for the

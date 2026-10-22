@@ -52,6 +52,9 @@ const REQUIRED_CHECKS: ReadonlyArray<readonly [string, RegExp]> = [
   ["the pipeline tests", /\bpnpm\s+(?:run\s+)?test:pipeline\b/],
 ];
 
+/** The test folders that the checker reads, and only these (stage plan B0, **Fixtures and helpers**). */
+const ACCEPTANCE_FOLDERS: readonly string[] = ["tests/unit", "tests/integration", "tests/pipeline", "tests/e2e", "tests/smoke"];
+
 describe("FND-02 pull request pipeline", () => {
   /** A workflow in .forgejo/workflows runs on each pull request. */
   it("FND-02.AC1: a workflow in .forgejo/workflows runs on each pull request", () => {
@@ -82,13 +85,19 @@ describe("FND-02 pull request pipeline", () => {
     const command = checker?.expanded ?? "";
     expect(command, "the checker reads docs/specs").toMatch(/--specs\s+\.?\/?docs\/specs\b/);
     const folders = checkerTestPaths(command);
-    const acceptanceFolders = readdirSync(path.join(repositoryRoot, "tests")).filter(
-      (entry) => entry !== "support" && !entry.includes("."),
-    );
-    const uncovered = acceptanceFolders.filter(
-      (folder) => !folders.some((given) => given === "tests" || given === `tests/${folder}`),
-    );
+    const present = readdirSync(path.join(repositoryRoot, "tests"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "support")
+      .map((entry) => `tests/${entry.name}`);
+    const acceptanceFolders = [...new Set([...ACCEPTANCE_FOLDERS, ...present])];
+    const uncovered = acceptanceFolders.filter((folder) => !folders.includes(folder));
     expect(uncovered, `acceptance folders that --tests ${folders.join(" ")} leaves out`).toEqual([]);
+
+    // The checker counts every id under the paths it reads, so a path above the test folders counts the README
+    // and the helpers as tests (stage plan B0, **Fixtures and helpers**).
+    const beyond = folders.filter((given) => !acceptanceFolders.includes(given));
+    expect(beyond, "paths after --tests that are not acceptance folders (tests, tests/support, tests/README.md)").toEqual(
+      [],
+    );
   });
 
   // sds-ci, "The jobs": the commits job runs the CI image's copy of the kit, under /opt/bioeksen-sds/{tag}/. Release

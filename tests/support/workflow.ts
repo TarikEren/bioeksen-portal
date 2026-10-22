@@ -1,5 +1,5 @@
 /**
- * Reads the forge workflows of the repository (FND-02, FND-07.AC5).
+ * Reads the forge workflows of the repository (FND-02, and the dependency check of FND-07).
  *
  * `sds-ci` fixes the place: `.forgejo/workflows/`, the only workflow
  * directory. People write these files; the tests read them to prove that the
