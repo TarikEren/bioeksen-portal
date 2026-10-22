@@ -14,6 +14,7 @@
 import "server-only";
 
 import { getConfigState } from "@/lib/config";
+import type { ErrorCode } from "@/lib/errors";
 import {
   type Capacity,
   type CheckValue,
@@ -25,6 +26,7 @@ import {
   readCapacity,
   readDatabaseCounts,
 } from "@/lib/health";
+import { logger } from "@/lib/logging";
 
 export type HealthStatus = "ok" | "fail";
 
@@ -56,6 +58,28 @@ export interface HealthReport {
   };
 }
 
+/**
+ * The last state of each gating dependency that a probe saw. A change is logged
+ * once, not at every probe (`sds-logging`, **What to log**: dependency status
+ * transitions).
+ */
+const lastSeen = new Map<string, CheckValue>();
+
+const UNAVAILABLE_CODES: Readonly<Record<"db" | "cache", ErrorCode>> = { db: "DB-5500", cache: "CACHE-5500" };
+
+function recordTransition(dependency: "db" | "cache", value: CheckValue): void {
+  const previous = lastSeen.get(dependency);
+  lastSeen.set(dependency, value);
+  if (previous === value || (previous === undefined && value === "ok")) {
+    return;
+  }
+  if (value === "fail") {
+    logger.failure(UNAVAILABLE_CODES[dependency], { tail: { dependency } });
+  } else if (value === "ok") {
+    logger.write({ severity: "INFO", type: "APP", message: "dependency recovered", tail: { dependency } });
+  }
+}
+
 function uptimeSeconds(): number {
   return Math.floor(process.uptime());
 }
@@ -70,6 +94,8 @@ export async function readiness(): Promise<ReadinessReport> {
     return { status: "fail", uptime: uptimeSeconds(), checks: { db: "fail", cache: "fail", dependencies: {} } };
   }
   const [db, cache] = await Promise.all([checkDatabase(), checkCache()]);
+  recordTransition("db", db);
+  recordTransition("cache", cache);
   return {
     status: db === "ok" && cache === "ok" ? "ok" : "fail",
     uptime: uptimeSeconds(),
