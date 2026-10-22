@@ -18,7 +18,7 @@ The developers' own unit and component tests are beside the code in `src/`.
 | integration | `tests/integration/` | Vitest, Node, one file at a time | `pnpm run test:integration` | Route handlers called directly, with a real disposable PostgreSQL 16, a real Redis and the local token issuer |
 | pipeline | `tests/pipeline/` | Vitest, Node, 600 s for each test | `pnpm run test:pipeline` | The toolchain on a copy of the repository: install, type check, lint rules, build, drift check, the forge workflow |
 | e2e | `tests/e2e/` | Playwright, Chromium | `pnpm run test:e2e` (after `pnpm run build`) | The production build with `next start`: headers, pages, languages, configuration at start |
-| smoke | `tests/smoke/` | Playwright, no browser page | `pnpm run test:smoke` | The test environment that IT deployed from a release tag (DEC-128). Its own configuration, `tests/smoke/playwright.config.ts`: no global setup, no web server, base URL from `TEST_ENVIRONMENT_URL`. The pull request pipeline does not run it; the main session runs it at the stage exit (stage plan B0, task T2) |
+| smoke | `tests/smoke/` | Playwright, no browser page | `pnpm run test:smoke` | The test environment that IT deployed from a release tag (DEC-128), and the demo of DEC-135 until that environment exists. Its own configuration, `tests/smoke/playwright.config.ts`: no global setup, no web server, base URL from `TEST_ENVIRONMENT_URL`. The pull request pipeline does not run it; the main session runs it at the stage exit (stage plan B0, tasks T2 and T10) |
 
 The runner configuration is `vitest.config.ts`, `playwright.config.ts` and
 `tests/smoke/playwright.config.ts`. `pnpm run test:e2e` never runs the smoke
@@ -86,7 +86,7 @@ of the test.
 | `TEST_E2E_DATABASE_URL` | e2e | A database whose name ends in `_e2e`, for example `bioeksen_portal_<role>_e2e` |
 | `TEST_DATABASE_HOSTS` | integration, e2e, pipeline | The hosts a suite may reset a database on, comma separated. Default: loopback only |
 | `TEST_REDIS_URL` | integration, e2e | A Redis 7. Default: `redis://127.0.0.1:6379` |
-| `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed. Without it, the smoke test fails and says so |
+| `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed, or of the demo (**The smoke tier against the demo**). Without it, the smoke test fails and says so |
 | `SDS_PLANNING_CHECKER` | pipeline (FND-02, the checker) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
 | `PYTHON` | pipeline (FND-02, the checker) | The Python command. Default: `python` on Windows, `python3` elsewhere |
 
@@ -112,7 +112,8 @@ refuse. A suite the guard refuses is not run.
 | `support/token-issuer.ts` | `startTokenIssuer()`: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1, until `close()` |
 | `support/global-setup/jwks.ts` | Integration global setup: starts one token issuer. The workers read it with `inject("testIssuer")` |
 | `support/setup/integration-env.ts` | Each integration worker: the guard again, then every app setting with a test value. PostgreSQL and Redis answer; the object store and the mail relay point to closed ports; `ENTRA_JWKS_URI` is the local issuer; the test seams are on |
-| `support/test-environment.ts` | The test values of every setting of FND-03 rule 2 (`appEnvironment`, `productionEnvironment`, `without`), and the issuer, audience, tenant and operator scope that tokens carry |
+| `support/test-environment.ts` | The test values of every setting of FND-03 rule 2 (`appEnvironment`, `productionEnvironment`, `without`), and the issuer, audience, tenant and operator scope that tokens carry. `demoEnvironment`: `APP_ENV` `demo`, the other settings of `productionEnvironment`, and no `ENTRA_*` setting (DEC-135). `entraSettingNames` gives the `ENTRA_*` names of an environment |
+| `support/api-response.ts` | `expectAnswerEnvelope(response, status, code)`: asserts the status and the error envelope of `sds-api-design` on a Playwright `APIResponse` of a running app |
 | `support/operator-token.ts` | `mintToken(issuer, kind, now, times)`: an operator token, a person without the role, a role without the scope, an app-only token, an expired token, an expired forged token, a wrong signature, a wrong audience, issuer or tenant, an unknown `kid`. `times` replaces `iat`, `nbf` or `exp`, for the cases of the clock skew |
 | `support/route.ts` | Calls a route handler with a `NextRequest`; `expectEnvelope` asserts the error envelope of `sds-api-design`; `detailFields` reads the fields of `details` |
 | `support/spawn-app.ts` | `spawnApp({ env, nodeEnv })`: starts `next start` on a free port with exactly the given settings (no shell variables, no `.env`), gives the base URL, the stdout and stderr lines and the log records, and stops the app. `NODE_ENV` is `production` unless `nodeEnv` gives another value. `waitForRecord` waits for a log record |
@@ -135,7 +136,9 @@ refuse. A suite the guard refuses is not run.
 | FND-01 | AC2, AC3, AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
 | FND-02 | AC1, AC2, AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
 | FND-02 | AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
-| FND-03 | AC1, AC2, AC3, AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
+| FND-02 | AC5 | smoke (stage exit, against the demo) | `smoke/fnd-02-demo.spec.ts` |
+| FND-03 | AC1, AC2, AC3, AC4, AC5 | e2e | `e2e/fnd-03-configuration.spec.ts` |
+| FND-03 | rules 2 and 4, DEC-135: `GET /api/admin/logs` answers `AUTH-5500` in the demo, and the test seams stay closed there | e2e | `e2e/fnd-03-configuration.spec.ts` |
 | FND-04 | AC1, AC4 | e2e | `e2e/fnd-04-probes.spec.ts` |
 | FND-04 | AC2, AC3, AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
 | FND-04 | rule 1: the list contract of `GET /api/admin/logs` (contract cases) | integration | `integration/fnd-04-admin-logs.test.ts` |
@@ -156,6 +159,28 @@ refuse. A suite the guard refuses is not run.
 The AC4 test of FND-07 is in the e2e tier, not in the integration tier of
 the stage plan: the Next.js origin check of server actions runs in the server before
 the action, so only a request to a running app reaches it.
+
+## The smoke tier against the demo
+
+FND-02.AC5 is a smoke test of the demo of DEC-135. The test starts no
+container: a person starts the demo, and gives its base URL.
+
+1. On a machine with Docker, start `compose.demo.yaml` with the values of
+   `.env.example`, as the compose file says.
+2. At once, run the AC5 test with the base URL of the demo:
+
+   ```bash
+   TEST_ENVIRONMENT_URL=http://127.0.0.1:<port of the demo> pnpm run test:smoke --grep "FND-02\.AC5"
+   ```
+
+The test asks `GET /api/health/ready` until it answers 200, for at most 3
+minutes from the start of the test. Start the test immediately after the
+demo, so that this time is the time of the criterion.
+
+Use `--grep` to select the test of the target: `FND-02\.AC5` for the demo,
+`FND-02\.AC4` for the test environment that IT deployed. Without `--grep`,
+both tests run against the one base URL, and the result of the other test
+says nothing about its criterion.
 
 ## The conformance check of the standard endpoints
 
