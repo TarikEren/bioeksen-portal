@@ -2,14 +2,17 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { setLanguage as setLanguageAction } from "@/app/_actions/language";
 import { dictionaries } from "@/lib/i18n";
 
 const refresh = vi.fn();
-const setLanguage = vi.fn();
+// Typed to the action: a change of its result or its argument breaks this build (`sds-testing`, Type safety).
+const setLanguage = vi.fn<typeof setLanguageAction>();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/_actions/language", () => ({
-  setLanguage: (language: "tr" | "en"): unknown => setLanguage(language),
+  setLanguage: (...args: Parameters<typeof setLanguageAction>): ReturnType<typeof setLanguageAction> =>
+    setLanguage(...args),
 }));
 
 const { LanguageSwitch } = await import("./language-switch");
