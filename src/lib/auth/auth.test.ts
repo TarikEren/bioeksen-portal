@@ -38,14 +38,24 @@ async function codeOf(action: Promise<unknown>): Promise<string | null> {
 async function withFakeClock<T>(action: Promise<T>): Promise<T> {
   vi.useFakeTimers({ toFake: ["setTimeout"] });
   try {
+    // The handler is attached at once, so a rejection that comes while the timers
+    // advance is never unhandled. The outcome is raised after the loop.
+    const outcome = action.then(
+      (value) => ({ failed: false as const, value }),
+      (error: unknown) => ({ failed: true as const, error }),
+    );
     let settled = false;
-    const watched = action.finally(() => {
+    void outcome.then(() => {
       settled = true;
     });
     for (let step = 0; !settled && step < 40; step += 1) {
       await vi.advanceTimersByTimeAsync(250);
     }
-    return await watched;
+    const result = await outcome;
+    if (result.failed) {
+      throw result.error;
+    }
+    return result.value;
   } finally {
     vi.useRealTimers();
   }
