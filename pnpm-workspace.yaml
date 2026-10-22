@@ -3,3 +3,16 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
   workerd: false
+
+# DEC-134: a pnpm override forces the patched version of a dependency that
+# has a high or critical advisory.
+overrides:
+  hono: ^4.12.25
+  "@hono/node-server": ^1.19.10
+  lodash: ^4.18.1
+
+# DEC-134: an advisory with no patched version is ignored only by its GHSA id,
+# while DEC-134 names it with a review date.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
