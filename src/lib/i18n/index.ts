@@ -9,3 +9,4 @@ export {
   resolveLanguage,
 } from "./languages";
 export type { Language, LanguageChoice } from "./languages";
+export { fmt, textForCode } from "./messages";

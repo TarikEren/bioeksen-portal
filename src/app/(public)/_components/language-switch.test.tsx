@@ -1,9 +1,9 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { setLanguage as setLanguageAction } from "@/app/_actions/language";
-import { dictionaries } from "@/lib/i18n";
+import { dictionaries, fmt } from "@/lib/i18n";
 
 const refresh = vi.fn();
 // Typed to the action: a change of its result or its argument breaks this build (`sds-testing`, Type safety).
@@ -24,6 +24,7 @@ const labels = {
   en: text.common.language.en,
   failure: text.common.language.failure,
   errorCode: text.common.errorCode,
+  errors: text.common.errors,
   callFailed: text.common.callFailed,
 };
 
@@ -64,10 +65,11 @@ describe("LanguageSwitch", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it("shows the localized sentence and the code of a failure, not the message", async () => {
+  // Source: R-017, R-024: the sentence is by code, in the title; the code is in the description.
+  it("shows the sentence for the code in the title and the code in the description, not the message", async () => {
     setLanguage.mockResolvedValue({
       status: "fail",
-      code: "SYS-5000",
+      code: "VAL-4002",
       message: "internal detail",
       details: {},
     });
@@ -76,10 +78,37 @@ describe("LanguageSwitch", () => {
     await userEvent.click(screen.getByRole("radio", { name: labels.en }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain(labels.failure);
-    expect(alert.textContent).toContain(`${labels.errorCode}: SYS-5000`);
+    const sentence = within(alert).getByText(text.common.errors["VAL-4002"]);
+    const codePart = within(alert).getByText(fmt(labels.errorCode, { code: "VAL-4002" }));
+    expect(sentence.className).toContain("alert__title");
+    expect(codePart.className).toContain("alert__description");
     expect(alert.textContent).not.toContain("internal detail");
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("shows a different sentence for each code of the map", async () => {
+    const sentences = new Set<string>();
+    for (const code of ["VAL-4001", "VAL-4002", "SYS-5000"] as const) {
+      setLanguage.mockResolvedValueOnce({ status: "fail", code, message: "m", details: {} });
+      const view = render(<LanguageSwitch current="tr" labels={labels} />);
+      await userEvent.click(screen.getByRole("radio", { name: labels.en }));
+      const alert = await screen.findByRole("alert");
+      expect(within(alert).getByText(text.common.errors[code])).not.toBeNull();
+      sentences.add(text.common.errors[code]);
+      view.unmount();
+    }
+    expect(sentences.size).toBe(3);
+  });
+
+  it("falls back to the sentence of the action for a code with no entry in the map", async () => {
+    setLanguage.mockResolvedValue({ status: "fail", code: "DB-5000", message: "m", details: {} });
+    render(<LanguageSwitch current="tr" labels={labels} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: labels.en }));
+
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText(labels.failure)).not.toBeNull();
+    expect(within(alert).getByText(fmt(labels.errorCode, { code: "DB-5000" }))).not.toBeNull();
   });
 
   // Source: DEC-122 (a call that gets no envelope shows the localized text of a failed call, with no code); R-002.
@@ -92,7 +121,7 @@ describe("LanguageSwitch", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe(labels.callFailed);
     expect(alert.textContent).not.toContain("socket hang up");
-    expect(alert.textContent).not.toContain(labels.errorCode);
+    expect(alert.textContent).not.toMatch(/[A-Z]+-\d{4}/);
     expect(refresh).not.toHaveBeenCalled();
     // The page stays: the rejection did not reach an error boundary.
     expect(screen.getByRole("radiogroup", { name: labels.switch })).not.toBeNull();

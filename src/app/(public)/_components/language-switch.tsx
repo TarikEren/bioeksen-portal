@@ -7,8 +7,11 @@
  * (`common.language.switch`) and one toggle button for each language. A choice
  * calls the server action `setLanguage`, which sets the cookie `bp_lang`, and
  * then refreshes the route so that the server renders the page in the chosen
- * language. A failure shows the localized sentence with the code beside it
- * (DEC-122), and never the `message` of the answer. A call that gets no
+ * language. A failure shows the localized sentence for its code in the title
+ * of the alert and the code in its description (DEC-122, R-017, R-024), and
+ * never the `message` of the answer. The sentence comes from a map keyed by
+ * code, and the sentence of the action is the fallback; the code part comes
+ * from a template that `fmt` fills. A call that gets no
  * envelope (the promise rejects: the network fails, or the action is unknown)
  * shows the localized text of a failed call with no code, so that the error
  * does not reach the error screen of Next.js (R-002). The props hold only the
@@ -23,6 +26,7 @@ import { useState, useTransition } from "react";
 import { setLanguage } from "@/app/_actions/language";
 import type { ActionResult, ErrorCode } from "@/lib/errors";
 import { LANGUAGES, isLanguage, type Language } from "@/lib/i18n/languages";
+import { fmt, textForCode } from "@/lib/i18n/messages";
 
 interface LanguageSwitchProps {
   /** The active language. */
@@ -32,9 +36,11 @@ interface LanguageSwitchProps {
     readonly switch: string;
     readonly tr: string;
     readonly en: string;
-    /** The sentence for a failed change. */
+    /** The sentence for a failed change, when the map has no entry for the code. */
     readonly failure: string;
-    /** The word that comes before the code of a failure. */
+    /** The sentence for each code, by code. */
+    readonly errors: Readonly<Record<string, string>>;
+    /** The template of the code part of a failure. It names the placeholder `{code}`. */
     readonly errorCode: string;
     /** The sentence for a call that got no envelope. It has no code. */
     readonly callFailed: string;
@@ -94,15 +100,14 @@ export function LanguageSwitch({ current, labels }: LanguageSwitchProps) {
         <Alert status="danger" role="alert">
           <Alert.Indicator />
           <Alert.Content>
-            <Alert.Description>
-              {failure.kind === "call" ? (
-                labels.callFailed
-              ) : (
-                <>
-                  {labels.failure} {labels.errorCode}: {failure.code}
-                </>
-              )}
-            </Alert.Description>
+            {failure.kind === "call" ? (
+              <Alert.Title>{labels.callFailed}</Alert.Title>
+            ) : (
+              <>
+                <Alert.Title>{textForCode(labels.errors, failure.code, labels.failure)}</Alert.Title>
+                <Alert.Description>{fmt(labels.errorCode, { code: failure.code })}</Alert.Description>
+              </>
+            )}
           </Alert.Content>
         </Alert>
       )}

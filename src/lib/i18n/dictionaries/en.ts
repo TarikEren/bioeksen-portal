@@ -12,7 +12,12 @@ export const en: Dictionary = {
       switch: "Language",
       failure: "The language could not be changed.",
     },
-    errorCode: "Error code",
+    errorCode: "Error code: {code}",
+    errors: {
+      "VAL-4001": "A required value is missing.",
+      "VAL-4002": "The chosen value is not supported.",
+      "SYS-5000": "An unexpected error occurred.",
+    },
     callFailed: "The action could not be completed. Check your connection and try again.",
   },
   home: {
