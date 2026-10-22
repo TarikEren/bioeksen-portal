@@ -52,18 +52,39 @@ describe("formatFileSize", () => {
   });
 
   it("steps up at 1000 and keeps at most one decimal", () => {
-    expect(formatFileSize(1000, "en")).toBe("1 KB");
-    expect(formatFileSize(1500, "en")).toBe("1.5 KB");
+    expect(formatFileSize(1000, "en")).toBe("1 kB");
+    expect(formatFileSize(1500, "en")).toBe("1.5 kB");
     expect(formatFileSize(2_345_678, "en")).toBe("2.3 MB");
     expect(formatFileSize(5_000_000_000, "en")).toBe("5 GB");
   });
 
-  it("does not show 1000 KB: it steps up to 1 MB", () => {
+  it("does not show 1000 kB: it steps up to 1 MB", () => {
     expect(formatFileSize(999_999, "en")).toBe("1 MB");
   });
 
+  // Source: DEC-133 (the symbols B, kB, MB and GB; at most one decimal); review 2, R-032.
+  it("uses the symbols B, kB, MB and GB, with a lowercase k", () => {
+    expect([1, 1000, 1_000_000, 1_000_000_000].map((bytes) => formatFileSize(bytes, "en").split(" ")[1])).toEqual([
+      "B",
+      "kB",
+      "MB",
+      "GB",
+    ]);
+  });
+
+  it("never shows more than one decimal", () => {
+    for (const bytes of [1234, 12_345, 123_456, 1_234_567, 12_345_678, 1_234_567_890, 987_654_321]) {
+      expect(formatFileSize(bytes, "en"), String(bytes)).toMatch(/^\d+(\.\d)? (B|kB|MB|GB)$/);
+      expect(formatFileSize(bytes, "tr"), String(bytes)).toMatch(/^\d+(,\d)? (B|kB|MB|GB)$/);
+    }
+  });
+
+  it("stays in GB for a terabyte or more, because DEC-133 gives no larger symbol", () => {
+    expect(formatFileSize(1_500_000_000_000, "en")).toBe("1500 GB");
+  });
+
   it("uses a decimal comma in Turkish", () => {
-    expect(formatFileSize(1500, "tr")).toBe("1,5 KB");
+    expect(formatFileSize(1500, "tr")).toBe("1,5 kB");
   });
 
   it("refuses a size that is negative, fractional or not finite", () => {

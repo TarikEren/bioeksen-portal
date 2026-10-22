@@ -1,12 +1,13 @@
 /**
- * The formatter of file sizes (FND-08 rule 4).
+ * The formatter of file sizes (FND-08 rule 4, DEC-133).
  *
- * The units are decimal (1 KB is 1000 bytes), as the sizes of the health report
- * are. The number has at most one decimal. The decimal separator follows the
- * language: a comma in Turkish, a point in English.
+ * The units are decimal (1 kB is 1000 bytes) with the symbols `B`, `kB`, `MB`
+ * and `GB`, as DEC-133 says. The number has at most one decimal. The decimal
+ * separator follows the language: a comma in Turkish, a point in English. A size
+ * of a terabyte or more stays in GB, because DEC-133 gives no larger symbol.
  */
 
-const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+const UNITS = ["B", "kB", "MB", "GB"] as const;
 
 const numbers = {
   tr: new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, useGrouping: false }),
@@ -14,7 +15,7 @@ const numbers = {
 } as const;
 
 /**
- * Formats a size in bytes for the interface: `0 B`, `1,5 KB`, `2.3 MB`.
+ * Formats a size in bytes for the interface: `0 B`, `1,5 kB`, `2.3 MB`.
  *
  * @throws RangeError when `bytes` is negative, not an integer, or not finite.
  */
