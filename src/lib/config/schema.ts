@@ -49,19 +49,35 @@ function isProxyAddress(value: string): boolean {
  */
 const integerText = z.string().trim().min(1).transform(Number).pipe(z.number().int());
 
-/** `base64` text that decodes to at least one byte. */
-function isBase64(value: string): boolean {
-  return value.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(value);
+/** The length of the key of AES-256-GCM, in bytes (DEC-081). */
+const IDENTITY_KEY_BYTES = 32;
+
+/** `base64` text that decodes to exactly `IDENTITY_KEY_BYTES` bytes. */
+function isIdentityKey(value: string): boolean {
+  return (
+    value.length % 4 === 0 &&
+    /^[A-Za-z0-9+/]+={0,2}$/.test(value) &&
+    Buffer.from(value, "base64").length === IDENTITY_KEY_BYTES
+  );
 }
 
-/** `id:base64key` entries, comma separated, newest first (IFU-90). Each key must decode. */
-const identityKeys = nonEmpty.refine((value) =>
-  value.split(",").every((entry) => {
-    const separator = entry.trim().indexOf(":");
-    const id = entry.trim().slice(0, Math.max(separator, 0));
-    return separator > 0 && /^[A-Za-z0-9_-]+$/.test(id) && isBase64(entry.trim().slice(separator + 1));
-  }),
-);
+/**
+ * `id:base64key` entries, comma separated, newest first (IFU-90). Each key
+ * decodes to 32 bytes, and each id is there once, so a key is found by its id.
+ */
+const identityKeys = nonEmpty.refine((value) => {
+  const ids = new Set<string>();
+  return value.split(",").every((entry) => {
+    const text = entry.trim();
+    const separator = text.indexOf(":");
+    const id = text.slice(0, Math.max(separator, 0));
+    if (separator <= 0 || !/^[A-Za-z0-9_-]+$/.test(id) || ids.has(id)) {
+      return false;
+    }
+    ids.add(id);
+    return isIdentityKey(text.slice(separator + 1));
+  });
+});
 
 /** The proxy addresses of DEC-038, comma separated. The result is the list. */
 const proxyList = nonEmpty

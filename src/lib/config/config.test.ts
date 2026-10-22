@@ -5,11 +5,15 @@ import { usableEnvironment } from "./usable-environment";
 
 const valid: Record<string, string> = { ...usableEnvironment };
 
+/** Keys of 32 bytes, in base64. */
+const KEY_ONE = Buffer.alloc(32, 1).toString("base64");
+const KEY_TWO = Buffer.alloc(32, 2).toString("base64");
+
 const production = {
   ...valid,
   APP_ENV: "production",
   TRUSTED_PROXIES: "10.0.0.1, 10.1.0.0/16",
-  EIFU_IDENTITY_KEYS: "k1:c2VjcmV0",
+  EIFU_IDENTITY_KEYS: `k1:${KEY_ONE}`,
   EIFU_IDENTITY_LOOKUP_PEPPER: "p".repeat(32),
 };
 
@@ -93,13 +97,38 @@ describe("configuration", () => {
     expect(inspectConfig({ ...valid, ENTRA_JWKS_MAX_AGE_SECONDS: "0" })).toHaveLength(1);
   });
 
-  it("checks the form of the identity keys: id:base64key, comma separated", () => {
-    for (const bad of ["abc", ":c2VjcmV0", "k1:", "k1:not base64!", "k1:c2VjcmV0,abc", "k1:c2VjcmV0=="]) {
+  it("checks the form of the identity keys: id:base64key, comma separated, each key of 32 bytes", () => {
+    const short = Buffer.alloc(16, 1).toString("base64");
+    const long = Buffer.alloc(33, 1).toString("base64");
+    for (const bad of [
+      "abc",
+      `:${KEY_ONE}`,
+      "k1:",
+      "k1:not base64!",
+      `k1:${KEY_ONE},abc`,
+      "k1:c2VjcmV0",
+      `k1:${short}`,
+      `k1:${long}`,
+      `k1:${KEY_ONE.slice(0, -1)}`,
+    ]) {
       expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: bad }), bad).toEqual([
         expect.objectContaining({ setting: "EIFU_IDENTITY_KEYS", code: "CFG-5001" }),
       ]);
     }
-    expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: "k1:c2VjcmV0, k0:c2VjcmV0MQ==" })).toEqual([]);
+    expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: `k1:${KEY_ONE}, k0:${KEY_TWO}` })).toEqual([]);
+  });
+
+  // Source: FND-03 (each id once); review 2, R-031.
+  it("refuses an id that appears twice, also when its keys differ", () => {
+    for (const keys of [`k1:${KEY_ONE},k1:${KEY_ONE}`, `k1:${KEY_ONE},k1:${KEY_TWO}`]) {
+      expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: keys }), keys).toEqual([
+        expect.objectContaining({ setting: "EIFU_IDENTITY_KEYS", code: "CFG-5001" }),
+      ]);
+    }
+  });
+
+  it("never holds the key in the issue", () => {
+    expect(JSON.stringify(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: "k1:c2VjcmV0" }))).not.toContain("c2VjcmV0");
   });
 
   it("requires the settings of production only in production", () => {
