@@ -15,3 +15,5 @@ export const POST = defineMethodNotAllowed(SPEC);
 export const PUT = defineMethodNotAllowed(SPEC);
 export const PATCH = defineMethodNotAllowed(SPEC);
 export const DELETE = defineMethodNotAllowed(SPEC);
+// Next.js answers OPTIONS itself when the file does not export it. That answer has no envelope.
+export const OPTIONS = defineMethodNotAllowed(SPEC);

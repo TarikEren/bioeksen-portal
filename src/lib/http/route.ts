@@ -167,6 +167,18 @@ export function defineMethodNotAllowed(spec: {
   readonly principal: "none" | "operator";
   readonly allow: readonly string[];
   readonly probe?: boolean;
+  readonly testSeam?: boolean;
 }): RouteHandler {
   return defineRoute(spec, () => Promise.reject(new AppError("RES-4500", "Method not allowed")));
+}
+
+/**
+ * The export for a path that does not exist under `/api`: 404 `RES-4200` for
+ * every method. Without it, Next.js answers an unknown API path with its HTML
+ * page, which has no envelope and no request id.
+ */
+export function defineNotFound(): RouteHandler {
+  return defineRoute({ principal: "none", probe: true }, () =>
+    Promise.reject(new AppError("RES-4200", "Resource does not exist")),
+  );
 }

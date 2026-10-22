@@ -1,33 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { ConfigError, evaluateConfig, inspectConfig, loadConfig } from ".";
+import { usableEnvironment } from "./usable-environment";
 
-/** A usable environment. The values are placeholders, not secrets. */
-const valid: Record<string, string> = {
-  APP_ENV: "test",
-  DATABASE_URL: "postgresql://user:db-password-0001@127.0.0.1:5432/example_integration",
-  REDIS_URL: "redis://127.0.0.1:6379",
-  S3_ENDPOINT_URL: "http://127.0.0.1:9000",
-  S3_REGION: "us-east-1",
-  S3_BUCKET: "bucket",
-  S3_ACCESS_KEY_ID: "key-id-0001",
-  S3_SECRET_ACCESS_KEY: "key-secret-0001",
-  SMTP_HOST: "127.0.0.1",
-  SMTP_PORT: "1025",
-  SMTP_USER: "mail-user",
-  SMTP_PASSWORD: "mail-password-0001",
-  MAIL_FROM: "portal@example.invalid",
-  PUBLIC_BASE_URL: "http://localhost:3000",
-  EIFU_LEGAL_NOTICE_VERSION: "draft-1",
-  ENTRA_TENANT_ID: "tenant-1",
-  ENTRA_ISSUER: "https://issuer.example.invalid/tenant-1/v2.0",
-  ENTRA_JWKS_URI: "http://127.0.0.1:9999/keys",
-  ENTRA_JWKS_MAX_AGE_SECONDS: "3600",
-  ENTRA_AUDIENCE: "api://bioeksen-portal",
-  ENTRA_CLIENT_ID: "client-1",
-  ENTRA_CLIENT_SECRET: "client-secret-0001",
-  ENTRA_OPERATOR_SCOPE: "operator.access",
-};
+const valid: Record<string, string> = { ...usableEnvironment };
 
 const production = {
   ...valid,

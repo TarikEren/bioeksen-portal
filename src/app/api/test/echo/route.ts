@@ -9,10 +9,20 @@
  */
 import { z } from "zod";
 
-import { defineJsonRoute, okResponse } from "@/lib/http";
+import { defineJsonRoute, defineMethodNotAllowed, okResponse } from "@/lib/http";
 
 const bodySchema = z.strictObject({ value: z.string() });
 
 export const POST = defineJsonRoute({ principal: "none", testSeam: true, bodySchema }, ({ body }) =>
   Promise.resolve(okResponse({ value: body.value })),
 );
+
+// The other methods answer through the wrapper too. With the seams off they answer
+// 404, as POST does, so a caller cannot tell that the route exists.
+const OTHER_METHODS = { principal: "none", testSeam: true, allow: ["POST"] } as const;
+
+export const GET = defineMethodNotAllowed(OTHER_METHODS);
+export const PUT = defineMethodNotAllowed(OTHER_METHODS);
+export const PATCH = defineMethodNotAllowed(OTHER_METHODS);
+export const DELETE = defineMethodNotAllowed(OTHER_METHODS);
+export const OPTIONS = defineMethodNotAllowed(OTHER_METHODS);
