@@ -3,10 +3,14 @@
 // platform_log_record: the local store of the in-app logger (DEC-127, FND-04
 // rule 3, FND-05). GET /api/admin/logs reads this table.
 //
-// Skeleton (stage B0): the table and its columns only. The named checks
-// (log_record_severity_is_known, log_record_type_is_known,
-// log_record_message_length), the three indexes and the rawSql function
-// platform_refuse_delete() come in the build migration (DEC-005).
+// The named checks keep the closed sets of log-record.md and the length of the
+// message (FND-05). The indexes serve GET /api/admin/logs: the page order
+// (timestamp, then the row id; PostgreSQL reads it backward and sorts the ties
+// of one timestamp by the row id), the filter by code, and the filter by type
+// and severity. The contract cannot hold a descending key: db verify reads an
+// index with a sort direction as a different index. The function platform_refuse_delete() is a rawSql operation
+// of the migration that adds these (DEC-005), because the contract cannot hold a
+// function.
 model PlatformLogRecord {
   id         BigInt                @id @default(autoincrement())
   softwareId String                @map("software_id")
@@ -17,5 +21,11 @@ model PlatformLogRecord {
   message    String
   shippedAt  TimestamptzString?    @map("shipped_at")
 
+  @@check(expression: sql`(severity = ANY (ARRAY['DEBUG'::text, 'INFO'::text, 'WARNING'::text, 'ERROR'::text, 'FATAL'::text]))`, map: "log_record_severity_is_known")
+  @@check(expression: sql`(type = ANY (ARRAY['APP'::text, 'SECURITY'::text, 'AUDIT'::text, 'ACCESS'::text, 'JOB'::text]))`, map: "log_record_type_is_known")
+  @@check(expression: sql`(char_length(message) <= 8192)`, map: "log_record_message_length")
+  @@index([timestamp, id], map: "platform_log_record_timestamp_id_idx")
+  @@index([code], map: "platform_log_record_code_idx")
+  @@index([type, severity], map: "platform_log_record_type_severity_idx")
   @@map("platform_log_record")
 }

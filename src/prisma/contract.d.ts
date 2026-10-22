@@ -21,7 +21,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'06d25668fc404834138e87b8e314f4979f0bab9492b75fe398bbb035ca57db9f'>;
+  StorageHashBase<'5b66d4508fcbc247ae27a362a84135cc6cfc3ca1a49f77330d30b18f240615a5'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -387,7 +387,23 @@ type ContractBase = Omit<
               };
               primaryKey: { readonly columns: readonly ['id'] };
               uniques: readonly [];
-              indexes: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'platform_log_record_code_idx';
+                  readonly columns: readonly ['code'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'platform_log_record_timestamp_id_idx';
+                  readonly columns: readonly ['timestamp', 'id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'platform_log_record_type_severity_idx';
+                  readonly columns: readonly ['type', 'severity'];
+                  readonly unique: false;
+                },
+              ];
               foreignKeys: readonly [];
             };
           };

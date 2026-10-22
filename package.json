@@ -16,7 +16,7 @@
     "start": "next start",
     "contract:emit": "prisma contract emit",
     "db:migrate": "prisma db migrate",
-    "db:check": "node -e \"console.error('db:check is not ready: the drift check is built in task T6 of stage B0 (FND-06.AC1).'); process.exit(2)\""
+    "db:check": "node --no-warnings src/scripts/db-check.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

@@ -117,6 +117,20 @@
         "entries": {
           "table": {
             "platform_log_record": {
+              "checks": [
+                {
+                  "expression": "(char_length(message) <= 8192)",
+                  "name": "log_record_message_length"
+                },
+                {
+                  "expression": "(severity = ANY (ARRAY['DEBUG'::text, 'INFO'::text, 'WARNING'::text, 'ERROR'::text, 'FATAL'::text]))",
+                  "name": "log_record_severity_is_known"
+                },
+                {
+                  "expression": "(type = ANY (ARRAY['APP'::text, 'SECURITY'::text, 'AUDIT'::text, 'ACCESS'::text, 'JOB'::text]))",
+                  "name": "log_record_type_is_known"
+                }
+              ],
               "columns": {
                 "code": {
                   "codecId": "pg/text@1",
@@ -167,7 +181,31 @@
                 }
               },
               "foreignKeys": [],
-              "indexes": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "code"
+                  ],
+                  "name": "platform_log_record_code_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "timestamp",
+                    "id"
+                  ],
+                  "name": "platform_log_record_timestamp_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "type",
+                    "severity"
+                  ],
+                  "name": "platform_log_record_type_severity_idx",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -181,7 +219,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "06d25668fc404834138e87b8e314f4979f0bab9492b75fe398bbb035ca57db9f"
+    "storageHash": "5b66d4508fcbc247ae27a362a84135cc6cfc3ca1a49f77330d30b18f240615a5"
   },
   "capabilities": {
     "postgres": {

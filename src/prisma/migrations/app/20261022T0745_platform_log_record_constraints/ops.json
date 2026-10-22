@@ -1,0 +1,274 @@
+[
+  {
+    "id": "checkConstraint.platform_log_record.log_record_message_length",
+    "label": "Add check constraint \"log_record_message_length\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "log_record_message_length",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"log_record_message_length\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_message_length",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"log_record_message_length\"",
+        "sql": "ALTER TABLE \"public\".\"platform_log_record\" ADD CONSTRAINT \"log_record_message_length\" CHECK ((char_length(message) <= 8192))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"log_record_message_length\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_message_length",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.platform_log_record.log_record_severity_is_known",
+    "label": "Add check constraint \"log_record_severity_is_known\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "log_record_severity_is_known",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"log_record_severity_is_known\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_severity_is_known",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"log_record_severity_is_known\"",
+        "sql": "ALTER TABLE \"public\".\"platform_log_record\" ADD CONSTRAINT \"log_record_severity_is_known\" CHECK ((severity = ANY (ARRAY['DEBUG'::text, 'INFO'::text, 'WARNING'::text, 'ERROR'::text, 'FATAL'::text])))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"log_record_severity_is_known\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_severity_is_known",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.platform_log_record.log_record_type_is_known",
+    "label": "Add check constraint \"log_record_type_is_known\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "log_record_type_is_known",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"log_record_type_is_known\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_type_is_known",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"log_record_type_is_known\"",
+        "sql": "ALTER TABLE \"public\".\"platform_log_record\" ADD CONSTRAINT \"log_record_type_is_known\" CHECK ((type = ANY (ARRAY['APP'::text, 'SECURITY'::text, 'AUDIT'::text, 'ACCESS'::text, 'JOB'::text])))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"log_record_type_is_known\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "log_record_type_is_known",
+          "public",
+          "\"public\".\"platform_log_record\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.platform_log_record.platform_log_record_code_idx",
+    "label": "Create index \"platform_log_record_code_idx\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "platform_log_record_code_idx",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"platform_log_record_code_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_code_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"platform_log_record_code_idx\"",
+        "sql": "CREATE INDEX \"platform_log_record_code_idx\" ON \"public\".\"platform_log_record\" (\"code\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"platform_log_record_code_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_code_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.platform_log_record.platform_log_record_timestamp_id_idx",
+    "label": "Create index \"platform_log_record_timestamp_id_idx\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "platform_log_record_timestamp_id_idx",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"platform_log_record_timestamp_id_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_timestamp_id_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"platform_log_record_timestamp_id_idx\"",
+        "sql": "CREATE INDEX \"platform_log_record_timestamp_id_idx\" ON \"public\".\"platform_log_record\" (\"timestamp\", \"id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"platform_log_record_timestamp_id_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_timestamp_id_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.platform_log_record.platform_log_record_type_severity_idx",
+    "label": "Create index \"platform_log_record_type_severity_idx\" on \"platform_log_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "platform_log_record_type_severity_idx",
+        "table": "platform_log_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"platform_log_record_type_severity_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_type_severity_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"platform_log_record_type_severity_idx\"",
+        "sql": "CREATE INDEX \"platform_log_record_type_severity_idx\" ON \"public\".\"platform_log_record\" (\"type\", \"severity\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"platform_log_record_type_severity_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"platform_log_record_type_severity_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "function.platform_refuse_delete",
+    "label": "Create function \"platform_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure function \"platform_refuse_delete\" does not exist",
+        "sql": "SELECT (to_regprocedure('public.platform_refuse_delete()')) IS NULL AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create function \"platform_refuse_delete\"",
+        "sql": "CREATE FUNCTION \"public\".\"platform_refuse_delete\"() RETURNS trigger LANGUAGE plpgsql AS $function$\nBEGIN\n  RAISE EXCEPTION '% on % is refused: the system never deletes a controlled record', TG_OP, TG_TABLE_NAME\n    USING ERRCODE = 'restrict_violation';\n  RETURN NULL;\nEND;\n$function$",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify function \"platform_refuse_delete\" exists",
+        "sql": "SELECT (to_regprocedure('public.platform_refuse_delete()')) IS NOT NULL AS \"result\"",
+        "params": []
+      }
+    ]
+  }
+]
