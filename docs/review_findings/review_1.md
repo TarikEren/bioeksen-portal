@@ -165,11 +165,12 @@ Line numbers are as of `19b9f54`.
 
 ### R-015 — The JWKS fetch timeout does not follow service-calls.md, and nothing records the difference
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 1 (backend reviewer; confirmed)
+- **Status:** **Fixed (505705d)** · **Severity:** Minor · **Found:** review 1 (backend reviewer; confirmed)
 - **Where:** `src/lib/auth/jwks.ts:14-16`, `:25`.
 - **Problem:** one attempt of 3 s, with no connect limit and no retry. `service-calls.md` gives connect 500 ms, 1.2 s for each attempt, 2 attempts, 3 s in total, and the deadline header. The comment says the code follows it.
 - **Fix:** use the request-path values, or record the override and its reason in `src/lib/config` (`sds-config`, **Overriding an empirical value**). Record the refetch budget (6 in 60 s) there too. Correct the comment.
 - **Review 2:** partly fixed in `4fa4a85`, checked by review 2: the values and the departures are in `src/lib/config/empirical.ts`, and the fetch retries. The header of `jwks.ts` is still not true (it names removed constants and one departure of two). The rest is R-030.
+- **Review 3:** the rest is fixed in `505705d` and checked by review 3.
 
 ### R-016 — aria-busy never reaches the DOM, and the header comment says that it does
 

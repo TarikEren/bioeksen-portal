@@ -224,7 +224,7 @@ setting.
 | `EIFU_IDENTITY_KEYS` (`id:base64key`, newest first; each key decodes to 32 bytes, the key of AES-256-GCM (DEC-081); each id once; IFU-90) | in production | — |
 | `EIFU_IDENTITY_LOOKUP_PEPPER` (at least 32 characters; IFU-90) | in production | — |
 | `EIFU_ACCESS_RECORD_RETENTION_DAYS` | no | as DEC-080 says |
-| The values of `sds-auth` (`credentials.md`, **Configuration**): `ENTRA_TENANT_ID`, `ENTRA_ISSUER`, `ENTRA_JWKS_URI`, `ENTRA_JWKS_MAX_AGE_SECONDS`, `ENTRA_AUDIENCE`, `ENTRA_CLIENT_ID`, the client credential, `ENTRA_OPERATOR_SCOPE`, `AUTH_CLOCK_SKEW_SECONDS` | as `sds-auth` says; the `ENTRA_*` settings are optional when `APP_ENV` is `demo` (DEC-135) | as `sds-auth` says |
+| The values of `sds-auth` (`credentials.md`, **Configuration**): `ENTRA_TENANT_ID`, `ENTRA_ISSUER`, `ENTRA_JWKS_URI`, `ENTRA_JWKS_MAX_AGE_SECONDS`, `ENTRA_AUDIENCE`, `ENTRA_CLIENT_ID`, the client credential, `ENTRA_OPERATOR_SCOPE`, `AUTH_CLOCK_SKEW_SECONDS` | as `sds-auth` says; when `APP_ENV` is `demo`, the `ENTRA_*` settings are all set or all not set (DEC-135) | as `sds-auth` says |
 | `LOG_LEVEL` (`sds-logging`) | no | `INFO` |
 | `TEST_SEAMS_ENABLED` | no | `false` |
 | `BOOTSTRAP_ADMIN_EMAIL` (only the command of ACC-40 reads it) | no | — |

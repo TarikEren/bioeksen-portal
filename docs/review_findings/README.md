@@ -24,6 +24,7 @@ coverage, the questions, the test gaps and the strengths.
 |---|---|---|---|---|
 | [1](review_1.md) | 2026-10-22 | Stage B0 build: backend `20e604b`..`bfe8170`, frontend `19b9f54`. Two `code-reviewer` agents; the main session checked each claim before it recorded it | `19b9f54` | Request changes: R-001 and R-002 (Major) |
 | [2](review_2.md) | 2026-10-22 | The fixes of review 1 (`41b3b1f..8a561f9`), every file under `tests/`, and an anti-overfitting pass over `src/`. Two `code-reviewer` agents; the main session checked the claims before it recorded them | `8a561f9` | Request changes: R-025 and R-026 (Major) |
+| [3](review_3.md) | 2026-10-22 | Phase review of B0 (crisis mode, DEC-136): the commits `a4c0d57..ee293cf` and the review-2 findings they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them | `ee293cf` | Approve with follow-ups: no Critical or Major finding |
 
 ## Status at a glance
 
@@ -43,7 +44,7 @@ coverage, the questions, the test gaps and the strengths.
 | [R-012](review_1.md#r-012--dbcheck-leaves-the-files-it-generated-in-the-working-tree-so-a-second-local-run-passes) | db:check leaves the files it generated in the working tree, so a second local run passes | Minor | **Fixed (56478eb)** — found in review 1, checked in review 2 |
 | [R-013](review_1.md#r-013--the-app-does-not-check-the-software-id-at-start-without-it-every-log-record-is-lost) | The app does not check the software id at start; without it, every log record is lost | Minor | **Fixed (18d87e4)** — found in review 1, checked in review 2 |
 | [R-014](review_1.md#r-014--no-integration-test-proves-that-platform_refuse_delete-exists-and-the-migration-comment-says-one-does) | No integration test proves that platform_refuse_delete() exists, and the migration comment says one does | Minor | **Fixed (8b9226a)** — found in review 1, checked in review 2 |
-| [R-015](review_1.md#r-015--the-jwks-fetch-timeout-does-not-follow-service-callsmd-and-nothing-records-the-difference) | The JWKS fetch timeout does not follow service-calls.md, and nothing records the difference | Minor | **Open** — found in review 1; partly fixed in `4fa4a85` (review 2); the rest is R-030 |
+| [R-015](review_1.md#r-015--the-jwks-fetch-timeout-does-not-follow-service-callsmd-and-nothing-records-the-difference) | The JWKS fetch timeout does not follow service-calls.md, and nothing records the difference | Minor | **Fixed (505705d)** — found in review 1, checked in review 3 |
 | [R-016](review_1.md#r-016--aria-busy-never-reaches-the-dom-and-the-header-comment-says-that-it-does) | aria-busy never reaches the DOM, and the header comment says that it does | Minor | **Fixed (256317d)** — found in review 1, checked in review 2 |
 | [R-017](review_1.md#r-017--the-failure-text-is-the-same-for-every-code-and-the-component-joins-the-strings) | The failure text is the same for every code, and the component joins the strings | Minor | **Fixed (1267122)** — found in review 1, checked in review 2 |
 | [R-018](review_1.md#r-018--the-language-names-have-no-lang-attribute) | The language names have no lang attribute | Minor | **Fixed (256317d)** — found in review 1, checked in review 2 |
@@ -53,42 +54,39 @@ coverage, the questions, the test gaps and the strengths.
 | [R-022](review_1.md#r-022--the-proxy-matcher-leaves-out-every-path-that-starts-with-api) | The proxy matcher leaves out every path that starts with api | Note | **Fixed (8b4cc73)** — found in review 1, checked in review 2 |
 | [R-023](review_1.md#r-023--the-root-layout-has-no-locale-provider-for-heroui) | The root layout has no locale provider for HeroUI | Note | **Fixed (8a561f9)** — found in review 1, checked in review 2 |
 | [R-024](review_1.md#r-024--the-failure-sentence-uses-the-muted-token) | The failure sentence uses the muted token | Note | **Fixed (1267122)** — found in review 1, checked in review 2 |
-| [R-025](review_2.md#r-025--the-smoke-test-of-fnd-02ac4-is-in-the-e2e-tier-which-every-pull-request-runs) | The smoke test of FND-02.AC4 is in the e2e tier, which every pull request runs | Major | **Open** — found in review 2 |
-| [R-026](review_2.md#r-026--no-test-covers-the-contract-cases-of-the-b0-endpoints-and-the-logger) | No test covers the contract cases of the B0 endpoints and the logger | Major | **Open** — found in review 2 |
-| [R-027](review_2.md#r-027--get-api-is-answered-by-nextjs-with-an-html-404-with-no-envelope-and-no-request-id) | GET /api is answered by Next.js with an HTML 404, with no envelope and no request id | Minor | **Open** — found in review 2 |
-| [R-028](review_2.md#r-028--the-csp-still-adds-unsafe-eval-to-a-production-build-that-starts-with-node_envdevelopment) | The CSP still adds 'unsafe-eval' to a production build that starts with NODE_ENV=development | Minor | **Open** — found in review 2 |
-| [R-029](review_2.md#r-029--an-html-answer-to-a-prefetch-of-the-browser-has-no-content-security-policy) | An HTML answer to a prefetch of the browser has no Content Security Policy | Minor | **Open** — found in review 2 |
-| [R-030](review_2.md#r-030--the-retry-of-the-key-set-fetch-waits-a-fixed-200-ms-with-no-jitter-and-has-no-retry-budget-or-breaker) | The retry of the key-set fetch waits a fixed 200 ms with no jitter, and has no retry budget or breaker | Minor | **Open** — found in review 2 |
-| [R-031](review_2.md#r-031--the-check-of-eifu_identity_keys-accepts-a-key-of-any-length-and-duplicate-ids) | The check of EIFU_IDENTITY_KEYS accepts a key of any length and duplicate ids | Minor | **Open** — found in review 2 |
-| [R-032](review_2.md#r-032--the-file-size-formatter-does-not-follow-dec-133) | The file-size formatter does not follow DEC-133 | Minor | **Open** — found in review 2 |
-| [R-033](review_2.md#r-033--new-unit-tests-wait-on-the-real-clock) | New unit tests wait on the real clock | Minor | **Open** — found in review 2 |
-| [R-034](review_2.md#r-034--the-raw-object-test-accepts-any-error-as-the-refusal) | The raw-object test accepts any error as the refusal | Minor | **Open** — found in review 2 |
-| [R-035](review_2.md#r-035--a-pipeline-test-cites-fnd-06ac1-for-a-rule-that-ac1-does-not-state) | A pipeline test cites FND-06.AC1 for a rule that AC1 does not state | Minor | **Open** — found in review 2 |
-| [R-036](review_2.md#r-036--the-fnd-03-tests-require-status-fail-which-no-criterion-states) | The FND-03 tests require status fail, which no criterion states | Minor | **Open** — found in review 2 |
-| [R-037](review_2.md#r-037--the-checkers-b0-result-does-not-depend-on-any-test) | The checker's B0 result does not depend on any test | Minor | **Open** — found in review 2 |
-| [R-038](review_2.md#r-038--the-fnd-02ac2-fixture-test-has-no-control-run) | The FND-02.AC2 fixture test has no control run | Minor | **Open** — found in review 2 |
-| [R-039](review_2.md#r-039--the-soft-gate-check-does-not-find----echo-or-if-conditions) | The soft-gate check does not find `|| :`, `|| echo` or if conditions | Minor | **Open** — found in review 2 |
-| [R-040](review_2.md#r-040--the-fnd-02ac3-test-accepts-any-step-whose-text-holds-bioeksen-sds-and-commit) | The FND-02.AC3 test accepts any step whose text holds bioeksen-sds and commit | Minor | **Open** — found in review 2 |
-| [R-041](review_2.md#r-041--the-production-cases-of-fnd-03-have-no-precondition-that-the-production-environment-is-otherwise-valid) | The production cases of FND-03 have no precondition that the production environment is otherwise valid | Minor | **Open** — found in review 2 |
-| [R-042](review_2.md#r-042--some-test-titles-carry-the-inputs-and-the-expected-values) | Some test titles carry the inputs and the expected values | Minor | **Open** — found in review 2 |
-| [R-043](review_2.md#r-043--the-migration-helper-puts-the-connection-string-in-the-arguments-and-removes-only-the-encoded-password) | The migration helper puts the connection string in the arguments and removes only the encoded password | Minor | **Open** — found in review 2 |
-| [R-044](review_2.md#r-044--the-guard-compares-the-host-of-database_url-as-text) | The guard compares the host of DATABASE_URL as text | Minor | **Open** — found in review 2 |
+| [R-025](review_2.md#r-025--the-smoke-test-of-fnd-02ac4-is-in-the-e2e-tier-which-every-pull-request-runs) | The smoke test of FND-02.AC4 is in the e2e tier, which every pull request runs | Major | **Fixed (ce29ef4)** — found in review 2, checked in review 3 |
+| [R-026](review_2.md#r-026--no-test-covers-the-contract-cases-of-the-b0-endpoints-and-the-logger) | No test covers the contract cases of the B0 endpoints and the logger | Major | **Fixed (e07db45)** — found in review 2, checked in review 3 |
+| [R-027](review_2.md#r-027--get-api-is-answered-by-nextjs-with-an-html-404-with-no-envelope-and-no-request-id) | GET /api is answered by Next.js with an HTML 404, with no envelope and no request id | Minor | **Fixed (c4175ec)** — found in review 2, checked in review 3 |
+| [R-028](review_2.md#r-028--the-csp-still-adds-unsafe-eval-to-a-production-build-that-starts-with-node_envdevelopment) | The CSP still adds 'unsafe-eval' to a production build that starts with NODE_ENV=development | Minor | **Fixed (8fbd126)** — found in review 2, checked in review 3 |
+| [R-029](review_2.md#r-029--an-html-answer-to-a-prefetch-of-the-browser-has-no-content-security-policy) | An HTML answer to a prefetch of the browser has no Content Security Policy | Minor | **Fixed (688780b)** — found in review 2, checked in review 3 |
+| [R-030](review_2.md#r-030--the-retry-of-the-key-set-fetch-waits-a-fixed-200-ms-with-no-jitter-and-has-no-retry-budget-or-breaker) | The retry of the key-set fetch waits a fixed 200 ms with no jitter, and has no retry budget or breaker | Minor | **Fixed (505705d)** — found in review 2, checked in review 3 |
+| [R-031](review_2.md#r-031--the-check-of-eifu_identity_keys-accepts-a-key-of-any-length-and-duplicate-ids) | The check of EIFU_IDENTITY_KEYS accepts a key of any length and duplicate ids | Minor | **Fixed (5c50622)** — found in review 2, checked in review 3 |
+| [R-032](review_2.md#r-032--the-file-size-formatter-does-not-follow-dec-133) | The file-size formatter does not follow DEC-133 | Minor | **Fixed (249846c)** — found in review 2, checked in review 3 |
+| [R-033](review_2.md#r-033--new-unit-tests-wait-on-the-real-clock) | New unit tests wait on the real clock | Minor | **Fixed (505705d)** — found in review 2, checked in review 3 |
+| [R-034](review_2.md#r-034--the-raw-object-test-accepts-any-error-as-the-refusal) | The raw-object test accepts any error as the refusal | Minor | **Fixed (0bfd87c)** — found in review 2, checked in review 3 |
+| [R-035](review_2.md#r-035--a-pipeline-test-cites-fnd-06ac1-for-a-rule-that-ac1-does-not-state) | A pipeline test cites FND-06.AC1 for a rule that AC1 does not state | Minor | **Fixed (99bb424)** — found in review 2, checked in review 3 |
+| [R-036](review_2.md#r-036--the-fnd-03-tests-require-status-fail-which-no-criterion-states) | The FND-03 tests require status fail, which no criterion states | Minor | **Fixed (369391d)** — found in review 2, checked in review 3 |
+| [R-037](review_2.md#r-037--the-checkers-b0-result-does-not-depend-on-any-test) | The checker's B0 result does not depend on any test | Minor | **Fixed (39040bb)** — found in review 2, checked in review 3 |
+| [R-038](review_2.md#r-038--the-fnd-02ac2-fixture-test-has-no-control-run) | The FND-02.AC2 fixture test has no control run | Minor | **Fixed (83d6870)** — found in review 2, checked in review 3 |
+| [R-039](review_2.md#r-039--the-soft-gate-check-does-not-find----echo-or-if-conditions) | The soft-gate check does not find `|| :`, `|| echo` or if conditions | Minor | **Fixed (dcd2a59)** — found in review 2, checked in review 3 |
+| [R-040](review_2.md#r-040--the-fnd-02ac3-test-accepts-any-step-whose-text-holds-bioeksen-sds-and-commit) | The FND-02.AC3 test accepts any step whose text holds bioeksen-sds and commit | Minor | **Fixed (a84b85d)** — found in review 2, checked in review 3 |
+| [R-041](review_2.md#r-041--the-production-cases-of-fnd-03-have-no-precondition-that-the-production-environment-is-otherwise-valid) | The production cases of FND-03 have no precondition that the production environment is otherwise valid | Minor | **Fixed (792181a)** — found in review 2, checked in review 3 |
+| [R-042](review_2.md#r-042--some-test-titles-carry-the-inputs-and-the-expected-values) | Some test titles carry the inputs and the expected values | Minor | **Fixed (f4d4208)** — found in review 2, checked in review 3 |
+| [R-043](review_2.md#r-043--the-migration-helper-puts-the-connection-string-in-the-arguments-and-removes-only-the-encoded-password) | The migration helper puts the connection string in the arguments and removes only the encoded password | Minor | **Fixed (88242d5)** — found in review 2, checked in review 3 |
+| [R-044](review_2.md#r-044--the-guard-compares-the-host-of-database_url-as-text) | The guard compares the host of DATABASE_URL as text | Minor | **Fixed (c6b597b)** — found in review 2, checked in review 3 |
 | [R-045](review_2.md#r-045--two-commits-do-not-follow-the-commit-rules) | Two commits do not follow the commit rules | Minor | **Won't fix** (the history of the branch stays) — found in review 2 |
 | [R-046](review_2.md#r-046--the-text-reaches-client-components-through-props-not-from-the-locale-provider) | The text reaches client components through props, not from the locale provider | Note | **Open** — found in review 2 |
 | [R-047](review_2.md#r-047--an-http-method-that-nextjs-does-not-know-gets-a-bare-400-under-api) | An HTTP method that Next.js does not know gets a bare 400 under /api | Note | **Open** — found in review 2 |
-| [R-048](review_2.md#r-048--no-test-uses-the-playwright-web-server-and-it-reads-the-shell-and-env) | No test uses the Playwright web server, and it reads the shell and .env | Note | **Open** — found in review 2 |
+| [R-048](review_2.md#r-048--no-test-uses-the-playwright-web-server-and-it-reads-the-shell-and-env) | No test uses the Playwright web server, and it reads the shell and .env | Note | **Fixed (dbbb65d)** — found in review 2, checked in review 3 |
+| [R-049](review_3.md#r-049--in-the-demo-a-request-with-no-credential-gets-503-auth-5500-instead-of-401-auth-4100) | In the demo, a request with no credential gets 503 AUTH-5500 instead of 401 AUTH-4100 | Minor | **Open** — found in review 3 |
+| [R-050](review_3.md#r-050--the-fakes-of-libdb-and-libcache-in-two-route-tests-are-not-typed-to-the-real-modules) | The fakes of @/lib/db and @/lib/cache in two route tests are not typed to the real modules | Minor | **Open** — found in review 3 |
+| [R-051](review_3.md#r-051--commit-2775b51-has-the-type-fix-but-it-changes-only-a-test) | Commit 2775b51 has the type fix, but it changes only a test | Minor | **Won't fix** (the history of the branch stays) — found in review 3 |
+| [R-052](review_3.md#r-052--production-accepts-the-example-identity-key-and-pepper-of-envexample) | Production accepts the example identity key and pepper of .env.example | Note | **Open** — found in review 3 |
 
 ### Fixes not yet checked
 
-A finding becomes `Fixed` only when a later review checks the fix. These
-commits claim a fix of a review-2 finding, and no review has checked them
-(owner decision 2026-10-22, see *Coverage*): R-025 `ce29ef4`, R-026
-`e07db45`, R-027 `c4175ec`, R-028 `8fbd126`, R-029 `688780b`, R-030 and
-R-033 and the rest of R-015 `505705d`, R-031 `5c50622`, R-032 `249846c`,
-R-034 `0bfd87c`, R-035 `99bb424`, R-036 `369391d`, R-037 `39040bb`, R-038
-`83d6870`, R-039 `dcd2a59`, R-040 `a84b85d`, R-041 `792181a`, R-042
-`f4d4208`, R-043 `88242d5`, R-044 `c6b597b`, R-048 `dbbb65d`. No commit
-claims R-046. R-047 waits for IT (`docs/required_changes.md`, RC-12).
+None. Review 3 checked the fixes that the commits `a4c0d57..ee293cf` claim.
+R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 
 ## Coverage
 
@@ -101,7 +99,7 @@ claims R-046. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | `tests/**`, `vitest.config.ts`, `playwright.config.ts` | 2 (read in full; the checker run; the unit and component tiers run; the integration, pipeline and e2e tiers not run) |
 | `src/**`, anti-overfitting pass | 2 (searched for fixture values, test-only names and seam paths) |
 | `src/app/globals.css` | Not reviewed: the owner's palette (DEC-015); FND-09.AC2 measures it |
-| The commits `a4c0d57..ee293cf`: the fixes of review 2, the demo of DEC-135 (`c445391`, `db2a720` `Dockerfile`, `4299cdc` `compose.demo.yaml`), `2775b51`, `ee293cf` | **Not reviewed.** Review 3 started and was stopped. Owner decision 2026-10-22: no general review until the e-IFU is built |
+| The commits `a4c0d57..ee293cf`: the fixes of review 2, the demo of DEC-135 (`c445391`, `db2a720` `Dockerfile`, `4299cdc` `compose.demo.yaml`), `2775b51`, `ee293cf` | 3 (phase review: the fix and demo commits read in full, one layer each way; the test-only commits read for their verdicts; the integration, e2e and smoke tiers and Docker not run, DEC-136) |
 
 ## Questions for the author
 
@@ -119,6 +117,8 @@ claims R-046. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | Q-10 | Is the delivery of the text by props a departure on purpose? | Answered (review 2): no. Follow `sds-nextjs-frontend` §5 and §6. See R-046 |
 | Q-11 | IFU-90: is each key of `EIFU_IDENTITY_KEYS` the AES-256 key itself? | Answered (review 2): yes, 32 bytes, each id once. The FND-03 row says so. See R-031 |
 | Q-12 | Does the refetch budget replace the retry budget and the breaker of `service-calls.md`? | Answered (review 2): no. They are *Structural* rules; the fetch follows them. See R-030 |
+| Q-13 | DEC-135: does the 503 `AUTH-5500` of the demo apply before step 2 of the `sds-auth` order, or only to a request that reaches step 6? | Answered (review 3): only at step 6, as FND-03.AC5 says (a request with a bearer token). See R-049 |
+| Q-14 | FND-03: in the demo, are the `ENTRA_*` settings optional one by one, or all or none? | Answered (review 3): all or none. The FND-03 row says so |
 
 ## Test coverage gaps
 
