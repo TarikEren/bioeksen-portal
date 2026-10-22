@@ -10,11 +10,18 @@
  *   refused, not cut, because two cut names can collide);
  * - the host is in `TEST_DATABASE_HOSTS`, or is a loopback host when the
  *   variable is not set;
- * - the target is not the database that `DATABASE_URL` names.
+ * - the target is not the database that `DATABASE_URL` names, in the
+ *   environment or in a `.env` file of the repository that Next.js or the
+ *   Prisma CLI loads. `localhost`, `127.0.0.1` and `::1` are one host for this
+ *   comparison. A `DATABASE_URL` that the guard cannot read makes it refuse.
  *
  * The guard never writes a connection string. An error names the rule, the
  * database name and the host, and never the user, the password or the query.
  */
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+import { repositoryRoot } from "./paths";
 
 export type DisposableTier = "integration" | "e2e";
 
@@ -39,7 +46,21 @@ export interface GuardOptions {
   readonly tier?: DisposableTier;
   /** The environment to read `TEST_DATABASE_HOSTS` and `DATABASE_URL` from. Default: `process.env`. */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** The `.env` files to read `DATABASE_URL` from. Default: `ENV_FILES` in the repository root. */
+  readonly envFiles?: readonly string[];
 }
+
+/** The `.env` files that Next.js (`@next/env`) or the Prisma CLI (`dotenv`) can load. */
+export const ENV_FILES: readonly string[] = [
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.development.local",
+  ".env.test",
+  ".env.test.local",
+  ".env.production",
+  ".env.production.local",
+];
 
 /** A target that the guard accepted. */
 export interface DisposableDatabase {
@@ -71,6 +92,34 @@ function parseTarget(connectionString: string): ParsedTarget | null {
   }
   const port = url.port === "" ? 5432 : Number(url.port);
   return { name, host, port, url };
+}
+
+/** One name for the loopback host, so that two spellings of it compare equal. */
+function comparableHost(host: string): string {
+  return LOOPBACK_HOSTS.includes(host) ? "loopback" : host;
+}
+
+/** The value of `DATABASE_URL` in a `.env` file, or undefined. The value is never written anywhere. */
+function databaseUrlInFile(file: string): string | undefined {
+  if (!existsSync(file)) {
+    return undefined;
+  }
+  let found: string | undefined;
+  for (const raw of readFileSync(file, "utf8").split(/\r?\n/)) {
+    const match = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/.exec(raw);
+    if (match === null) {
+      continue;
+    }
+    let value = (match[1] ?? "").trim();
+    const quoted = /^(["'`])(.*)\1$/.exec(value);
+    if (quoted !== null) {
+      value = quoted[2] ?? "";
+    } else {
+      value = value.replace(/\s+#.*$/, "");
+    }
+    found = value;
+  }
+  return found;
 }
 
 function allowedHosts(env: Readonly<Record<string, string | undefined>>): readonly string[] {
@@ -138,9 +187,28 @@ export function assertDisposableDatabase(
     );
   }
 
-  const appDatabase = env["DATABASE_URL"] === undefined ? null : parseTarget(env["DATABASE_URL"]);
-  if (appDatabase !== null && appDatabase.host === host && appDatabase.port === port && appDatabase.name === name) {
-    throw new DatabaseGuardError(`${variable} names the database of DATABASE_URL. The suite is not run.`);
+  const files = (options.envFiles ?? ENV_FILES.map((file) => path.join(repositoryRoot, file))).filter(
+    (file) => path.basename(file) !== ".env.example",
+  );
+  const appDatabases: ReadonlyArray<readonly [string, string | undefined]> = [
+    ["DATABASE_URL", env["DATABASE_URL"]],
+    ...files.map((file) => [`DATABASE_URL in ${path.basename(file)}`, databaseUrlInFile(file)] as const),
+  ];
+  for (const [source, value] of appDatabases) {
+    if (value === undefined || value.trim() === "") {
+      continue;
+    }
+    const appDatabase = parseTarget(value.trim());
+    if (appDatabase === null) {
+      throw new DatabaseGuardError(`The guard cannot read ${source}, so it cannot compare it. The suite is not run.`);
+    }
+    if (
+      comparableHost(appDatabase.host) === comparableHost(host) &&
+      appDatabase.port === port &&
+      appDatabase.name === name
+    ) {
+      throw new DatabaseGuardError(`${variable} names the database of ${source}. The suite is not run.`);
+    }
   }
 
   return { name, host, port };

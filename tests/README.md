@@ -18,15 +18,21 @@ The developers' own unit and component tests are beside the code in `src/`.
 | integration | `tests/integration/` | Vitest, Node, one file at a time | `pnpm run test:integration` | Route handlers called directly, with a real disposable PostgreSQL 16, a real Redis and the local token issuer |
 | pipeline | `tests/pipeline/` | Vitest, Node, 600 s for each test | `pnpm run test:pipeline` | The toolchain on a copy of the repository: install, type check, lint rules, build, drift check, the forge workflow |
 | e2e | `tests/e2e/` | Playwright, Chromium | `pnpm run test:e2e` (after `pnpm run build`) | The production build with `next start`: headers, pages, languages, configuration at start |
+| smoke | `tests/smoke/` | Playwright, no browser page | `pnpm run test:smoke` | The test environment that IT deployed from a release tag (DEC-128). Its own configuration, `tests/smoke/playwright.config.ts`: no global setup, no web server, base URL from `TEST_ENVIRONMENT_URL`. The pull request pipeline does not run it; the main session runs it at the stage exit (stage plan B0, task T2) |
 
-The runner configuration is `vitest.config.ts` and `playwright.config.ts`.
+The runner configuration is `vitest.config.ts`, `playwright.config.ts` and
+`tests/smoke/playwright.config.ts`. `pnpm run test:e2e` never runs the smoke
+tier.
 Each claim is tested at the lowest tier that can prove it.
 
 ## How a test cites its criterion
 
 - The title starts with the id of the criterion it proves, then names the
-  rule, for example `FND-04.AC4: GET /api/health/live answers with
-  Cache-Control: no-store`. It never holds the steps.
+  rule, for example `FND-03.AC4: a missing ENTRA_ISSUER is refused at start`.
+  It never holds the inputs, the expected values or the steps: the criterion
+  holds the detail. A contract case names its source after the id, for
+  example `FND-04.AC3: GET /api/health, sds-auth validation order, step 3: a
+  credential that does not parse`.
 - A `/** … */` brief above the test states the behaviour of the criterion in
   at most 20 words.
 - A contract case of `sds-testing` (`references/contract-tests.md`) cites the
@@ -34,14 +40,21 @@ Each claim is tested at the lowest tier that can prove it.
   the source document. For example, the auth cases of the operator
   endpoints cite `FND-04.AC3`, because FND-04 rule 1 adopts the principals of
   `sds-auth`.
-- A test never writes the id of a criterion that does not exist: the
-  `sds-planning` checker reads every file under `tests/`. A fixture that
-  needs such an id builds it at run time.
+- A contract case that no criterion states cites no criterion id. Its title
+  names the rule of the item that adopts the convention, then the source,
+  for example `FND-04 rule 1, sds-api-design List defaults: the answer
+  echoes the page and the limit it used`.
+- The `sds-planning` checker reads the test folders only (stage plan B0,
+  **Fixtures and helpers**), never this README or `tests/support/`. So an id
+  in a comment or a table there does not count as a test, and the helpers and
+  this README write no criterion id. A test never writes the id of a
+  criterion that does not exist; a fixture that needs one builds it at run
+  time.
 
 Check the citations:
 
 ```bash
-python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests --through B0
+python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests/unit tests/integration tests/pipeline tests/e2e tests/smoke --through B0
 ```
 
 ## The results-only interface
@@ -49,7 +62,7 @@ python <sds-planning>/scripts/check_specs.py --specs docs/specs --tests tests --
 ```bash
 pnpm run test:results                       # every tier
 pnpm run test:results unit integration      # some tiers
-pnpm run test:results --grep 'FND-04\.AC3'  # one criterion
+pnpm run test:results --grep 'FND-04\.AC3'  # the tests of one criterion
 ```
 
 `tests/support/results.ts` runs the tiers with their JSON reporters. For each
@@ -60,7 +73,12 @@ tier with tests could not run (`NOT RUN`, with the reason).
 
 ## Variables of each tier
 
-No tier reads `.env`. The variables come from the shell.
+No tier takes a setting from `.env`. The variables come from the shell. Only
+the guard opens the `.env` files, to compare their `DATABASE_URL` with the
+target, and it never writes the value. The e2e tier has no
+Playwright web server and no base URL: each test file starts the production
+build with `support/spawn-app.ts`, on a free port, with exactly the settings
+of the test.
 
 | Variable | Tiers | Value |
 |---|---|---|
@@ -68,10 +86,9 @@ No tier reads `.env`. The variables come from the shell.
 | `TEST_E2E_DATABASE_URL` | e2e | A database whose name ends in `_e2e`, for example `bioeksen_portal_<role>_e2e` |
 | `TEST_DATABASE_HOSTS` | integration, e2e, pipeline | The hosts a suite may reset a database on, comma separated. Default: loopback only |
 | `TEST_REDIS_URL` | integration, e2e | A Redis 7. Default: `redis://127.0.0.1:6379` |
-| `E2E_PORT` | e2e | The port of the Playwright web server. Default: 3100 |
-| `TEST_ENVIRONMENT_URL` | e2e (FND-02.AC4 only) | The base URL of the test environment that IT deployed. Without it, that test fails and says so |
-| `SDS_PLANNING_CHECKER` | pipeline (FND-02.AC2) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
-| `PYTHON` | pipeline (FND-02.AC2) | The Python command. Default: `python` on Windows, `python3` elsewhere |
+| `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed. Without it, the smoke test fails and says so |
+| `SDS_PLANNING_CHECKER` | pipeline (FND-02, the checker) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
+| `PYTHON` | pipeline (FND-02, the checker) | The Python command. Default: `python` on Windows, `python3` elsewhere |
 
 Every setting of the app (FND-03 rule 2) comes from
 `tests/support/test-environment.ts`, never from the shell. The local services
@@ -80,54 +97,92 @@ are PostgreSQL 16 and Redis 7 on the loopback address, for example from
 
 The guard (`tests/support/db-guard.ts`) refuses a database whose name does
 not end in the suffix of the tier, a host that is not allowed, and the
-database of `DATABASE_URL`. A suite the guard refuses is not run.
+database of `DATABASE_URL`, in the shell or in a `.env` file of the
+repository (`.env`, `.env.local`, and the `.env.<mode>` files that Next.js
+loads; not `.env.example`). `localhost`, `127.0.0.1` and `::1` are one host
+for that comparison. A `DATABASE_URL` that the guard cannot read makes it
+refuse. A suite the guard refuses is not run.
 
 ## Helpers
 
 | Helper | Does |
 |---|---|
 | `support/db-guard.ts` | Accepts a disposable database or refuses it (FND-06 rule 4). Never writes a connection string |
-| `support/global-setup/database.ts`, `vitest.ts`, `playwright.ts` | Recreate the disposable database of the tier and apply the migrations, after the guard |
-| `support/global-setup/jwks.ts` | Integration global setup: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1. The workers read it with `inject("testIssuer")` |
+| `support/global-setup/database.ts`, `vitest.ts`, `playwright.ts` | Recreate the disposable database of the tier and apply the migrations, after the guard. The Prisma CLI gets the connection string only in `DATABASE_URL`, never as an argument; `redactConnection` removes it and its password, encoded and decoded, from any output |
+| `support/token-issuer.ts` | `startTokenIssuer()`: makes an RS256 key pair and serves its public key at the Entra JWKS path on 127.0.0.1, until `close()` |
+| `support/global-setup/jwks.ts` | Integration global setup: starts one token issuer. The workers read it with `inject("testIssuer")` |
 | `support/setup/integration-env.ts` | Each integration worker: the guard again, then every app setting with a test value. PostgreSQL and Redis answer; the object store and the mail relay point to closed ports; `ENTRA_JWKS_URI` is the local issuer; the test seams are on |
 | `support/test-environment.ts` | The test values of every setting of FND-03 rule 2 (`appEnvironment`, `productionEnvironment`, `without`), and the issuer, audience, tenant and operator scope that tokens carry |
-| `support/operator-token.ts` | `mintToken(issuer, kind)`: an operator token, a person without the role, a role without the scope, an app-only token, an expired token, an expired forged token, a wrong signature, a wrong audience, issuer or tenant, an unknown `kid` |
+| `support/operator-token.ts` | `mintToken(issuer, kind, now, times)`: an operator token, a person without the role, a role without the scope, an app-only token, an expired token, an expired forged token, a wrong signature, a wrong audience, issuer or tenant, an unknown `kid`. `times` replaces `iat`, `nbf` or `exp`, for the cases of the clock skew |
 | `support/route.ts` | Calls a route handler with a `NextRequest`; `expectEnvelope` asserts the error envelope of `sds-api-design`; `detailFields` reads the fields of `details` |
-| `support/spawn-app.ts` | `spawnApp({ env })`: starts `next start` on a free port with exactly the given settings (no shell variables, no `.env`), gives the base URL, the stdout and stderr lines and the log records, and stops the app. `waitForRecord` waits for a log record |
+| `support/spawn-app.ts` | `spawnApp({ env, nodeEnv })`: starts `next start` on a free port with exactly the given settings (no shell variables, no `.env`), gives the base URL, the stdout and stderr lines and the log records, and stops the app. `NODE_ENV` is `production` unless `nodeEnv` gives another value. `waitForRecord` waits for a log record |
 | `support/log-records.ts` | Reads log records from stdout lines, in the JSON form or the rendered form of `sds-logging` (`log-record.md`) |
+| `support/log-store.ts` | `openLogStore()`: reads the local store `platform_log_record` of the integration database: the records of one request, a wait for a record, and the count of records that hold a text (for the secrets that no record may hold) |
 | `support/ports.ts` | A free port, a closed port, and a wait for a port without an HTTP request |
 | `support/repo-copy.ts` | `copyRepository({ linkNodeModules })`: a copy of the files git would check out, in a temporary directory; runs `pnpm` there; writes fixtures; removes the copy (it unlinks the linked `node_modules` first) |
-| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline |
+| `support/workflow.ts` | Reads `.forgejo/workflows/`: the triggers, the jobs, the `run:` commands (with the bodies of the `pnpm run` scripts they call), and the steps whose failure does not fail the pipeline (`isSoftGate`): `continue-on-error`, `set +e`, each `\|\|` that does not exit with a failure, and an `if:` on the job or the step other than `success()`, `always()` or `!cancelled()`. `commitCheckGates` finds the commit check of the kit (`KIT_COMMIT_CHECK`, its path in the CI image) in the commits job, as a gate |
 | `support/contrast.ts` | The contrast table of the `sds-nextjs-frontend` reference page, computed in Node.js from HeroUI's default theme and `src/app/globals.css`: the cascade of custom properties, `oklch()` and `color-mix()`, the paint on a canvas, and the WCAG ratio. Checked against the reference page in Chromium on 2026-10-22 |
 | `support/language.ts` | Chooses a language with the language switch, by role and accessible name, with the labels of the dictionaries |
 | `support/results.ts` | The results-only interface, `pnpm run test:results` |
-| `e2e/fixtures.ts` | `configuredApp`: one production app for each Playwright worker, with every setting valid and the e2e database |
+| `e2e/fixtures.ts` | `tokenIssuer`: one token issuer for each Playwright worker. `configuredApp`: one production app for each worker, with every setting valid, the e2e database, and `tokenIssuer` as its issuer. `configuredEnvironment(port, jwksUri)` gives the same settings for an app that a test starts itself |
 | `support/paths.ts` | The root of the repository |
 
 ## Coverage of stage B0
 
-| Criterion | Tier | File |
-|---|---|---|
-| FND-01.AC1 | pipeline | `pipeline/fnd-01-toolchain.test.ts` |
-| FND-01.AC2, FND-01.AC3, FND-01.AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
-| FND-02.AC1, FND-02.AC2, FND-02.AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
-| FND-02.AC4 | e2e (stage exit) | `e2e/fnd-02-test-environment.spec.ts` |
-| FND-03.AC1, FND-03.AC2, FND-03.AC3, FND-03.AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
-| FND-04.AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
-| FND-04.AC2, FND-04.AC3, FND-04.AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
-| FND-05.AC1, FND-05.AC2, FND-05.AC3, FND-05.AC5 | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
-| FND-06.AC1, FND-06.AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
-| DEC-005 (no criterion: the raw object `platform_refuse_delete()` of FND-06 rule 5; review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
-| FND-07.AC1, FND-07.AC2, FND-07.AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
-| FND-07.AC5 | pipeline | `pipeline/fnd-07-dependency-check.test.ts` |
-| FND-08.AC1 | pipeline | `pipeline/fnd-08-dictionaries.test.ts` |
-| FND-08.AC2, FND-08.AC3, FND-08.AC4 | e2e | `e2e/fnd-08-languages.spec.ts` |
-| FND-08.AC6 | unit | `unit/fnd-08-date-time.test.ts` |
-| FND-09.AC2 | unit | `unit/fnd-09-contrast.test.ts` |
+| Item | Criteria | Tier | File |
+|---|---|---|---|
+| FND-01 | AC1 | pipeline | `pipeline/fnd-01-toolchain.test.ts` |
+| FND-01 | AC2, AC3, AC4 | pipeline | `pipeline/fnd-01-import-rules.test.ts` |
+| FND-02 | AC1, AC2, AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
+| FND-02 | AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
+| FND-03 | AC1, AC2, AC3, AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
+| FND-04 | AC1, AC4 | e2e | `e2e/fnd-04-probes.spec.ts` |
+| FND-04 | AC2, AC3, AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
+| FND-04 | rule 1: the list contract of `GET /api/admin/logs` (contract cases) | integration | `integration/fnd-04-admin-logs.test.ts` |
+| FND-04 | AC4, and rule 1: 405 `RES-4500` after the credential check, 503 `SYS-5500` (contract cases) | e2e | `e2e/fnd-04-methods-and-readiness.spec.ts` |
+| FND-05 | AC1, AC2, AC3, AC5, and rule 2: `VAL-4006` (contract case) | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
+| FND-05 | AC1: an HTML page, and a path under `/api` that does not exist | e2e | `e2e/fnd-05-request-id.spec.ts` |
+| FND-05 | rules 1 and 5: severity, type and prose of a failure record, no bearer token in a record (contract cases) | integration | `integration/fnd-05-log-records.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
+| FND-03 | rules 2 and 3: `LOG_LEVEL` (contract cases) | e2e | `e2e/fnd-05-log-level.spec.ts` |
+| FND-06 | AC1, AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
+| DEC-005 | none: the raw object `platform_refuse_delete()` of FND-06 rule 5 (review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
+| FND-07 | AC1, AC2, AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
+| FND-07 | AC5 | pipeline | `pipeline/fnd-07-dependency-check.test.ts` |
+| FND-08 | AC1 | pipeline | `pipeline/fnd-08-dictionaries.test.ts` |
+| FND-08 | AC2, AC3, AC4 | e2e | `e2e/fnd-08-languages.spec.ts` |
+| FND-08 | AC6 | unit | `unit/fnd-08-date-time.test.ts` |
+| FND-09 | AC2 | unit | `unit/fnd-09-contrast.test.ts` |
 
-FND-07.AC4 is in the e2e tier, not in the integration tier of the stage
-plan: the Next.js origin check of server actions runs in the server before
+The AC4 test of FND-07 is in the e2e tier, not in the integration tier of
+the stage plan: the Next.js origin check of server actions runs in the server before
 the action, so only a request to a running app reaches it.
+
+## The conformance check of the standard endpoints
+
+`sds-testing` ships `scripts/check_service.py`, which checks the four standard
+endpoints of a running app against `sds-api-design` (`openapi.yaml`). It is
+not a test of a tier: it needs Python with the packages of its
+`requirements.txt`. Run it against the production build, with an operator
+token of a token issuer that the app trusts, given only in
+`BIOEKSEN_OPERATOR_TOKEN`:
+
+```bash
+python <sds-testing>/scripts/check_service.py --base-url http://127.0.0.1:<port>
+```
+
+Start the app with `support/spawn-app.ts` and the settings of
+`configuredEnvironment(port, issuer.jwksUri)`. The JWKS server of the issuer
+must keep answering while the check runs, so do not start the check with a
+call that blocks the process that runs the issuer.
+
+Last run: 2026-10-22, on the branch of the second review's test fixes, with
+an operator token: exit 0, 14 of 14 checks passed.
+
+## Cases not run
+
+| Case | Why | What makes it runnable |
+|---|---|---|
+| FND-02, the second sentence of AC3: the commit check, run on two commit messages that break `sds-commit` (one with a `Change-Id` without the software id), fails | Release 0.9.0 of the `bioeksen-sds` kit has no commit-check script. The CI proposal names `/opt/bioeksen-sds/${SDS_TAG}/skills/sds-commit/scripts/check_commits.py` as a placeholder, and the pipeline test requires that path in the commits job | A release of the kit with `check_commits.py`: then a pipeline test runs it on the two messages, and expects a failure, after a control run on a good message |
 
 ## Known defects
 

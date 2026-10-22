@@ -5,7 +5,8 @@
  * AC1 changes the contract in a copy of the repository and runs
  * `pnpm run db:check` there. The drift check gets its target only from
  * `TEST_DATABASE_URL`: the disposable integration database, checked by the
- * guard. It never gets `DATABASE_URL` (`sds-testing`, **Test databases**).
+ * guard. A test titled with its source (`sds-testing`, **Test databases**)
+ * proves that it never falls back to `DATABASE_URL`.
  *
  * AC2 runs the integration suite of the repository against a database whose
  * name does not end in `_integration`, and proves that the suite refuses to
@@ -94,9 +95,12 @@ describe("FND-06 drift check", () => {
 
     expect(result.code, tail(result)).not.toBe(0);
   });
-  // Source: sds-testing, "Test databases": the target is never the database of the app's own configuration.
-  /** Without TEST_DATABASE_URL the drift check does not run (exit 2), and does not touch the DATABASE_URL database. */
-  it("FND-06.AC1: without TEST_DATABASE_URL the drift check exits 2 and changes no database", async () => {
+
+  // Source: sds-testing, "Test databases": a suite that cannot tell refuses and is reported as not run (exit 2 of
+  // the results-only interface), and the target is never the database of the app's own configuration.
+  // The criterion of the drift check does not state this rule.
+  /** Without its disposable target, the drift check does not run, and leaves the database of DATABASE_URL as it is. */
+  it("sds-testing Test databases: the drift check never falls back to the database of DATABASE_URL", async () => {
     const sentinel = `qa_db_check_sentinel_${String(process.pid)}`;
     const client = new Client({ connectionString: integrationDatabaseUrl() });
     await client.connect();

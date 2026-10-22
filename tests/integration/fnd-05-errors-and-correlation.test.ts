@@ -8,14 +8,13 @@
  */
 import { randomBytes } from "node:crypto";
 
-import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { GET as getHealthLive } from "@/app/api/health/live/route";
 import { GET as getHealth } from "@/app/api/health/route";
 import { POST as postEcho } from "@/app/api/test/echo/route";
 
-import { hasTailPair } from "../support/log-records";
+import { type LogStore, openLogStore } from "../support/log-store";
 import { REQUEST_ID_FORMAT, call, describeAnswer, detailFields, expectEnvelope, readBody } from "../support/route";
 
 /** The body limit of FND-05 rule 7: 1 MiB. */
@@ -33,30 +32,15 @@ function echoBody(valueLength: number): string {
   return JSON.stringify({ value: "a".repeat(valueLength) });
 }
 
-let database: Client;
+let store: LogStore;
 
 beforeAll(async () => {
-  database = new Client({ connectionString: process.env["DATABASE_URL"] });
-  await database.connect();
+  store = await openLogStore();
 });
 
 afterAll(async () => {
-  await database.end();
+  await store.close();
 });
-
-interface StoredRecord {
-  readonly code: string | null;
-  readonly message: string;
-}
-
-/** The records of one request in the local store (`request=<id>` in the tail). */
-async function recordsOfRequest(requestId: string): Promise<StoredRecord[]> {
-  const result = await database.query<StoredRecord>(
-    "SELECT code, message FROM platform_log_record WHERE message LIKE $1 ORDER BY id",
-    [`%request=${requestId}%`],
-  );
-  return result.rows.filter((row) => hasTailPair(row.message, "request", requestId));
-}
 
 describe("FND-05 request id", () => {
   /** A request without X-Request-Id gets an answer with a new request id. */
@@ -88,6 +72,16 @@ describe("FND-05 request id", () => {
     expect(response.status, "precondition: the request without a credential fails").toBe(401);
   });
 
+  // The format of sds-logging, log-record.md (X-Request-Id): [A-Za-z0-9_-], 1 to 128 characters.
+  /** A request id at the longest length of the format is adopted as it is. */
+  it("FND-05.AC1: a request id of the longest valid length is adopted", async () => {
+    const requestId = `qa-${randomBytes(64).toString("hex")}`.slice(0, 128);
+    expect(requestId).toHaveLength(128);
+    const response = await call(getHealthLive, "/api/health/live", { headers: { "x-request-id": requestId } });
+
+    expect(response.headers.get("x-request-id")).toBe(requestId);
+  });
+
   // Contract case "Replaced" (sds-logging, log-record.md): a malformed id is never adopted.
   /** A malformed X-Request-Id is not adopted: the request succeeds with a new id. */
   it("FND-05.AC1: a malformed X-Request-Id is replaced by a new request id", async () => {
@@ -105,13 +99,13 @@ describe("FND-05 request id", () => {
 describe("FND-05 failure codes in the log", () => {
   async function expectLoggedWithCode(requestId: string, code: string): Promise<void> {
     await expect
-      .poll(async () => (await recordsOfRequest(requestId)).map((record) => record.code), {
+      .poll(async () => (await store.recordsOfRequest(requestId)).map((record) => record.code), {
         timeout: 10_000,
         interval: 200,
         message: `a record with request=${requestId} and the code ${code} is in platform_log_record`,
       })
       .toContain(code);
-    const otherCodes = (await recordsOfRequest(requestId))
+    const otherCodes = (await store.recordsOfRequest(requestId))
       .map((record) => record.code)
       .filter((logged) => logged !== null && logged !== code);
     expect(otherCodes, "no record of the request carries another code").toEqual([]);
@@ -124,6 +118,17 @@ describe("FND-05 failure codes in the log", () => {
     const envelope = await expectEnvelope(response, 401, "AUTH-4100");
 
     expect(response.headers.get("x-request-id")).toBe(requestId);
+    await expectLoggedWithCode(requestId, String(envelope["code"]));
+  });
+
+  // Contract case "Generated" (sds-logging, log-record.md): the id the app makes is the request= of its records.
+  /** A failed request without X-Request-Id: the answer's new id and code are those of its log record. */
+  it("FND-05.AC2: a refused request without a request id is logged with the id that its answer carries", async () => {
+    const response = await call(getHealth, "/api/health");
+    const envelope = await expectEnvelope(response, 401, "AUTH-4100");
+    const requestId = response.headers.get("x-request-id") ?? "(no X-Request-Id)";
+    expect(requestId, "the answer carries a new request id").toMatch(REQUEST_ID_FORMAT);
+
     await expectLoggedWithCode(requestId, String(envelope["code"]));
   });
 
@@ -157,7 +162,7 @@ describe("FND-05 request bodies", () => {
   });
 
   /** A body with a field the endpoint does not define gets 400 VAL-4007, and details names the field. */
-  it("FND-05.AC3: a body with an unknown field answers 400 VAL-4007 and names the field", async () => {
+  it("FND-05.AC3: a body field that the endpoint does not define is refused and named", async () => {
     const response = await call(postEcho, "/api/test/echo", {
       method: "POST",
       headers: JSON_HEADERS,
@@ -183,7 +188,7 @@ describe("FND-05 request bodies", () => {
 
   // Contract case of the route wrapper (code-prefixes.md step 13): a body that does not parse.
   /** A body that is not JSON gets 400 VAL-4000. */
-  it("FND-05.AC3: a body that does not parse answers 400 VAL-4000", async () => {
+  it("FND-05.AC3: sds-logging selection procedure, step 13: a body that does not parse", async () => {
     const response = await call(postEcho, "/api/test/echo", {
       method: "POST",
       headers: JSON_HEADERS,
@@ -192,8 +197,21 @@ describe("FND-05 request bodies", () => {
     await expectEnvelope(response, 400, "VAL-4000");
   });
 
+  // Contract case "Invalid field value" (sds-logging, code-prefixes.md step 19). Review 2, R-026.
+  /** A body field of the wrong type gets 400 VAL-4006, and details names the field. */
+  it("FND-05 rule 2, sds-logging selection procedure, step 19: a body field of the wrong type", async () => {
+    const response = await call(postEcho, "/api/test/echo", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ value: 42 }),
+    });
+    const envelope = await expectEnvelope(response, 400, "VAL-4006");
+
+    expect(detailFields(envelope)).toEqual(["value"]);
+  });
+
   /** A body of exactly 1 MiB is inside the limit: the seam echoes it. */
-  it("FND-05.AC5: a body of exactly 1 MiB is accepted", async () => {
+  it("FND-05.AC5: a body at the limit is accepted", async () => {
     const valueLength = BODY_LIMIT_BYTES - ECHO_FRAME_BYTES;
     const body = echoBody(valueLength);
     expect(Buffer.byteLength(body, "utf8")).toBe(BODY_LIMIT_BYTES);
@@ -208,7 +226,7 @@ describe("FND-05 request bodies", () => {
   });
 
   /** A body one byte over 1 MiB gets 413 VAL-4550. */
-  it("FND-05.AC5: a body one byte over 1 MiB answers 413 VAL-4550", async () => {
+  it("FND-05.AC5: a body over the limit is refused", async () => {
     const body = echoBody(BODY_LIMIT_BYTES - ECHO_FRAME_BYTES + 1);
     expect(Buffer.byteLength(body, "utf8")).toBe(BODY_LIMIT_BYTES + 1);
 
@@ -218,7 +236,7 @@ describe("FND-05 request bodies", () => {
 
   // Contract case "Understated length" (sds-api-design, standard-api-endpoints.md): the limit counts the bytes that arrive.
   /** A streamed body over 1 MiB, with no Content-Length, gets 413 VAL-4550. */
-  it("FND-05.AC5: a streamed body over 1 MiB without Content-Length answers 413 VAL-4550", async () => {
+  it("FND-05.AC5: the limit counts the bytes that arrive, not Content-Length", async () => {
     const chunk = new TextEncoder().encode("a".repeat(64 * 1024));
     const chunks = Math.ceil((BODY_LIMIT_BYTES + 1) / chunk.byteLength) + 1;
     let sent = 0;

@@ -1,5 +1,5 @@
 /**
- * Reads the forge workflows of the repository (FND-02, FND-07.AC5).
+ * Reads the forge workflows of the repository (FND-02, and the dependency check of FND-07).
  *
  * `sds-ci` fixes the place: `.forgejo/workflows/`, the only workflow
  * directory. People write these files; the tests read them to prove that the
@@ -201,11 +201,15 @@ export interface WorkflowStep {
   readonly run: string | undefined;
   readonly uses: string | undefined;
   readonly continueOnError: string | undefined;
+  /** The `if:` of the step, or undefined. */
+  readonly condition: string | undefined;
 }
 
 export interface WorkflowJob {
   readonly id: string;
   readonly continueOnError: string | undefined;
+  /** The `if:` of the job, or undefined. */
+  readonly condition: string | undefined;
   readonly steps: readonly WorkflowStep[];
 }
 
@@ -246,6 +250,7 @@ export function loadWorkflows(root: string = repositoryRoot): Workflow[] {
         return {
           id,
           continueOnError: asString(job["continue-on-error"]),
+          condition: asString(job["if"]),
           steps: steps.map((stepNode, index) => {
             const step = asRecord(stepNode);
             return {
@@ -253,6 +258,7 @@ export function loadWorkflows(root: string = repositoryRoot): Workflow[] {
               run: asString(step["run"]),
               uses: asString(step["uses"]),
               continueOnError: asString(step["continue-on-error"]),
+              condition: asString(step["if"]),
             };
           }),
         };
@@ -323,14 +329,65 @@ export function runCommands(workflows: readonly Workflow[], root: string = repos
   return commands;
 }
 
+/**
+ * The conditions that never skip a job or a step whose earlier steps passed:
+ * none, the default `success()`, `always()` and `!cancelled()`. Any other
+ * condition can skip the check on a pull request, and a skipped check passes.
+ */
+const GATE_CONDITIONS = /^(?:\$\{\{\s*)?(?:success\(\)|always\(\)|!\s*cancelled\(\))(?:\s*\}\})?$/;
+
+function isSoftCondition(condition: string | undefined): boolean {
+  if (condition === undefined || condition.trim() === "") return false;
+  return !GATE_CONDITIONS.test(condition.trim());
+}
+
+/**
+ * True when a `||` of the command lets a failure through: each `||` is soft
+ * unless what follows it ends the command with a failure (`exit` with a code
+ * other than 0, or `false`). A `||` inside a `[[ … ]]` test is a logical or.
+ */
+function hasSoftOr(command: string): boolean {
+  for (const line of command.split(/\r?\n/)) {
+    const withoutTests = line.replace(/\[\[[^\]]*\]\]/g, "[[ ]]");
+    const parts = withoutTests.split("||");
+    for (const rest of parts.slice(1)) {
+      const fails = /^\s*(?:\{[^}]*?;\s*)?(?:exit\s+(?:[1-9]\d*|"?\$\?"?)|false)\b/.test(rest) ||
+        /^\s*\{[^}]*\bexit\s+[1-9]\d*\b[^}]*\}/.test(rest);
+      if (!fails) return true;
+    }
+  }
+  return false;
+}
+
 /** True when a failure of the step can still let the pipeline pass. */
 export function isSoftGate(command: RunCommand): boolean {
   const soft = (value: string | undefined): boolean => value !== undefined && value.trim() !== "false";
   return (
     soft(command.job.continueOnError) ||
     soft(command.step.continueOnError) ||
-    /\|\|\s*(true|:|exit\s+0)\b/.test(command.command) ||
+    isSoftCondition(command.job.condition) ||
+    isSoftCondition(command.step.condition) ||
+    hasSoftOr(command.command) ||
     /\bset\s+\+e\b/.test(command.command)
+  );
+}
+
+/**
+ * The commit check of the `bioeksen-sds` kit, by its path in the CI image and
+ * its name (`sds-ci`, **The jobs**). The tag segment is the pinned release,
+ * written as a variable or as a literal.
+ */
+export const KIT_COMMIT_CHECK = /\/opt\/bioeksen-sds\/[^/\s]+\/skills\/sds-commit\/scripts\/check_commits\.py\b/;
+
+/** True when the command is in the commits job (`sds-ci`, **The jobs**): a job whose id names commits. */
+export function isCommitsJob(command: RunCommand): boolean {
+  return /\bcommits?\b/i.test(command.job.id.replace(/[-_]/g, " "));
+}
+
+/** The steps of the commits job that run the commit check of the kit and are gates. */
+export function commitCheckGates(commands: readonly RunCommand[]): RunCommand[] {
+  return commands.filter(
+    (command) => isCommitsJob(command) && KIT_COMMIT_CHECK.test(command.expanded) && !isSoftGate(command),
   );
 }
 

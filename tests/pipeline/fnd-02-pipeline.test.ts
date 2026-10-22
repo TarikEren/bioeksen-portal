@@ -15,7 +15,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { repositoryRoot } from "../support/paths";
 import { type RepositoryCopy, copyRepository, tail } from "../support/repo-copy";
-import { type RunCommand, describeWorkflows, isSoftGate, pullRequestWorkflows, runCommands } from "../support/workflow";
+import {
+  KIT_COMMIT_CHECK,
+  type RunCommand,
+  commitCheckGates,
+  describeWorkflows,
+  isCommitsJob,
+  isSoftGate,
+  pullRequestWorkflows,
+  runCommands,
+} from "../support/workflow";
 
 function pullRequestCommands(): RunCommand[] {
   return runCommands(pullRequestWorkflows());
@@ -43,6 +52,9 @@ const REQUIRED_CHECKS: ReadonlyArray<readonly [string, RegExp]> = [
   ["the pipeline tests", /\bpnpm\s+(?:run\s+)?test:pipeline\b/],
 ];
 
+/** The test folders that the checker reads, and only these (stage plan B0, **Fixtures and helpers**). */
+const ACCEPTANCE_FOLDERS: readonly string[] = ["tests/unit", "tests/integration", "tests/pipeline", "tests/e2e", "tests/smoke"];
+
 describe("FND-02 pull request pipeline", () => {
   /** A workflow in .forgejo/workflows runs on each pull request. */
   it("FND-02.AC1: a workflow in .forgejo/workflows runs on each pull request", () => {
@@ -62,7 +74,7 @@ describe("FND-02 pull request pipeline", () => {
     expect(commands.length, describeWorkflows()).toBeGreaterThan(0);
 
     const soft = commands.filter(isSoftGate).map((command) => `${command.job.id} > ${command.step.name}`);
-    expect(soft, "steps whose failure does not fail the pipeline (continue-on-error, || true)").toEqual([]);
+    expect(soft, "steps whose failure does not fail the pipeline (continue-on-error, a || that does not exit with a failure, set +e, an if: that can skip the step)").toEqual([]);
   });
 
   /** The pipeline runs the sds-planning checker with --tests over the acceptance folders. */
@@ -73,24 +85,34 @@ describe("FND-02 pull request pipeline", () => {
     const command = checker?.expanded ?? "";
     expect(command, "the checker reads docs/specs").toMatch(/--specs\s+\.?\/?docs\/specs\b/);
     const folders = checkerTestPaths(command);
-    const acceptanceFolders = readdirSync(path.join(repositoryRoot, "tests")).filter(
-      (entry) => entry !== "support" && !entry.includes("."),
-    );
-    const uncovered = acceptanceFolders.filter(
-      (folder) => !folders.some((given) => given === "tests" || given === `tests/${folder}`),
-    );
+    const present = readdirSync(path.join(repositoryRoot, "tests"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "support")
+      .map((entry) => `tests/${entry.name}`);
+    const acceptanceFolders = [...new Set([...ACCEPTANCE_FOLDERS, ...present])];
+    const uncovered = acceptanceFolders.filter((folder) => !folders.includes(folder));
     expect(uncovered, `acceptance folders that --tests ${folders.join(" ")} leaves out`).toEqual([]);
+
+    // The checker counts every id under the paths it reads, so a path above the test folders counts the README
+    // and the helpers as tests (stage plan B0, **Fixtures and helpers**).
+    const beyond = folders.filter((given) => !acceptanceFolders.includes(given));
+    expect(beyond, "paths after --tests that are not acceptance folders (tests, tests/support, tests/README.md)").toEqual(
+      [],
+    );
   });
 
-  /** The pipeline runs the commit check of the bioeksen-sds kit. */
-  it("FND-02.AC3: the pull request pipeline runs the commit check of the bioeksen-sds kit", () => {
-    const check = findCommand(/bioeksen-sds/);
-    const commitCheck = pullRequestCommands().find(
-      (command) => /bioeksen-sds/.test(command.expanded) && /commit/i.test(command.expanded),
-    );
+  // sds-ci, "The jobs": the commits job runs the CI image's copy of the kit, under /opt/bioeksen-sds/{tag}/. Release
+  // 0.9.0 of the kit has no commit-check script yet; the CI proposal names check_commits.py of sds-commit.
+  /** The pipeline runs the commit check of the bioeksen-sds kit as a gate. */
+  it("FND-02.AC3: the commits job of the pull request pipeline runs the commit check of the kit as a gate", () => {
+    const commands = pullRequestCommands();
+    const inCommitsJob = commands.filter(isCommitsJob);
+    expect(inCommitsJob.length, `no pull request job is the commits job. Steps:\n${describeCommands()}`).toBeGreaterThan(0);
 
-    expect(check, `no pull request step runs the bioeksen-sds kit. Steps:\n${describeCommands()}`).toBeDefined();
-    expect(commitCheck, `no pull request step runs the commit check of the kit. Steps:\n${describeCommands()}`).toBeDefined();
+    const gates = commitCheckGates(commands);
+    expect(
+      gates.map((command) => `${command.job.id} > ${command.step.name}`),
+      `no step of the commits job runs ${KIT_COMMIT_CHECK.source} as a gate. Steps:\n${describeCommands()}`,
+    ).not.toEqual([]);
   });
 });
 
@@ -181,14 +203,28 @@ describe("FND-02 the checks fail on a broken change", () => {
     const script = localChecker();
     expect(script, "the sds-planning checker is on this machine (SDS_PLANNING_CHECKER)").toBeDefined();
 
-    const folders = checkerTestPaths(checker?.expanded ?? "");
+    const command = checker?.expanded ?? "";
+    const through = /--through\s+(\S+)/.exec(command)?.[1];
+    const checkerArguments = [
+      script ?? "",
+      "--specs",
+      "docs/specs",
+      "--tests",
+      ...checkerTestPaths(command),
+      ...(through === undefined ? [] : ["--through", through]),
+    ];
+
+    // Control: the same command passes on the unchanged copy, so the failure below comes from the citation.
+    const control = await copy.run(pythonCommand(), checkerArguments);
+    expect(control.code, `precondition: the checker passes on the unchanged copy\n${tail(control)}`).toBe(0);
+
     // Built at run time, so this file itself cites nothing that does not exist.
     const missingCriterion = ["FND-01", `AC${String(90 + new Date().getUTCDate())}`].join(".");
     copy.write(
       "tests/unit/qa-fixture-citation.test.ts",
       `import { it } from "vitest";\n\nit("${missingCriterion}: a criterion that does not exist", () => {});\n`,
     );
-    const result = await copy.run(pythonCommand(), [script ?? "", "--specs", "docs/specs", "--tests", ...folders]);
+    const result = await copy.run(pythonCommand(), checkerArguments);
     copy.delete("tests/unit/qa-fixture-citation.test.ts");
 
     expect(result.code, tail(result)).toBe(1);

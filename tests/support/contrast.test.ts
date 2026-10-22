@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { measurePair, parseColor, scopeProperties } from "./contrast";
 
-// Source: WCAG 2.2 (contrast ratio) and CSS Color 5 (color-mix). The reader that FND-09.AC2 uses.
+// Source: WCAG 2.2 (contrast ratio) and CSS Color 5 (color-mix). The reader that the contrast test of FND-09 uses.
 const HEROUI = `@layer base {
   :root, .light, [data-theme="light"] { --background: #ffffff; --link: var(--accent); --accent: #0000ff; }
   .dark, [data-theme="dark"] { --background: #000000; }

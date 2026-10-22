@@ -1,6 +1,6 @@
 /**
  * Starts the production build with `next start` on a free port, with exactly
- * the environment a test gives (FND-03, FND-04.AC1, FND-07, FND-08).
+ * the environment a test gives (FND-03, FND-04, FND-07, FND-08).
  *
  * Build first: `pnpm run build`.
  *
@@ -69,6 +69,11 @@ export interface SpawnOptions {
   readonly port?: number;
   /** How long to wait for the port. Default: 60 s. */
   readonly startTimeoutMs?: number;
+  /**
+   * The `NODE_ENV` of the process. Default: `production`. `next start` keeps an
+   * explicit value, so a test can start the production build with another one.
+   */
+  readonly nodeEnv?: "production" | "development" | "test";
 }
 
 function systemEnvironment(): Record<string, string> {
@@ -115,7 +120,7 @@ export async function spawnApp(options: SpawnOptions): Promise<SpawnedApp> {
       ...systemEnvironment(),
       ...options.env,
       PORT: String(port),
-      NODE_ENV: "production",
+      NODE_ENV: options.nodeEnv ?? "production",
       NEXT_TELEMETRY_DISABLED: "1",
       __NEXT_PROCESSED_ENV: "true",
     },

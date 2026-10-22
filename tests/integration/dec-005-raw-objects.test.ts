@@ -4,6 +4,9 @@
  * function `platform_refuse_delete()`, for the DELETE and TRUNCATE triggers of
  * the controlled tables (FND-06 rule 5, DEC-010). Finding R-014 of review 1.
  *
+ * The function raises SQLSTATE `23001` (`restrict_violation`), which the app
+ * maps to `RES-4302` (stage plan B0, **Data**; review 2, Q-8).
+ *
  * The global setup applied the migrations to the disposable `_integration`
  * database. The test makes a scratch table with the two triggers, and drops it
  * at the end.
@@ -32,19 +35,22 @@ async function rowCount(): Promise<number> {
   return Number(result.rows[0]?.count ?? -1);
 }
 
-async function sqlState(statement: string): Promise<string | undefined> {
+/** The SQLSTATE of `restrict_violation`, which the data contract names. */
+const RESTRICT_VIOLATION = "23001";
+
+async function sqlState(statement: string): Promise<string> {
   try {
     await database.query(statement);
   } catch (error) {
     const code: unknown = typeof error === "object" && error !== null ? Reflect.get(error, "code") : undefined;
     return typeof code === "string" ? code : "(an error with no SQLSTATE)";
   }
-  return undefined;
+  return "(no error: the statement ran)";
 }
 
 describe("DEC-005 raw objects of the migrations", () => {
-  // Source: DEC-005 and FND-06 rule 5. No acceptance criterion of B0 covers it.
-  /** The migrations create platform_refuse_delete(); a trigger with it refuses DELETE and TRUNCATE, and the row stays. */
+  // Source: DEC-005, FND-06 rule 5 and the data contract of the stage plan. No acceptance criterion of B0 covers it.
+  /** The migrations create platform_refuse_delete(); a trigger with it refuses DELETE and TRUNCATE with 23001, and the row stays. */
   it("DEC-005 the migration creates platform_refuse_delete(), and a trigger with it refuses DELETE and TRUNCATE", async () => {
     const found = await database.query<{ procedure: string | null }>(
       "SELECT to_regprocedure('public.platform_refuse_delete()')::text AS procedure",
@@ -63,10 +69,14 @@ describe("DEC-005 raw objects of the migrations", () => {
     await database.query(`INSERT INTO public."${SCRATCH}" (label) VALUES ('kept')`);
     expect(await rowCount(), "precondition: the scratch table holds one row").toBe(1);
 
-    expect(await sqlState(`DELETE FROM public."${SCRATCH}"`), "the database refuses DELETE").toBeDefined();
+    expect(await sqlState(`DELETE FROM public."${SCRATCH}"`), "the database refuses DELETE with SQLSTATE 23001").toBe(
+      RESTRICT_VIOLATION,
+    );
     expect(await rowCount(), "the row stays after DELETE").toBe(1);
 
-    expect(await sqlState(`TRUNCATE public."${SCRATCH}"`), "the database refuses TRUNCATE").toBeDefined();
+    expect(await sqlState(`TRUNCATE public."${SCRATCH}"`), "the database refuses TRUNCATE with SQLSTATE 23001").toBe(
+      RESTRICT_VIOLATION,
+    );
     expect(await rowCount(), "the row stays after TRUNCATE").toBe(1);
   });
 });
