@@ -56,6 +56,29 @@ describe("LanguageSwitch", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // Source: R-016 (aria-busy must reach the DOM; React Aria drops it from the group).
+  it("sets aria-busy on the wrapper while the action runs, and clears it after", async () => {
+    let finish: (result: Awaited<ReturnType<typeof setLanguageAction>>) => void = () => undefined;
+    setLanguage.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<LanguageSwitch current="tr" labels={labels} />);
+    const wrapper = screen.getByRole("radiogroup", { name: labels.switch }).parentElement;
+    expect(wrapper?.getAttribute("aria-busy")).toBe("false");
+
+    await userEvent.click(screen.getByRole("radio", { name: labels.en }));
+
+    await waitFor(() => expect(wrapper?.getAttribute("aria-busy")).toBe("true"));
+    finish({ status: "ok" });
+    await waitFor(() => expect(wrapper?.getAttribute("aria-busy")).toBe("false"));
+  });
+
+  // Source: R-018, DEC-018 (WCAG 3.1.2): the name of a language is in that language.
+  it("marks the name of each language with its own lang", () => {
+    render(<LanguageSwitch current="tr" labels={labels} />);
+
+    expect(screen.getByText(labels.tr).getAttribute("lang")).toBe("tr");
+    expect(screen.getByText(labels.en).getAttribute("lang")).toBe("en");
+  });
+
   it("does not call the action when the active language is chosen again", async () => {
     render(<LanguageSwitch current="tr" labels={labels} />);
 

@@ -17,7 +17,12 @@
  * does not reach the error screen of Next.js (R-002). The props hold only the
  * text and the language that the control shows (`sds-nextjs-frontend` §2).
  * The group stays enabled while the action runs, so that focus stays on the
- * button the person pressed; `aria-busy` tells a screen reader to wait.
+ * button the person pressed. `aria-busy` is on the wrapping `div`, which React
+ * renders as it is: the ToggleButtonGroup of React Aria keeps only global and
+ * label props, so `aria-busy` on the group never reached the DOM (R-016). Each
+ * language name is in a `span` with the `lang` of that language, so that a
+ * screen reader speaks "English" with English rules on a Turkish page (R-018,
+ * WCAG 3.1.2, DEC-018).
  */
 import { Alert, ToggleButton, ToggleButtonGroup, type Key } from "@heroui/react";
 import { useRouter } from "next/navigation";
@@ -80,10 +85,9 @@ export function LanguageSwitch({ current, labels }: LanguageSwitchProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" aria-busy={pending}>
       <ToggleButtonGroup
         aria-label={labels.switch}
-        aria-busy={pending}
         selectionMode="single"
         disallowEmptySelection
         selectedKeys={[current]}
@@ -92,7 +96,7 @@ export function LanguageSwitch({ current, labels }: LanguageSwitchProps) {
         {LANGUAGES.map((language, index) => (
           <ToggleButton key={language} id={language}>
             {index > 0 ? <ToggleButtonGroup.Separator /> : null}
-            {labels[language]}
+            <span lang={language}>{labels[language]}</span>
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
