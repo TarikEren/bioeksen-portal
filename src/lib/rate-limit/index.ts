@@ -14,6 +14,13 @@
  *   refuses a locked subject, also when its next try is right. A success ends the
  *   count (`clearConsecutiveFailures`).
  *
+ * - A counter of requests in a fixed window: `assertUnderQuota` refuses a caller
+ *   that has used its quota, and `consumeQuota` counts one request with one
+ *   atomic `INCR`. The first request of a window sets the expiry. The public
+ *   lookup uses it (DEC-072, IFU-50 rule 8): a request that fails its checks
+ *   counts nothing, so the service reads first, checks the request, and counts
+ *   after.
+ *
  * A refusal is 429 `RATE-4400` with the whole seconds until the caller may try
  * again (`RateLimitedError`). The rules read the clock of the app (`now()`), so
  * the test seam can move it. A subject is stored as its SHA-256, so Redis holds
@@ -23,12 +30,13 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { withCache } from "@/lib/cache";
+import { type CacheClient, withCache } from "@/lib/cache";
 import { now } from "@/lib/clock";
 import { RateLimitedError } from "@/lib/errors";
 
 const WINDOW_PREFIX = "rate:window:";
 const LOCK_PREFIX = "rate:lock:";
+const QUOTA_PREFIX = "rate:quota:";
 
 /** The failures of a subject in a row are forgotten after a day without a failure. */
 const COUNTER_TTL_MS = 24 * 60 * 60 * 1000;
@@ -128,4 +136,53 @@ export async function clearConsecutiveFailures(scope: string, subject: string): 
   await withCache(async (cache) => {
     await cache.del(keyOf(LOCK_PREFIX, scope, subject));
   });
+}
+
+export interface QuotaLimit {
+  /** The most requests of a subject in one window. The next request is refused. */
+  readonly limit: number;
+  /** The length of the window. It starts at the first request of the subject. */
+  readonly windowMs: number;
+}
+
+/** The seconds until the counter of the key ends. One second when Redis reports no expiry. */
+async function secondsToWindowEnd(cache: CacheClient, key: string, window: QuotaLimit): Promise<number> {
+  const remaining = await cache.pTTL(key);
+  return remaining > 0 ? remaining / 1000 : window.windowMs / 1000;
+}
+
+/**
+ * Refuses a subject that has used its quota in the current window. It counts
+ * nothing.
+ *
+ * @throws RateLimitedError 429 `RATE-4400`, with the time until the window ends.
+ */
+export async function assertUnderQuota(scope: string, subject: string, window: QuotaLimit): Promise<void> {
+  const key = keyOf(QUOTA_PREFIX, scope, subject);
+  const retryAfter = await withCache(async (cache) => {
+    const used = Number(await cache.get(key));
+    return Number.isFinite(used) && used >= window.limit ? secondsToWindowEnd(cache, key, window) : null;
+  });
+  if (retryAfter !== null) {
+    throw new RateLimitedError(retryAfter, "the subject used its quota in the window");
+  }
+}
+
+/**
+ * Counts one request of a subject with one atomic `INCR`, and refuses it when the
+ * count passes the quota. Two requests at the same time get two different counts,
+ * so the quota holds under any concurrency. The first request of a window sets
+ * the expiry, and a later request never moves it (`PEXPIRE ... NX`).
+ *
+ * @throws RateLimitedError 429 `RATE-4400`, with the time until the window ends.
+ */
+export async function consumeQuota(scope: string, subject: string, window: QuotaLimit): Promise<void> {
+  const key = keyOf(QUOTA_PREFIX, scope, subject);
+  const retryAfter = await withCache(async (cache) => {
+    const [count] = await cache.multi().incr(key).pExpire(key, window.windowMs, "NX").exec();
+    return typeof count === "number" && count > window.limit ? secondsToWindowEnd(cache, key, window) : null;
+  });
+  if (retryAfter !== null) {
+    throw new RateLimitedError(retryAfter, "the subject used its quota in the window");
+  }
 }

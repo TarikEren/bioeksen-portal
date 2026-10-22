@@ -7,15 +7,22 @@
  * number or the LOT exists (IFU-50.AC3), and it never changes a product, a catalog
  * number or a LOT.
  *
- * **MOCK (stage B4, step 2).** The verification store, the code, the code mail
- * and the rate limits are mocks (`src/lib/mock/lookup.ts`). Step 4 moves the row
- * to `eifu_verification` with the email address and the client address encrypted
- * (`../domain/identity.ts`), the code to a keyed hash, the limits to Redis, and
- * the code mail to `mail-service.ts`, sent after the commit and awaited
- * (DEC-097). The checks and the answers here are the real ones.
+ * The order of one request:
+ * 1. The limits of DEC-072 are read first, so a caller over a limit gets 429
+ *    `RATE-4400` before anything else (`code-prefixes.md`, selection procedure).
+ * 2. The request is checked (IFU-50 rule 2). A request that fails counts against
+ *    no limit.
+ * 3. Each limit counts the request with one atomic `INCR` in Redis (DEC-007), so
+ *    two requests at the same time cannot both take the last place.
+ * 4. The row is written with the email address and the client address encrypted
+ *    (IFU-90) and the code as a keyed hash (DEC-071), and the transaction
+ *    commits.
+ * 5. After the commit, the code mail is sent and awaited (DEC-097). When it
+ *    fails, `send_failed_at` is set, the verification ends (IFU-50 rule 6), and
+ *    the answer carries `UP-5500`, `UP-5501` or `UP-5000`.
  *
- * No log record holds an email address, a code or a client address (FND-05
- * rule 5, DEC-139).
+ * No log record holds an email address, a code, a verification id or a full
+ * client address (FND-05 rule 5, DEC-139).
  */
 import "server-only";
 
@@ -23,18 +30,11 @@ import { randomUUID } from "node:crypto";
 
 import { now } from "@/lib/clock";
 import { getConfig } from "@/lib/config";
-import { AppError, CODE_MEANINGS, RateLimitedError } from "@/lib/errors";
+import { AppError, CODE_MEANINGS } from "@/lib/errors";
+import { cleanTransport } from "@/lib/format/transport-cleanup";
 import { type FieldFault, validationError } from "@/lib/http/validation";
 import { logger } from "@/lib/logging";
-import {
-  mockDigest,
-  mockFindVerification,
-  mockInsertVerification,
-  mockMailFailure,
-  mockMarkSendFailed,
-  mockRateRecord,
-  mockRateRetryAfter,
-} from "@/lib/mock/lookup";
+import { type QuotaLimit, assertUnderQuota, consumeQuota } from "@/lib/rate-limit";
 import {
   LOOKUP_ISSUES,
   LOOKUP_NUMBER_MAX,
@@ -46,12 +46,26 @@ import {
   type VerificationView,
 } from "@/lib/schemas/lookup";
 import { resolveForwardedSource } from "@/lib/security";
-import { cleanTransport } from "@/modules/catalog/domain/lot-number";
+import { readExecutor, runTransaction } from "@/lib/transaction";
+import { sendCodeMail } from "@/modules/platform/services/mail-service";
 
-/** The limits of DEC-072 for a verification. Each one counts the requests that pass the checks. */
-const EMAIL_SHORT = { scope: "eifu-verification-email-10m", limit: 3, windowMs: 600_000 } as const;
-const EMAIL_DAY = { scope: "eifu-verification-email-1d", limit: 10, windowMs: 86_400_000 } as const;
-const SOURCE_HOUR = { scope: "eifu-verification-source-1h", limit: 20, windowMs: 3_600_000 } as const;
+import { encryptIdentity, generateVerificationCode, hashVerificationCode, lookupHash } from "../domain/identity";
+import { findVerificationByPublicId, insertVerification, markVerificationSendFailed } from "../repositories/verification-repository";
+import { verificationUuid } from "./verification-state";
+
+/** A limit of DEC-072: the scope names the counter, and the quota is its size and its window. */
+interface Limit extends QuotaLimit {
+  readonly scope: string;
+}
+
+/** At most 3 verifications in 10 minutes and 10 in a day for one email address (IFU-50.AC7, AC8). */
+const EMAIL_SHORT: Limit = { scope: "eifu-verification-email-10m", limit: 3, windowMs: 600_000 };
+const EMAIL_DAY: Limit = { scope: "eifu-verification-email-1d", limit: 10, windowMs: 86_400_000 };
+/** At most 20 verifications in an hour for one source address (IFU-50.AC9). */
+const SOURCE_HOUR: Limit = { scope: "eifu-verification-source-1h", limit: 20, windowMs: 3_600_000 };
+
+/** The most characters of a user agent that a row keeps (IFU-50 rule 7). */
+const USER_AGENT_MAX = 512;
 
 /** The subject of a source that has no usable address. All such requests share one counter. */
 export const UNKNOWN_SOURCE = "unknown";
@@ -61,26 +75,10 @@ export function sourceOf(forwardedFor: string | null): string {
   return resolveForwardedSource(forwardedFor, getConfig().TRUSTED_PROXIES ?? []) ?? UNKNOWN_SOURCE;
 }
 
-interface RateLimit {
-  readonly scope: string;
-  readonly limit: number;
-  readonly windowMs: number;
-}
-
-/**
- * @throws RateLimitedError 429 `RATE-4400` with the seconds until the subject may try again.
- */
-function assertBelow(rule: RateLimit, subject: string, at: number): void {
-  // MOCK: DEC-072, the rate limits in Redis
-  const retryAfter = mockRateRetryAfter(rule.scope, subject, rule.limit, rule.windowMs, at);
-  if (retryAfter !== null) {
-    throw new RateLimitedError(retryAfter, `the ${rule.scope} limit is reached`);
-  }
-}
-
 /**
  * The faults of the request that the schema cannot see (IFU-50 rule 2): the
  * numbers after the transport cleanup, the consent and the version of its text.
+ * A NUL character is a fault too: the store cannot hold it in a text column.
  */
 function requestFaults(input: VerificationInput): FieldFault[] {
   const faults: FieldFault[] = [];
@@ -93,6 +91,8 @@ function requestFaults(input: VerificationInput): FieldFault[] {
       faults.push({ code: "VAL-4001", entry: { field, issue: LOOKUP_ISSUES.required } });
     } else if (cleaned.length > LOOKUP_NUMBER_MAX) {
       faults.push({ code: "VAL-4006", entry: { field, issue: LOOKUP_ISSUES.outOfRange } });
+    } else if (raw.includes("\u0000")) {
+      faults.push({ code: "VAL-4006", entry: { field, issue: "has the wrong format" } });
     }
   }
   if (!input.noticeAccepted) {
@@ -107,71 +107,95 @@ function requestFaults(input: VerificationInput): FieldFault[] {
 /**
  * Starts a verification and sends the code mail (IFU-50 rule 3, rule 4).
  *
- * The order is the one of `sds-logging` (`code-prefixes.md`): the limits, then the
- * request. A request that a limit or a fault refuses counts against no limit.
- *
  * @throws RateLimitedError 429 `RATE-4400` over a limit of DEC-072 (IFU-50.AC7 to AC9).
  * @throws AppError 400 `VAL-4001`, `VAL-4006` for the numbers, the consent and the version of its text (IFU-50.AC4, AC5).
  * @throws AppError `UP-5500`, `UP-5501` or `UP-5000` when the code mail fails (IFU-50.AC10). The verification then ends (IFU-50 rule 6).
+ * @throws AppError `CACHE-5500` when Redis is not there: the request is refused, never counted by guess.
  */
 export async function createVerification(input: VerificationInput, meta: LookupMeta): Promise<VerificationCreated> {
   const at = now();
   const source = sourceOf(meta.forwardedFor);
-  const emailDigest = mockDigest(input.email);
+  const emailSubject = input.email.toLowerCase();
 
-  assertBelow(SOURCE_HOUR, source, at.getTime());
-  assertBelow(EMAIL_SHORT, emailDigest, at.getTime());
-  assertBelow(EMAIL_DAY, emailDigest, at.getTime());
+  await assertUnderQuota(SOURCE_HOUR.scope, source, SOURCE_HOUR);
+  await assertUnderQuota(EMAIL_SHORT.scope, emailSubject, EMAIL_SHORT);
+  await assertUnderQuota(EMAIL_DAY.scope, emailSubject, EMAIL_DAY);
 
   const faults = requestFaults(input);
   if (faults.length > 0) {
     throw validationError(faults);
   }
 
-  mockRateRecord(SOURCE_HOUR.scope, source, SOURCE_HOUR.windowMs, at.getTime());
-  mockRateRecord(EMAIL_SHORT.scope, emailDigest, EMAIL_SHORT.windowMs, at.getTime());
-  mockRateRecord(EMAIL_DAY.scope, emailDigest, EMAIL_DAY.windowMs, at.getTime());
+  await consumeQuota(SOURCE_HOUR.scope, source, SOURCE_HOUR);
+  await consumeQuota(EMAIL_SHORT.scope, emailSubject, EMAIL_SHORT);
+  await consumeQuota(EMAIL_DAY.scope, emailSubject, EMAIL_DAY);
 
-  const verification = mockInsertVerification({
-    id: randomUUID(),
-    // The inputs as the visitor typed them (IFU-50 rule 7).
-    catalogNumberInput: input.catalogNumber,
-    lotNumberInput: input.lotNumber,
-    noticeVersion: input.noticeVersion,
-    expiresAt: new Date(at.getTime() + VERIFICATION_TTL_MS),
+  const publicId = randomUUID();
+  const code = generateVerificationCode();
+  const encryptedEmail = encryptIdentity(input.email);
+  const encryptedAddress = encryptIdentity(source);
+  const expiresAt = new Date(at.getTime() + VERIFICATION_TTL_MS);
+  // The mail runs after the commit and the answer waits for its result (DEC-097).
+  // An effect of the transaction never throws, so it keeps its failure here.
+  const mail: { failure: AppError | null } = { failure: null };
+
+  await runTransaction(async (tx) => {
+    await insertVerification(tx, {
+      publicId,
+      // The inputs as the visitor typed them (IFU-50 rule 7).
+      catalogNumberInput: input.catalogNumber,
+      lotNumberInput: input.lotNumber,
+      noticeVersion: input.noticeVersion,
+      email: encryptedEmail.cipher,
+      emailLookupHash: lookupHash(input.email),
+      clientAddress: encryptedAddress.cipher,
+      identityKeyId: encryptedEmail.keyId,
+      userAgent: meta.userAgent === null ? null : meta.userAgent.slice(0, USER_AGENT_MAX),
+      codeHash: hashVerificationCode(publicId, code),
+      now: at,
+      expiresAt,
+    });
+    tx.afterCommit(async () => {
+      try {
+        await sendCodeMail({
+          to: input.email,
+          code,
+          catalogNumber: cleanTransport(input.catalogNumber),
+          lotNumber: cleanTransport(input.lotNumber),
+        });
+      } catch (error) {
+        mail.failure = error instanceof AppError ? error : new AppError("UP-5000", CODE_MEANINGS["UP-5000"]);
+      }
+    });
   });
   logger.write({ severity: "INFO", type: "APP", message: "verification created" });
 
-  // The mail goes after the commit, and the answer waits for the result (DEC-097).
-  const failure = mockMailFailure(input.email);
-  if (failure !== null) {
-    mockMarkSendFailed(verification.id, now());
-    throw new AppError(failure, CODE_MEANINGS[failure], { reason: "the code mail was not sent" });
+  if (mail.failure !== null) {
+    const failure = mail.failure;
+    await runTransaction((tx) => markVerificationSendFailed(tx, publicId, now()));
+    throw new AppError(failure.code, CODE_MEANINGS[failure.code], { reason: "the code mail was not sent" });
   }
-  return { id: verification.id, expiresAt: verification.expiresAt.toISOString() };
+  return { id: publicId, expiresAt: expiresAt.toISOString() };
 }
 
 /**
  * Reads a verification (IFU-50 rule 5). `attemptsRemaining` is 0 when nobody can
  * use the verification any more: it is used, ended, expired or its mail failed.
- * A malformed id never reaches this function: the route answers 404 for it.
+ * An id that is not a UUID names no verification.
  *
  * @throws AppError 404 `RES-4200` for an unknown id.
  */
-export function getVerification(publicId: string): Promise<VerificationView> {
-  // MOCK: IFU-50, the table eifu_verification
-  const verification = mockFindVerification(publicId);
-  if (verification === null) {
-    return Promise.reject(new AppError("RES-4200", CODE_MEANINGS["RES-4200"], { reason: "no verification has the id" }));
+export async function getVerification(publicId: string): Promise<VerificationView> {
+  const id = verificationUuid(publicId);
+  const row = id === null ? null : await findVerificationByPublicId(readExecutor(), id);
+  if (row === null) {
+    throw new AppError("RES-4200", CODE_MEANINGS["RES-4200"], { reason: "no verification has the id" });
   }
   const usable =
-    verification.usedAt === null &&
-    verification.endedAt === null &&
-    verification.sendFailedAt === null &&
-    verification.expiresAt.getTime() > now().getTime();
-  return Promise.resolve({
-    id: verification.id,
-    expiresAt: verification.expiresAt.toISOString(),
-    attemptsRemaining: usable ? Math.max(0, MAX_CODE_ATTEMPTS - verification.attemptsUsed) : 0,
-  });
+    row.usedAt === null && row.endedAt === null && row.sendFailedAt === null && row.expiresAt.getTime() > now().getTime();
+  return {
+    id: row.publicId,
+    expiresAt: row.expiresAt.toISOString(),
+    attemptsRemaining: usable ? Math.max(0, MAX_CODE_ATTEMPTS - row.attemptsUsed) : 0,
+  };
 }

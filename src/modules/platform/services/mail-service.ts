@@ -10,12 +10,17 @@
  * starts with `PUBLIC_BASE_URL`, never with the host of the request (PLT-20
  * rule 3), and holds the token in the URL fragment (DEC-138). A message holds
  * no image and no tracking link (PLT-20 rule 5).
+ *
+ * The code mail of the public lookup (`sendCodeMail`) is the one message that
+ * the caller waits for: the visitor's answer carries the code of its failure
+ * (IFU-50 rule 4, DEC-097). It has no link, and one body in Turkish and English
+ * (PLT-20 rule 2, IFU-50.AC2).
  */
 import "server-only";
 
 import { getConfig } from "@/lib/config";
 import type { Transaction } from "@/lib/transaction";
-import { AppError, type ErrorCode } from "@/lib/errors";
+import { AppError, CODE_MEANINGS, type ErrorCode } from "@/lib/errors";
 import type { Language } from "@/lib/i18n/languages";
 import { logger } from "@/lib/logging";
 
@@ -117,4 +122,85 @@ export function queueMail(tx: Transaction, message: MailMessage, options: { read
     { detached: options.detached === true },
   );
   return Promise.resolve();
+}
+
+/** What the code mail holds (IFU-50.AC2): the code, and the catalog number and the LOT number of the request. */
+export interface CodeMailMessage {
+  readonly to: string;
+  /** The six-digit verification code. It goes into the body and nowhere else. */
+  readonly code: string;
+  readonly catalogNumber: string;
+  readonly lotNumber: string;
+}
+
+/**
+ * A number as the mail shows it: on one line, with no control character, so a
+ * visitor cannot add lines of their own to a message that goes to another
+ * person (PLT-20 rule 5).
+ */
+function oneLine(value: string): string {
+  return Array.from(value, (character) => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127 || code === 0x2028 || code === 0x2029 ? " " : character;
+  }).join("");
+}
+
+/**
+ * Renders the code mail: Turkish, then English, in one body, with no link
+ * (PLT-20 rule 2, IFU-50.AC2).
+ */
+export function renderCodeMail(message: CodeMailMessage): RenderedMail {
+  const catalogNumber = oneLine(message.catalogNumber);
+  const lotNumber = oneLine(message.lotNumber);
+  return {
+    subject: "Bioeksen Portal doğrulama kodu / verification code",
+    text: [
+      "Merhaba,",
+      "",
+      "Bioeksen Portal'da kullanım talimatı (IFU) sorgusu için doğrulama kodunuz:",
+      "",
+      message.code,
+      "",
+      `Katalog numarası: ${catalogNumber}`,
+      `LOT numarası: ${lotNumber}`,
+      "",
+      "Kod 10 dakika geçerlidir ve yalnızca bir kez çalışır. Bu isteği siz yapmadıysanız bu iletiyi yok sayın.",
+      "",
+      "----",
+      "",
+      "Hello,",
+      "",
+      "Your verification code for the Bioeksen Portal instructions for use (IFU) lookup is:",
+      "",
+      message.code,
+      "",
+      `Catalog number: ${catalogNumber}`,
+      `LOT number: ${lotNumber}`,
+      "",
+      "The code is valid for 10 minutes and works only once. If you did not ask for it, ignore this message.",
+    ].join("\n"),
+  };
+}
+
+/**
+ * Sends the code mail now and waits for the relay (IFU-50 rule 4, DEC-097). The
+ * caller runs it after the commit of the verification.
+ *
+ * A failure is logged with its `UP-` code, the template and a fixed reason, and
+ * never the recipient, the code or the text of the relay (PLT-20 rule 4,
+ * FND-05 rule 5). The error goes to the caller, so the answer carries the same
+ * code.
+ *
+ * @throws AppError `UP-5500` (no relay), `UP-5501` (late relay), `UP-5000` (the relay refused the message).
+ */
+export async function sendCodeMail(message: CodeMailMessage): Promise<void> {
+  const rendered = renderCodeMail(message);
+  try {
+    await getMailTransport().send({ to: message.to, subject: rendered.subject, text: rendered.text });
+  } catch (error) {
+    const code = codeOfFailure(error);
+    const reason = error instanceof AppError && error.reason !== null ? error.reason : "the relay did not take the message";
+    logger.failure(code, { tail: { template: "verificationCode", reason } });
+    throw new AppError(code, CODE_MEANINGS[code], { reason });
+  }
 }
