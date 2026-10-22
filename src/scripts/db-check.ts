@@ -13,8 +13,9 @@
  *    that results satisfies the contract (`prisma db migrate`, then
  *    `prisma db verify`). A contract that no migration reaches fails here.
  *
- * The database is `TEST_DATABASE_URL`, or `DATABASE_URL` when the first is not
- * set. The guard of FND-06 rule 4 applies before
+ * The database is `TEST_DATABASE_URL`, and nothing else: `DATABASE_URL` is the
+ * database of the app's own configuration, and the check drops its target
+ * (`sds-testing`, **Test databases**). The guard of FND-06 rule 4 applies before
  * anything is created or dropped: the name ends in `_integration`, the host is
  * in `TEST_DATABASE_HOSTS` (default: the loopback address), and the database is
  * not the one of `DATABASE_URL`. A connection string is never printed.
@@ -62,11 +63,10 @@ export type Environment = Readonly<Record<string, string | undefined>>;
 
 /** The disposable database, after the guard of FND-06 rule 4. Only `TEST_DATABASE_URL` names it. */
 export function resolveTarget(env: Environment): DatabaseTarget {
-  const explicit = env["TEST_DATABASE_URL"];
-  const raw = explicit !== undefined && explicit !== "" ? explicit : env["DATABASE_URL"];
+  const raw = env["TEST_DATABASE_URL"];
   if (raw === undefined || raw === "") {
     throw new CheckFailure(
-      "db:check could not run: neither TEST_DATABASE_URL nor DATABASE_URL is set (a database whose name ends in _integration).",
+      "db:check could not run: TEST_DATABASE_URL is not set (a database whose name ends in _integration).",
       2,
     );
   }
@@ -88,7 +88,7 @@ export function resolveTarget(env: Environment): DatabaseTarget {
     throw new CheckFailure("db:check refused the database: its host is not in TEST_DATABASE_HOSTS.", 2);
   }
   const development = env["DATABASE_URL"];
-  if (explicit !== undefined && explicit !== "" && development !== undefined && development !== "") {
+  if (development !== undefined && development !== "") {
     try {
       const other = new URL(development);
       const sameServer = other.hostname === parsed.hostname && (other.port || "5432") === (parsed.port || "5432");

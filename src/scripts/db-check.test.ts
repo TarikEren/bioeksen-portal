@@ -26,6 +26,14 @@ describe("the guard of db:check", () => {
     expect(resolveTarget({ TEST_DATABASE_URL: url }).name).toBe("portal_x_integration");
   });
 
+  it("does not fall back to DATABASE_URL, also when that names a database ending in _integration", () => {
+    expect(refusal({ DATABASE_URL: url })).toEqual({
+      message: expect.stringContaining("TEST_DATABASE_URL is not set"),
+      exitCode: 2,
+    });
+    expect(refusal({ TEST_DATABASE_URL: "", DATABASE_URL: url })?.exitCode).toBe(2);
+  });
+
   it("refuses a name that does not end in _integration", () => {
     expect(refusal({ TEST_DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/portal_dev" })?.exitCode).toBe(2);
     expect(refusal({ TEST_DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/portal_e2e" })?.exitCode).toBe(2);
