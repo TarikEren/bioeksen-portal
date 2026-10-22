@@ -37,6 +37,10 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-051 | A LOT import takes a request body of at most 5 MiB (5,242,880 bytes) and at most 5,000 data rows. | Default | ENG | — | CAT-60 | eng/eifu-imports.md |
 | DEC-052 | The import reads a CSV that is not valid UTF-8 as Windows-1254. Excel writes this encoding on a Turkish system. | Default | ENG | — | CAT-60 | eng/eifu-imports.md |
 | DEC-053 | A supplied date is `YYYY-MM-DD`, `DD.MM.YYYY` or `DD/MM/YYYY`, or a date cell of an XLSX file. The day always comes before the month. | Default | ENG | — | CAT-40, CAT-60 | eng/eifu-imports.md |
+| DEC-054 | The input of a LOT import is a `multipart/form-data` body with the field `text` or `file`, and the optional fields `productId` and `catalogNumber`. The server actions of the import take the same fields as `FormData`, with the body limit of DEC-051. | Default | ENG | — | CAT-60 | B2 contract; owner answer 2026-10-22 |
+| DEC-055 | The app reads and writes XLSX files with `exceljs`. It reads Windows-1254 (DEC-052) with the `TextDecoder` of Node. | Default | ENG | — | CAT-60, CAT-61 | B2 contract; owner answer 2026-10-22 |
+| DEC-056 | `GET /api/v1/catalog/lot-imports` lists the imports, newest first, in pages, for the screen *LOT imports*. It needs `catalog.lot.view`. | Default | ENG | — | CAT-60 | B2 contract; owner answer 2026-10-22 |
+| DEC-057 | The download of the import template needs `catalog.lot.manage`. | Default | ENG | — | CAT-61 | B2 contract; owner answer 2026-10-22 |
 
 ## The catalog model
 
@@ -321,9 +325,11 @@ with an outcome for each row.
 2. `GET /api/v1/catalog/lot-imports/{id}` gives an import and its counts.
    `GET /api/v1/catalog/lot-imports/{id}/rows` gives the rows of the import in
    pages, as `sds-api-design` says. Both endpoints need `catalog.lot.view`.
+   The list of the imports follows DEC-056.
 3. The input is pasted text (tab-, semicolon- or comma-separated) or a file
-   (`.xlsx`, first sheet; `.csv`; `.tsv`; `.txt`). The limits of DEC-051 and
-   the encoding of DEC-052 apply to the input. Supplied dates follow DEC-053.
+   (`.xlsx`, first sheet; `.csv`; `.tsv`; `.txt`), in the body of DEC-054. The
+   limits of DEC-051 and the encoding of DEC-052 apply to the input. The
+   reading follows DEC-055. Supplied dates follow DEC-053.
 4. The system finds the columns by their header labels in either language.
    The system ignores the letter case and the accents of a label. The labels
    are:
@@ -449,6 +455,9 @@ Constraint `lot_import_row_unique`: `UNIQUE (lot_import_id, row_number)`.
 **Trace.** eng/eifu-imports.md; eng/state-machines.md §ImportBatch; eng/data-model-fields.md §ImportBatch; audit D-4, D-9
 
 ### CAT-61 Import template
+
+**Rules.**
+1. The download needs the permission of DEC-057. The file follows DEC-055.
 
 **Acceptance.**
 - **AC1.** When a person downloads the import template, the file is an XLSX

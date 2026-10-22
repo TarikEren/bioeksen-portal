@@ -4,7 +4,7 @@ This is the contract of stage B2, step 1 of the loop of `crisis_mode.md`
 (DEC-136). It names what the agents build. It writes no test. The contract of
 B1 is in git: `git show feature/b1-identity:docs/plans/test_plan.md`.
 
-**Status.** Draft. The owner has not approved it.
+**Status.** The owner approved this contract on 2026-10-22.
 
 **Items.** FND-09 (AC3), CAT-10, CAT-20, CAT-30, CAT-40 (with CAT-41), CAT-50,
 CAT-60 (with CAT-61).
@@ -146,12 +146,7 @@ The sidebar gains the group *e-IFU* with *Product catalog*
 | 6 Fix | Developers | Only a finding that blocks B3, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**Choices the specs leave open** (record them as Default decisions if the
-owner accepts them):
-- The import input is `multipart/form-data` (a file needs it); the server
-  actions take the same `FormData`, with a body limit of 5 MiB.
-- XLSX is read and written with `exceljs`. Windows-1254 is decoded with the
-  `TextDecoder` of Node.
-- The list of imports (`GET lot-imports`) is added for the screen *LOT
-  imports*; CAT-60 rule 2 names only one import and its rows.
-- The template download needs `catalog.lot.manage`.
+**Choices the specs left open.** The owner accepted them on 2026-10-22, and
+they are Default decisions now: DEC-054 (the `multipart/form-data` input),
+DEC-055 (`exceljs` and the `TextDecoder` of Node), DEC-056 (the list of the
+imports) and DEC-057 (the permission of the template download).

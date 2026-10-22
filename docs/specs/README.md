@@ -31,11 +31,11 @@ The text follows ASD-STE-100 (Simplified Technical English).
 - The items `ACD` are in `academy.md`.
 - Each decision is in the file of its subject:
   - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-138.
-  - `catalog.md`: DEC-040 to DEC-053.
+  - `catalog.md`: DEC-040 to DEC-057.
   - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-091.
   - `academy.md`: DEC-100 to DEC-112.
 - A new decision takes the next free number of its file's block. The free
-  numbers are 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
+  numbers are 139 for `core.md`, 058 and 059 for `catalog.md`, 092 to
   099 for `eifu.md` and 113 to 119 for `academy.md`. Change the list above
   when you add a decision. Do not use the number 086 again.
 
