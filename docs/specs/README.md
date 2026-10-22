@@ -30,12 +30,12 @@ The text follows ASD-STE-100 (Simplified Technical English).
 - The items `IFU` are in `eifu.md`.
 - The items `ACD` are in `academy.md`.
 - Each decision is in the file of its subject:
-  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-132.
+  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-133.
   - `catalog.md`: DEC-040 to DEC-053.
   - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-091.
   - `academy.md`: DEC-100 to DEC-112.
 - A new decision takes the next free number of its file's block. The free
-  numbers are 129 and 133 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
+  numbers are 129 and 134 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
   099 for `eifu.md` and 113 to 119 for `academy.md`. Change the list above
   when you add a decision. Do not use the number 086 again.
 
@@ -195,8 +195,8 @@ B0 Foundation
 
 | Stage | Items | Exit criterion |
 |---|---|---|
-| **B0 Foundation** | FND-01 to FND-04, FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2), FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2) | CI runs every check of FND-02 on a pull request. IT deploys a release tag of the empty app to the test environment (DEC-128). There, `GET /api/health/ready` answers 200. The `sds-planning` checker passes on this set. |
-| **B1 Identity and platform services** | FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10, ACC-20, ACC-30 (AC1, AC3, AC4), ACC-40, PLT-10, PLT-30, ACC-50 (AC1, AC2) | The first Platform Administrator gets an invitation, sets a password, completes the sign-in, invites a second user and grants the IFU Manager role. Each grant has its audit record. |
+| **B0 Foundation** | FND-01 to FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2), FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2) | CI runs every check of FND-02 on a pull request. IT deploys a release tag of the empty app to the test environment (DEC-128). There, `GET /api/health/ready` answers 200. The `sds-planning` checker passes on this set. |
+| **B1 Identity and platform services** | FND-04 (AC5), FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10, ACC-20, ACC-30 (AC1, AC3, AC4), ACC-40, PLT-10, PLT-30, ACC-50 (AC1, AC2) | The first Platform Administrator gets an invitation, sets a password, completes the sign-in, invites a second user and grants the IFU Manager role. Each grant has its audit record. |
 | **B2 Product catalog** | FND-09 (AC3), CAT-10, CAT-20, CAT-30, CAT-40, CAT-50, CAT-60 | An IFU Manager enters a product with two catalog numbers, imports LOTs with a row report, and corrects a LOT whose dates disagree. |
 | **B3 Documents and publication** | IFU-10, IFU-20, IFU-30, IFU-40 | An IFU Manager publishes three versions of one document, replaces a published file, withdraws a version and sets an override. The periods match IFU-30. |
 | **B4 Public lookup** | FND-05 (AC4), FND-06 (AC3, AC4, AC5), FND-09 (AC1, AC4), ACC-50 (AC3), IFU-90, IFU-50, IFU-60, IFU-80, IFU-70 | A visitor proves an email address with the emailed code and gets the files of the correct version. The public endpoints pass the fixture of IFU-60. Each lookup has its access record, which holds the encrypted identity. |

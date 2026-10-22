@@ -1,6 +1,6 @@
 # Stage B0: Foundation
 
-**Items.** FND-01 to FND-04, FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2),
+**Items.** FND-01 to FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2),
 FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2).
 
 **Exit criterion.** CI runs every check of FND-02 on a pull request. IT
@@ -16,7 +16,7 @@ on the set.
 
 **Decisions this stage carries.** DEC-003, DEC-004, DEC-005, DEC-009,
 DEC-015, DEC-016, DEC-017, DEC-018, DEC-020, DEC-022, DEC-127, DEC-130,
-DEC-131.
+DEC-131, DEC-133.
 
 ## Contract
 
@@ -32,7 +32,7 @@ Every answer carries `X-Request-Id`. The four standard endpoints carry
 |---|---|---|---|
 | `GET /api/health/live` | — | 200, the `sds-api-design` live body | — |
 | `GET /api/health/ready` | — | 200, `status` `ok`, checks `db` and `cache` | 503, `status` `fail` or `not-ready`, no `code` |
-| `GET /api/health` | `Authorization: Bearer <operator token>` | 200, the full report; `checks.dependencies` holds `object-store` and `smtp` | 401 `AUTH-4100`, `AUTH-4103`, `AUTH-4102`, `AUTH-4101`; 503 `AUTH-5500`; 403 `PERM-4151` |
+| `GET /api/health` | `Authorization: Bearer <operator token>` | 200, the full report; `checks.dependencies` holds `object-store` and `smtp`; 200 `ok` also when only these two fail (FND-04.AC2) | 401 `AUTH-4100`, `AUTH-4103`, `AUTH-4102`, `AUTH-4101`; 503 `AUTH-5500`; 403 `PERM-4151` |
 | `GET /api/admin/logs` | operator token; the query of `sds-api-design` | 200, the list body of `sds-api-design`, from `platform_log_record` | as `GET /api/health`; 400 `VAL-4003`, `VAL-4004`, `VAL-4005` |
 | Another method on the four paths | — | — | 405 `RES-4500` |
 | `POST /api/test/echo` (test seam) | JSON body `{ "value": string }`, body limit 1 MiB | 200 `{ "status": "ok", "value": … }` | 400 `VAL-4000`, `VAL-4001`, `VAL-4007`; 413 `VAL-4550`; 404 when the seams are off |
@@ -140,7 +140,33 @@ empty database, and `db verify` passes.
 
 ## Open point for the exit
 
-`src/app/globals.css` fails four contrast pairs of WCAG 2.2 AA today
-(placeholder 2.64:1, link on the page 4.28:1, dark accent text 4.32:1, field
-edge 1.12:1). FND-09.AC2 stays red until the file changes, and the stage
-cannot exit with a red criterion. The owner decides before the exit.
+`src/app/globals.css` fails pairs of the reference page of
+`sds-nextjs-frontend` at WCAG 2.2 AA (measured by the B0 tests, 2026-10-22):
+
+- Light theme, 8 pairs: link on the page 4.28; accent text on the page 4.28;
+  primary button, hovered 3.99; soft warning chip 4.21; danger, solid 3.48;
+  error text on a surface 3.57; placeholder 2.64; field edge 1.00.
+- Dark theme, 11 pairs: muted text on a surface 3.94; accent text on a
+  surface 4.32; primary button 4.32; primary button, hovered 3.77; soft accent
+  chip 4.45; success, solid 4.32; soft success chip 4.45; danger, solid 4.35;
+  soft danger chip 3.42; error text 2.33; field edge 1.25.
+- The region `.sidebar-theme`: 8 pairs in the light theme and 8 in the dark
+  theme.
+
+FND-09.AC2 stays red until the file changes, and the stage cannot exit with a
+red criterion. The owner changes the file before the exit.
+
+## Answers to the test questions (2026-10-22)
+
+- FND-09.AC2 measures `.sidebar-theme` in both themes, as the reference page
+  does. The pairs that come from the HeroUI tokens count too.
+- FND-03.AC3 now says "no test seam works". In B0, the seam is
+  `POST /api/test/echo`, which answers 404.
+- FND-04 rule 4 and AC5 (the rate limit of failed authentication, `sds-auth`)
+  are new. AC5 is due in B1, with the rate limits of ACC-20.
+- FND-04.AC2 now gives the status of `GET /api/health`: 200 `ok`.
+- FND-08.AC6 now gives the forms of DEC-133.
+- FND-02.AC1: the pipeline runs `test:pipeline` too (`sds-ci`).
+- FND-02.AC3 and FND-07.AC5: no local script runs the commit check or the
+  audit. The tests read the workflow. A person commits the workflow
+  (`sds-ci`).

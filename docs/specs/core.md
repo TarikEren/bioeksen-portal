@@ -21,7 +21,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-004 | The app is a modular monolith: one deployable unit and one PostgreSQL 16 database. The modules are `identity`, `catalog`, `eifu`, `platform` and, in release 2, `academy`. The name of each table starts with the name of its module (`catalog_product`). The tables are in the schema `public`. Each worktree uses its own database: `bioeksen_portal_<role>_integration` or `bioeksen_portal_<role>_e2e`. This departs from `sds-database` §8 (one disposable schema for each worktree), because Prisma 8 adds the schema `public` to each table name. The departure ends when Prisma 8 accepts a schema for each connection. A module reads the data of another module only through the service of that module. | Default | ENG | — | FND-01, FND-06 | adr/0001; eng/architecture.md; Prisma 8 skill (`references/runtime.md`) |
 | DEC-005 | Prisma 8 RC (`@prisma/orm-postgres` 8.0.0-rc.18, an exact version) is the only ORM. The contract `src/prisma/contract.prisma` is the source of truth. The contract holds each unique constraint, partial unique index and check constraint, with the name of the spec in `map:`. An extension, an exclusion constraint and a trigger are `rawSql` operations in the migration that creates or changes their table. A migration with raw SQL only is not possible, because Prisma 8 never applies a migration that does not change the contract. The drift check cannot see the raw objects, so an integration test proves that each one exists. | Decided | PO | — | FND-06 | Owner answer 2026-10-22; adr/0015; Prisma 8 skill (`references/migrations.md`) |
 | DEC-006 | All production data is on infrastructure in Türkiye: the database, the object store, the cache, the backups, the logs and the mail relay. An external service that receives personal data or project data needs the approval of `PO` and `LEG` before its first use. | Decided | PO | questions.md 1 | FND-09, PLT-10, PLT-20, PLT-60 | adr/0006; audit D-2 |
-| DEC-007 | Redis 7 holds the sessions and the rate-limit counters. Only PostgreSQL holds durable data. | Default | ENG | — | ACC-20, IFU-50 | eng/tech-stack-versions.md |
+| DEC-007 | Redis 7 holds the sessions and the rate-limit counters. Only PostgreSQL holds durable data. | Default | ENG | — | FND-04, ACC-20, IFU-50 | eng/tech-stack-versions.md |
 | DEC-008 | The scheduled work runs in a worker process that is built from this repository. The worker runs one pass each hour. A PostgreSQL advisory lock lets only one instance run a pass at a time. | Default | ENG | — | PLT-30 | eng/backend-nestjs.md §Background work; ops/monitoring.md |
 | DEC-130 | The Next.js configuration switches off `cacheComponents` and `partialPrefetching`. Partial Prerendering does not work with the nonce in the Content Security Policy of FND-07. | Default | ENG | — | FND-07 | `next/dist/docs/01-app/02-guides/content-security-policy.md` |
 | DEC-131 | All code is under `src/`. The repository root holds only the configuration files. | Decided | PO | — | FND-01 | Owner answer 2026-10-22 |
@@ -35,6 +35,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-010 | The system never deletes a controlled record. The controlled records are a user, a role assignment, a product, a catalog number, a LOT, and a LOT import and its rows. The other controlled records are a document, a document version, a document file, a file replacement, an applicability period, an override and an access record. A state or an `isActive` flag ends a record instead. | Decided | PO | — | FND-06, ACC-10, ACC-31, CAT-10, CAT-20, CAT-40, CAT-60, IFU-10, IFU-20, IFU-30, IFU-32, IFU-40, IFU-80, ACD-50 | eng/data-model-fields.md §Deletion policy; eng/audit-traceability.md |
 | DEC-011 | Record content that people read in two languages (a product name, a document title) is one JSONB column. It has one entry for each locale: `{ "tr": …, "en": … }`. Both entries are required. A check constraint enforces this. Interface text never uses this form. The dictionaries give the interface text. | Default | ENG | — | FND-08, CAT-10, IFU-10, ACD-20 | adr/0009; audit A-03 |
 | DEC-012 | The database stores timestamps as `timestamptz`, in UTC. Business dates (a manufacturing date, an effective date, an expiry date) are `date` columns with no time. The interface shows timestamps and counts days in the time zone `Europe/Istanbul`. | Default | ENG | — | FND-08, CAT-40, IFU-30, IFU-83 | eng/localization.md §Data representation |
+| DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. | Default | ENG | — | FND-08 | B0 test review, 2026-10-22 |
 | DEC-039 | In JSON, a business date is `YYYY-MM-DD`, with no time and no offset. This departs from `sds-api-design` (`standard-api-endpoints.md`, **Types and units**). That skill gives each date an offset. The departure ends when SDS answers. | Pending | SDS | questions.md 2 | CAT-40, IFU-30, IFU-60, IFU-83 | — |
 
 ### Errors and audit
@@ -80,7 +81,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-029 | An authorization check names a permission code, never a role. A role is a named bundle of permissions. In release 1, each grant of a role applies to the whole platform. The Academy adds grants that apply to one organization (DEC-102). | Default | ENG | — | ACC-30, ACD-10 | eng/permission-matrix.md |
 | DEC-030 | Only a holder of `iam.role.manage` grants or revokes a role. Nobody grants a role to themselves. The system audits each grant and each revocation. | Decided | PO | — | ACC-31 | eng/permission-matrix.md §Role assignment scope (decided 2026-08-23) |
 | DEC-031 | Each permission has one test that allows and one test that refuses. | Default | ENG | — | ACC-30 | eng/testing.md §Authorization |
-| DEC-038 | The source address of a request is the rightmost `X-Forwarded-For` entry that a proxy in `TRUSTED_PROXIES` did not add. This follows the rule of `sds-auth` for rate limits. The source address is never the leftmost entry. | Default | ENG | — | ACC-20, IFU-50, IFU-80, FND-03 | eng/eifu-resolution-specification.md §Access recording; sds-auth §Rate limiting |
+| DEC-038 | The source address of a request is the rightmost `X-Forwarded-For` entry that a proxy in `TRUSTED_PROXIES` did not add. This follows the rule of `sds-auth` for rate limits. The source address is never the leftmost entry. | Default | ENG | — | FND-04, ACC-20, IFU-50, IFU-80, FND-03 | eng/eifu-resolution-specification.md §Access recording; sds-auth §Rate limiting |
 
 ### Platform services
 
@@ -235,7 +236,7 @@ setting.
   with `CFG-5001` names the setting and does not hold its value.
 - **AC3.** If `TEST_SEAMS_ENABLED` is `true` when `APP_ENV` is `production`,
   the app does not report ready, a `FATAL` record carries `CFG-5001`, and no
-  test sign-in works.
+  test seam works.
 - **AC4.** If `ENTRA_ISSUER` is not set when the app starts, the app does not
   report ready, and a `FATAL` record carries `CFG-5000`.
 
@@ -255,17 +256,25 @@ setting.
    mail fails, and the app continues to serve the other requests.
 3. `GET /api/admin/logs` reads the local store `platform_log_record`
    (DEC-127).
+4. A failed authentication at `GET /api/health` or `GET /api/admin/logs`
+   counts against its source address (DEC-038). The limit is 10 failures in
+   one minute, in Redis (DEC-007; `sds-auth`, **Rate limiting**).
 
 **Acceptance.**
 - **AC1.** When the database does not answer, `GET /api/health/live` answers
   200, and `GET /api/health/ready` answers 503 with the body `status` `fail`.
 - **AC2.** When PostgreSQL and Redis answer and the object store and the mail
   relay do not answer, `GET /api/health/ready` answers 200. In this case,
-  `GET /api/health` reports `object-store` and `smtp` as `fail`.
+  `GET /api/health` answers 200 with the body `status` `ok`, and reports
+  `object-store` and `smtp` as `fail`.
 - **AC3.** If a request to `GET /api/health` or `GET /api/admin/logs` has no
   `Authorization` header, the answer is 401 `AUTH-4100`.
 - **AC4.** Each answer of the four endpoints carries
   `Cache-Control: no-store`.
+- **AC5.** When one source address sent 10 requests with a failed
+  authentication to `GET /api/health` in one minute, the 11th request in that
+  minute answers 429 `RATE-4400` with a `Retry-After` header. This is also
+  true when the 11th request has a valid operator token.
 
 **Trace.** sds-api-design (standard-api-endpoints.md §Further dependencies); adr/0014; audit A-17
 
@@ -385,7 +394,7 @@ times and sizes.
 2. The language follows DEC-017. `<html lang>` gives the active language.
 3. Record content in two languages follows DEC-011.
 4. The formatters of the project format the dates, the times and the file
-   sizes, with the time zone of DEC-012.
+   sizes, with the time zone of DEC-012 and the forms of DEC-133.
 5. The interface never changes text to capital letters with `text-transform`.
    In Turkish, this gives wrong letters. If a label must show in capital
    letters, the dictionary holds it in capital letters.
@@ -401,7 +410,7 @@ times and sizes.
 - **AC5.** When a signed-in user whose preferred language is English opens a
   page, the page is in English, also when the language cookie says Turkish.
 - **AC6.** When the interface shows the timestamp `2026-03-09T21:30:00Z`, it
-  shows the date 10 March 2026 and the time 00:30.
+  shows `10.03.2026 00:30` in Turkish and `10 Mar 2026, 00:30` in English.
 
 **Trace.** eng/localization.md; eng/design-system.md §Typography
 
