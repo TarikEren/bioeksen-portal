@@ -36,6 +36,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-011 | Record content that people read in two languages (a product name, a document title) is one JSONB column. It has one entry for each locale: `{ "tr": …, "en": … }`. Both entries are required. A check constraint enforces this. Interface text never uses this form. The dictionaries give the interface text. | Default | ENG | — | FND-08, CAT-10, IFU-10, ACD-20 | adr/0009; audit A-03 |
 | DEC-012 | The database stores timestamps as `timestamptz`, in UTC. Business dates (a manufacturing date, an effective date, an expiry date) are `date` columns with no time. The interface shows timestamps and counts days in the time zone `Europe/Istanbul`. | Default | ENG | — | FND-08, CAT-40, IFU-30, IFU-83 | eng/localization.md §Data representation |
 | DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. It shows a file size in decimal units (1 kB is 1000 bytes), with one decimal, and a decimal comma in Turkish. | Default | ENG | — | FND-08 | B0 test review, 2026-10-22; review 1 |
+| DEC-134 | The dependency check of FND-07 fails on an advisory of severity high or critical in any dependency, also a development tool. When a patched version exists, a pnpm override forces it. An advisory with no patched version is ignored only by its GHSA id, and only while this row names it with a review date. Ignored now: GHSA-vfj7-8cjw-p6xm (`braces` 3.0.3 and earlier, through `eslint-config-next`), review on 2027-01-22. | Decided | PO | — | FND-07 | Owner answer 2026-10-22 |
 | DEC-039 | In JSON, a business date is `YYYY-MM-DD`, with no time and no offset. This departs from `sds-api-design` (`standard-api-endpoints.md`, **Types and units**). That skill gives each date an offset. The departure ends when SDS answers. | Pending | SDS | questions.md 2 | CAT-40, IFU-30, IFU-60, IFU-83 | — |
 
 ### Errors and audit
@@ -368,7 +369,8 @@ across the answer and its log records.
    The Next.js origin check of server actions stays on.
 4. The app never renders HTML that a person supplied. It never runs a script
    that an administrator supplied.
-5. The pipeline checks the dependencies for known vulnerabilities.
+5. The pipeline checks the dependencies for known vulnerabilities
+   (DEC-134).
 
 **Acceptance.**
 - **AC1.** Each HTML answer carries a `Content-Security-Policy`. Its
