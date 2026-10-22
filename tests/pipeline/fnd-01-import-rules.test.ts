@@ -131,6 +131,48 @@ describe("FND-01 import rules", () => {
     expect(namesFile(result.text, forbidden), `the lint output names ${forbidden}\n${result.text}`).toBe(true);
   });
 
+  /** The rule forbids only another module's repository: a module's own service may import its own repository. */
+  it("FND-01.AC3: lint accepts a module that imports its own repository", async () => {
+    const file = "src/modules/catalog/services/qa-fixture-own-repository.ts";
+    copy.write(
+      file,
+      moduleSource('import { findQaFixture } from "@/modules/catalog/repositories/qa-fixture-repository";', "findQaFixture"),
+    );
+    const result = await lint(file);
+
+    expect(result.code, `pnpm run lint passes on ${file}\n${result.text}`).toBe(0);
+  });
+
+  /** The rule also holds for a relative import path. */
+  it("FND-01.AC3: lint fails and names the file when one module imports a repository of another module by a relative path", async () => {
+    const forbidden = "src/modules/eifu/services/qa-fixture-relative-cross-repository.ts";
+    const result = await expectImportRule(
+      {
+        file: "src/modules/eifu/services/qa-fixture-relative-cross-service.ts",
+        text: moduleSource('import { readQaFixture } from "../../catalog/services/qa-fixture-service";', "readQaFixture"),
+      },
+      {
+        file: forbidden,
+        text: moduleSource('import { findQaFixture } from "../../catalog/repositories/qa-fixture-repository";', "findQaFixture"),
+      },
+    );
+    expect(namesFile(result.text, forbidden), `the lint output names ${forbidden}\n${result.text}`).toBe(true);
+  });
+
+  /** The rule also holds for a relative import path. */
+  it("FND-01.AC4: lint fails when a file under src/lib imports a file under src/modules by a relative path", async () => {
+    await expectImportRule(
+      {
+        file: "src/lib/qa-fixture/qa-fixture-relative-lib-import.ts",
+        text: moduleSource('import { qaFixtureHelper } from "./qa-fixture-helper";', "qaFixtureHelper"),
+      },
+      {
+        file: "src/lib/qa-fixture/qa-fixture-relative-module-import.ts",
+        text: moduleSource('import { readQaFixture } from "../../modules/catalog/services/qa-fixture-service";', "readQaFixture"),
+      },
+    );
+  });
+
   /** A file under src/lib that imports a file under src/modules fails lint. */
   it("FND-01.AC4: lint fails when a file under src/lib imports a file under src/modules", async () => {
     await expectImportRule(
