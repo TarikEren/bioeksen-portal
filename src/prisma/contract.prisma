@@ -472,3 +472,70 @@ model EifuLotOverride {
   @@index([documentVersionId], map: "eifu_lot_override_version_idx")
   @@map("eifu_lot_override")
 }
+
+// eifu_verification: the first step of the public lookup (IFU-50, DEC-070,
+// DEC-071). It is not a controlled record: the worker removes a verification 24
+// hours after it ends (IFU-50 rule 6). `email` and `client_address` hold the
+// AES-256-GCM cipher text (nonce, cipher, tag) and `identity_key_id` names the
+// key (IFU-90, DEC-081). `code_hash` is a keyed hash, never the code (DEC-071).
+// The inputs are the text as the visitor typed it (IFU-50 rule 7).
+model EifuVerification {
+  id                 BigInt                @id @default(autoincrement())
+  publicId           Uuid                  @map("public_id")
+  catalogNumberInput String                @map("catalog_number_input")
+  lotNumberInput     String                @map("lot_number_input")
+  noticeVersion      String                @map("notice_version")
+  email              Bytes
+  emailLookupHash    String                @map("email_lookup_hash")
+  clientAddress      Bytes                 @map("client_address")
+  identityKeyId      String                @map("identity_key_id")
+  userAgent          String?               @map("user_agent")
+  codeHash           String                @map("code_hash")
+  attemptsUsed       Int                   @default(0) @map("attempts_used")
+  createdAt          TimestamptzString(3)  @map("created_at")
+  expiresAt          TimestamptzString(3)  @map("expires_at")
+  usedAt             TimestamptzString(3)? @map("used_at")
+  endedAt            TimestamptzString(3)? @map("ended_at")
+  sendFailedAt       TimestamptzString(3)? @map("send_failed_at")
+
+  @@unique([publicId], map: "verification_public_id_unique")
+  @@check(expression: sql`((attempts_used >= 0) AND (attempts_used <= 5))`, map: "verification_attempts_in_range")
+  @@check(expression: sql`((user_agent IS NULL) OR (char_length(user_agent) <= 512))`, map: "verification_user_agent_length")
+  @@check(expression: sql`((char_length(catalog_number_input) <= 256) AND (char_length(lot_number_input) <= 256))`, map: "verification_inputs_length")
+  @@index([expiresAt], map: "eifu_verification_expires_at_idx")
+  @@index([endedAt], map: "eifu_verification_ended_at_idx")
+  @@map("eifu_verification")
+}
+
+// eifu_access_record: one record for each lookup with a correct code (IFU-80,
+// DEC-078). It is a controlled record: the triggers of the migration
+// `eifu_lookup` refuse DELETE and TRUNCATE (DEC-010). The ids of the resolved
+// product and version have no foreign key, so the record stays after any change
+// of the catalog (IFU-80 rule 2). The identity columns are encrypted (IFU-90)
+// and null only after the retention pass anonymizes the record (IFU-81,
+// `access_record_anonymized_keeps_no_identity`).
+model EifuAccessRecord {
+  id                        BigInt                @id @default(autoincrement())
+  catalogNumberInput        String                @map("catalog_number_input")
+  lotNumberInput            String                @map("lot_number_input")
+  resolvedProductId         BigInt?               @map("resolved_product_id")
+  resolvedDocumentVersionId BigInt?               @map("resolved_document_version_id")
+  outcome                   String
+  resolvedViaOverride       Boolean               @default(false) @map("resolved_via_override")
+  acknowledgedNoticeVersion String                @map("acknowledged_notice_version")
+  emailVerified             Boolean               @default(true) @map("email_verified")
+  email                     Bytes?
+  clientAddress             Bytes?                @map("client_address")
+  emailLookupHash           String?               @map("email_lookup_hash")
+  identityKeyId             String?               @map("identity_key_id")
+  userAgent                 String?               @map("user_agent")
+  requestId                 String?               @map("request_id")
+  createdAt                 TimestamptzString(3)  @map("created_at")
+  anonymizedAt              TimestamptzString(3)? @map("anonymized_at")
+
+  @@check(expression: sql`(outcome = ANY (ARRAY['RESOLVED'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'LOT_NOT_FOUND'::text, 'LOT_CATALOG_MISMATCH'::text, 'LOT_DATE_CONFLICT'::text, 'NO_APPLICABLE_VERSION'::text, 'AMBIGUOUS_APPLICABILITY'::text, 'NO_FILE_FOR_VERSION'::text, 'OVERRIDE_TARGET_NOT_PUBLISHED'::text]))`, map: "access_record_outcome_is_known")
+  @@check(expression: sql`((anonymized_at IS NULL) OR ((email IS NULL) AND (client_address IS NULL) AND (email_lookup_hash IS NULL) AND (identity_key_id IS NULL)))`, map: "access_record_anonymized_keeps_no_identity")
+  @@check(expression: sql`((user_agent IS NULL) OR (char_length(user_agent) <= 512))`, map: "access_record_user_agent_length")
+  @@index([createdAt, anonymizedAt], map: "access_record_created_at_anonymized_at_idx")
+  @@map("eifu_access_record")
+}

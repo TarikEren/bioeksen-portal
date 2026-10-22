@@ -24,6 +24,10 @@
       "model": "CatalogProduct",
       "namespace": "public"
     },
+    "eifu_access_record": {
+      "model": "EifuAccessRecord",
+      "namespace": "public"
+    },
     "eifu_applicability": {
       "model": "EifuApplicability",
       "namespace": "public"
@@ -46,6 +50,10 @@
     },
     "eifu_lot_override": {
       "model": "EifuLotOverride",
+      "namespace": "public"
+    },
+    "eifu_verification": {
+      "model": "EifuVerification",
       "namespace": "public"
     },
     "identity_auth_token": {
@@ -888,6 +896,193 @@
               },
               "namespaceId": "public",
               "table": "catalog_product"
+            }
+          },
+          "EifuAccessRecord": {
+            "fields": {
+              "acknowledgedNoticeVersion": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "anonymizedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "catalogNumberInput": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "clientAddress": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/bytea@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "email": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/bytea@1",
+                  "kind": "scalar"
+                }
+              },
+              "emailLookupHash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "emailVerified": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "identityKeyId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotNumberInput": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "outcome": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "requestId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolvedDocumentVersionId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolvedProductId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolvedViaOverride": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "userAgent": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "acknowledgedNoticeVersion": {
+                  "column": "acknowledged_notice_version"
+                },
+                "anonymizedAt": {
+                  "column": "anonymized_at"
+                },
+                "catalogNumberInput": {
+                  "column": "catalog_number_input"
+                },
+                "clientAddress": {
+                  "column": "client_address"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "emailLookupHash": {
+                  "column": "email_lookup_hash"
+                },
+                "emailVerified": {
+                  "column": "email_verified"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "identityKeyId": {
+                  "column": "identity_key_id"
+                },
+                "lotNumberInput": {
+                  "column": "lot_number_input"
+                },
+                "outcome": {
+                  "column": "outcome"
+                },
+                "requestId": {
+                  "column": "request_id"
+                },
+                "resolvedDocumentVersionId": {
+                  "column": "resolved_document_version_id"
+                },
+                "resolvedProductId": {
+                  "column": "resolved_product_id"
+                },
+                "resolvedViaOverride": {
+                  "column": "resolved_via_override"
+                },
+                "userAgent": {
+                  "column": "user_agent"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_access_record"
             }
           },
           "EifuApplicability": {
@@ -1834,6 +2029,202 @@
               },
               "namespaceId": "public",
               "table": "eifu_lot_override"
+            }
+          },
+          "EifuVerification": {
+            "fields": {
+              "attemptsUsed": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "catalogNumberInput": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "clientAddress": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bytea@1",
+                  "kind": "scalar"
+                }
+              },
+              "codeHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bytea@1",
+                  "kind": "scalar"
+                }
+              },
+              "emailLookupHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "endedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "expiresAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "identityKeyId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotNumberInput": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "noticeVersion": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "publicId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "sendFailedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "usedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "userAgent": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "attemptsUsed": {
+                  "column": "attempts_used"
+                },
+                "catalogNumberInput": {
+                  "column": "catalog_number_input"
+                },
+                "clientAddress": {
+                  "column": "client_address"
+                },
+                "codeHash": {
+                  "column": "code_hash"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "emailLookupHash": {
+                  "column": "email_lookup_hash"
+                },
+                "endedAt": {
+                  "column": "ended_at"
+                },
+                "expiresAt": {
+                  "column": "expires_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "identityKeyId": {
+                  "column": "identity_key_id"
+                },
+                "lotNumberInput": {
+                  "column": "lot_number_input"
+                },
+                "noticeVersion": {
+                  "column": "notice_version"
+                },
+                "publicId": {
+                  "column": "public_id"
+                },
+                "sendFailedAt": {
+                  "column": "send_failed_at"
+                },
+                "usedAt": {
+                  "column": "used_at"
+                },
+                "userAgent": {
+                  "column": "user_agent"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_verification"
             }
           },
           "IdentityAuthToken": {
@@ -3437,6 +3828,144 @@
                 }
               ]
             },
+            "eifu_access_record": {
+              "checks": [
+                {
+                  "expression": "((anonymized_at IS NULL) OR ((email IS NULL) AND (client_address IS NULL) AND (email_lookup_hash IS NULL) AND (identity_key_id IS NULL)))",
+                  "name": "access_record_anonymized_keeps_no_identity"
+                },
+                {
+                  "expression": "(outcome = ANY (ARRAY['RESOLVED'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'LOT_NOT_FOUND'::text, 'LOT_CATALOG_MISMATCH'::text, 'LOT_DATE_CONFLICT'::text, 'NO_APPLICABLE_VERSION'::text, 'AMBIGUOUS_APPLICABILITY'::text, 'NO_FILE_FOR_VERSION'::text, 'OVERRIDE_TARGET_NOT_PUBLISHED'::text]))",
+                  "name": "access_record_outcome_is_known"
+                },
+                {
+                  "expression": "((user_agent IS NULL) OR (char_length(user_agent) <= 512))",
+                  "name": "access_record_user_agent_length"
+                }
+              ],
+              "columns": {
+                "acknowledged_notice_version": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "anonymized_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "catalog_number_input": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "client_address": {
+                  "codecId": "pg/bytea@1",
+                  "dataType": "pg/bytea",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "email": {
+                  "codecId": "pg/bytea@1",
+                  "dataType": "pg/bytea",
+                  "nullable": true
+                },
+                "email_lookup_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "email_verified": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "identity_key_id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "lot_number_input": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "outcome": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "request_id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "resolved_document_version_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "resolved_product_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "resolved_via_override": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "user_agent": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "created_at",
+                    "anonymized_at"
+                  ],
+                  "name": "access_record_created_at_anonymized_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "eifu_applicability": {
               "checks": [
                 {
@@ -4274,6 +4803,162 @@
               },
               "uniques": []
             },
+            "eifu_verification": {
+              "checks": [
+                {
+                  "expression": "((attempts_used >= 0) AND (attempts_used <= 5))",
+                  "name": "verification_attempts_in_range"
+                },
+                {
+                  "expression": "((char_length(catalog_number_input) <= 256) AND (char_length(lot_number_input) <= 256))",
+                  "name": "verification_inputs_length"
+                },
+                {
+                  "expression": "((user_agent IS NULL) OR (char_length(user_agent) <= 512))",
+                  "name": "verification_user_agent_length"
+                }
+              ],
+              "columns": {
+                "attempts_used": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "catalog_number_input": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "client_address": {
+                  "codecId": "pg/bytea@1",
+                  "dataType": "pg/bytea",
+                  "nullable": false
+                },
+                "code_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "email": {
+                  "codecId": "pg/bytea@1",
+                  "dataType": "pg/bytea",
+                  "nullable": false
+                },
+                "email_lookup_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "ended_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "expires_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "identity_key_id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "lot_number_input": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "notice_version": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "public_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": false
+                },
+                "send_failed_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "used_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "user_agent": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "ended_at"
+                  ],
+                  "name": "eifu_verification_ended_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "expires_at"
+                  ],
+                  "name": "eifu_verification_expires_at_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "public_id"
+                  ],
+                  "name": "verification_public_id_unique"
+                }
+              ]
+            },
             "identity_auth_token": {
               "checks": [
                 {
@@ -5097,7 +5782,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "611d61f0e7bd6becd3659f2734221f3eb0e11f628c9a533e5a893de8dcfde676"
+    "storageHash": "437f9273d9a04bf95f19b497029e2b556aadc2b3f3d7921758f2c1b19c4a00a6"
   },
   "capabilities": {
     "postgres": {

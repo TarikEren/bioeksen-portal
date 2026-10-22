@@ -1,0 +1,297 @@
+[
+  {
+    "id": "table.eifu_access_record",
+    "label": "Create table \"eifu_access_record\"",
+    "summary": "Creates table \"eifu_access_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_access_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_access_record\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_access_record\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_access_record\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_access_record\" (\n  \"acknowledged_notice_version\" text NOT NULL,\n  \"anonymized_at\" timestamptz(3),\n  \"catalog_number_input\" text NOT NULL,\n  \"client_address\" bytea,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"email\" bytea,\n  \"email_lookup_hash\" text,\n  \"email_verified\" bool DEFAULT true NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"identity_key_id\" text,\n  \"lot_number_input\" text NOT NULL,\n  \"outcome\" text NOT NULL,\n  \"request_id\" text,\n  \"resolved_document_version_id\" int8,\n  \"resolved_product_id\" int8,\n  \"resolved_via_override\" bool DEFAULT false NOT NULL,\n  \"user_agent\" text,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"access_record_anonymized_keeps_no_identity\" CHECK (((anonymized_at IS NULL) OR ((email IS NULL) AND (client_address IS NULL) AND (email_lookup_hash IS NULL) AND (identity_key_id IS NULL)))),\n  CONSTRAINT \"access_record_outcome_is_known\" CHECK ((outcome = ANY (ARRAY['RESOLVED'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'LOT_NOT_FOUND'::text, 'LOT_CATALOG_MISMATCH'::text, 'LOT_DATE_CONFLICT'::text, 'NO_APPLICABLE_VERSION'::text, 'AMBIGUOUS_APPLICABILITY'::text, 'NO_FILE_FOR_VERSION'::text, 'OVERRIDE_TARGET_NOT_PUBLISHED'::text]))),\n  CONSTRAINT \"access_record_user_agent_length\" CHECK (((user_agent IS NULL) OR (char_length(user_agent) <= 512)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_access_record\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_access_record\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_verification",
+    "label": "Create table \"eifu_verification\"",
+    "summary": "Creates table \"eifu_verification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_verification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_verification\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_verification\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_verification\" (\n  \"attempts_used\" int4 DEFAULT 0 NOT NULL,\n  \"catalog_number_input\" text NOT NULL,\n  \"client_address\" bytea NOT NULL,\n  \"code_hash\" text NOT NULL,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"email\" bytea NOT NULL,\n  \"email_lookup_hash\" text NOT NULL,\n  \"ended_at\" timestamptz(3),\n  \"expires_at\" timestamptz(3) NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"identity_key_id\" text NOT NULL,\n  \"lot_number_input\" text NOT NULL,\n  \"notice_version\" text NOT NULL,\n  \"public_id\" uuid NOT NULL,\n  \"send_failed_at\" timestamptz(3),\n  \"used_at\" timestamptz(3),\n  \"user_agent\" text,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"verification_attempts_in_range\" CHECK (((attempts_used >= 0) AND (attempts_used <= 5))),\n  CONSTRAINT \"verification_inputs_length\" CHECK (((char_length(catalog_number_input) <= 256) AND (char_length(lot_number_input) <= 256))),\n  CONSTRAINT \"verification_user_agent_length\" CHECK (((user_agent IS NULL) OR (char_length(user_agent) <= 512)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_verification\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.eifu_verification.verification_public_id_unique",
+    "label": "Add unique constraint on \"eifu_verification\" (public_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "verification_public_id_unique",
+        "table": "eifu_verification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"verification_public_id_unique\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "verification_public_id_unique",
+          "public",
+          "\"public\".\"eifu_verification\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"verification_public_id_unique\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_verification\" ADD CONSTRAINT \"verification_public_id_unique\" UNIQUE (\"public_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"verification_public_id_unique\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "verification_public_id_unique",
+          "public",
+          "\"public\".\"eifu_verification\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_access_record.access_record_created_at_anonymized_at_idx",
+    "label": "Create index \"access_record_created_at_anonymized_at_idx\" on \"eifu_access_record\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "access_record_created_at_anonymized_at_idx",
+        "table": "eifu_access_record"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"access_record_created_at_anonymized_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"access_record_created_at_anonymized_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"access_record_created_at_anonymized_at_idx\"",
+        "sql": "CREATE INDEX \"access_record_created_at_anonymized_at_idx\" ON \"public\".\"eifu_access_record\" (\"created_at\", \"anonymized_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"access_record_created_at_anonymized_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"access_record_created_at_anonymized_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_verification.eifu_verification_ended_at_idx",
+    "label": "Create index \"eifu_verification_ended_at_idx\" on \"eifu_verification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_verification_ended_at_idx",
+        "table": "eifu_verification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_verification_ended_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification_ended_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_verification_ended_at_idx\"",
+        "sql": "CREATE INDEX \"eifu_verification_ended_at_idx\" ON \"public\".\"eifu_verification\" (\"ended_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_verification_ended_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification_ended_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_verification.eifu_verification_expires_at_idx",
+    "label": "Create index \"eifu_verification_expires_at_idx\" on \"eifu_verification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_verification_expires_at_idx",
+        "table": "eifu_verification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_verification_expires_at_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification_expires_at_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_verification_expires_at_idx\"",
+        "sql": "CREATE INDEX \"eifu_verification_expires_at_idx\" ON \"public\".\"eifu_verification\" (\"expires_at\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_verification_expires_at_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_verification_expires_at_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_access_record_refuse_delete",
+    "label": "Create trigger \"eifu_access_record_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_access_record_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_access_record_refuse_delete' AND tgrelid = to_regclass('public.eifu_access_record'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_access_record_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_access_record_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_access_record\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_access_record_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_access_record_refuse_delete' AND tgrelid = to_regclass('public.eifu_access_record'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_access_record_refuse_truncate",
+    "label": "Create trigger \"eifu_access_record_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_access_record_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_access_record_refuse_truncate' AND tgrelid = to_regclass('public.eifu_access_record'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_access_record_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_access_record_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_access_record\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_access_record_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_access_record_refuse_truncate' AND tgrelid = to_regclass('public.eifu_access_record'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  }
+]

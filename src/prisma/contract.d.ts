@@ -21,7 +21,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'611d61f0e7bd6becd3659f2734221f3eb0e11f628c9a533e5a893de8dcfde676'>;
+  StorageHashBase<'437f9273d9a04bf95f19b497029e2b556aadc2b3f3d7921758f2c1b19c4a00a6'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -295,6 +295,25 @@ export type FieldOutputTypes = {
       readonly regulatoryStatus: CodecTypes['pg/text@1']['output'];
       readonly updatedAt: TimestamptzString<3>;
     };
+    readonly EifuAccessRecord: {
+      readonly acknowledgedNoticeVersion: CodecTypes['pg/text@1']['output'];
+      readonly anonymizedAt: TimestamptzString<3> | null;
+      readonly catalogNumberInput: CodecTypes['pg/text@1']['output'];
+      readonly clientAddress: CodecTypes['pg/bytea@1']['output'] | null;
+      readonly createdAt: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/bytea@1']['output'] | null;
+      readonly emailLookupHash: CodecTypes['pg/text@1']['output'] | null;
+      readonly emailVerified: CodecTypes['pg/bool@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly identityKeyId: CodecTypes['pg/text@1']['output'] | null;
+      readonly lotNumberInput: CodecTypes['pg/text@1']['output'];
+      readonly outcome: CodecTypes['pg/text@1']['output'];
+      readonly requestId: CodecTypes['pg/text@1']['output'] | null;
+      readonly resolvedDocumentVersionId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly resolvedProductId: CodecTypes['pg/int8@1']['output'] | null;
+      readonly resolvedViaOverride: CodecTypes['pg/bool@1']['output'];
+      readonly userAgent: CodecTypes['pg/text@1']['output'] | null;
+    };
     readonly EifuApplicability: {
       readonly createdAt: TimestamptzString<3>;
       readonly documentVersionId: CodecTypes['pg/int8@1']['output'];
@@ -363,6 +382,25 @@ export type FieldOutputTypes = {
       readonly isActive: CodecTypes['pg/bool@1']['output'];
       readonly lotId: CodecTypes['pg/int8@1']['output'];
       readonly reason: CodecTypes['pg/text@1']['output'];
+    };
+    readonly EifuVerification: {
+      readonly attemptsUsed: CodecTypes['pg/int4@1']['output'];
+      readonly catalogNumberInput: CodecTypes['pg/text@1']['output'];
+      readonly clientAddress: CodecTypes['pg/bytea@1']['output'];
+      readonly codeHash: CodecTypes['pg/text@1']['output'];
+      readonly createdAt: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/bytea@1']['output'];
+      readonly emailLookupHash: CodecTypes['pg/text@1']['output'];
+      readonly endedAt: TimestamptzString<3> | null;
+      readonly expiresAt: TimestamptzString<3>;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly identityKeyId: CodecTypes['pg/text@1']['output'];
+      readonly lotNumberInput: CodecTypes['pg/text@1']['output'];
+      readonly noticeVersion: CodecTypes['pg/text@1']['output'];
+      readonly publicId: CodecTypes['pg/uuid@1']['output'];
+      readonly sendFailedAt: TimestamptzString<3> | null;
+      readonly usedAt: TimestamptzString<3> | null;
+      readonly userAgent: CodecTypes['pg/text@1']['output'] | null;
     };
     readonly IdentityAuthToken: {
       readonly createdAt: TimestamptzString<3>;
@@ -498,6 +536,25 @@ export type FieldInputTypes = {
       readonly regulatoryStatus: CodecTypes['pg/text@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
     };
+    readonly EifuAccessRecord: {
+      readonly acknowledgedNoticeVersion: CodecTypes['pg/text@1']['input'];
+      readonly anonymizedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly catalogNumberInput: CodecTypes['pg/text@1']['input'];
+      readonly clientAddress: CodecTypes['pg/bytea@1']['input'] | null;
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/bytea@1']['input'] | null;
+      readonly emailLookupHash: CodecTypes['pg/text@1']['input'] | null;
+      readonly emailVerified: CodecTypes['pg/bool@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly identityKeyId: CodecTypes['pg/text@1']['input'] | null;
+      readonly lotNumberInput: CodecTypes['pg/text@1']['input'];
+      readonly outcome: CodecTypes['pg/text@1']['input'];
+      readonly requestId: CodecTypes['pg/text@1']['input'] | null;
+      readonly resolvedDocumentVersionId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly resolvedProductId: CodecTypes['pg/int8@1']['input'] | null;
+      readonly resolvedViaOverride: CodecTypes['pg/bool@1']['input'];
+      readonly userAgent: CodecTypes['pg/text@1']['input'] | null;
+    };
     readonly EifuApplicability: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly documentVersionId: CodecTypes['pg/int8@1']['input'];
@@ -566,6 +623,25 @@ export type FieldInputTypes = {
       readonly isActive: CodecTypes['pg/bool@1']['input'];
       readonly lotId: CodecTypes['pg/int8@1']['input'];
       readonly reason: CodecTypes['pg/text@1']['input'];
+    };
+    readonly EifuVerification: {
+      readonly attemptsUsed: CodecTypes['pg/int4@1']['input'];
+      readonly catalogNumberInput: CodecTypes['pg/text@1']['input'];
+      readonly clientAddress: CodecTypes['pg/bytea@1']['input'];
+      readonly codeHash: CodecTypes['pg/text@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/bytea@1']['input'];
+      readonly emailLookupHash: CodecTypes['pg/text@1']['input'];
+      readonly endedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly expiresAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly identityKeyId: CodecTypes['pg/text@1']['input'];
+      readonly lotNumberInput: CodecTypes['pg/text@1']['input'];
+      readonly noticeVersion: CodecTypes['pg/text@1']['input'];
+      readonly publicId: CodecTypes['pg/uuid@1']['input'];
+      readonly sendFailedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly usedAt: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly userAgent: CodecTypes['pg/text@1']['input'] | null;
     };
     readonly IdentityAuthToken: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -701,6 +777,25 @@ export type StorageColumnTypes = {
       readonly regulatory_status: CodecTypes['pg/text@1']['output'];
       readonly updated_at: TimestamptzString<3>;
     };
+    readonly eifu_access_record: {
+      readonly acknowledged_notice_version: CodecTypes['pg/text@1']['output'];
+      readonly anonymized_at: TimestamptzString<3> | null;
+      readonly catalog_number_input: CodecTypes['pg/text@1']['output'];
+      readonly client_address: CodecTypes['pg/bytea@1']['output'] | null;
+      readonly created_at: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/bytea@1']['output'] | null;
+      readonly email_lookup_hash: CodecTypes['pg/text@1']['output'] | null;
+      readonly email_verified: CodecTypes['pg/bool@1']['output'];
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly identity_key_id: CodecTypes['pg/text@1']['output'] | null;
+      readonly lot_number_input: CodecTypes['pg/text@1']['output'];
+      readonly outcome: CodecTypes['pg/text@1']['output'];
+      readonly request_id: CodecTypes['pg/text@1']['output'] | null;
+      readonly resolved_document_version_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly resolved_product_id: CodecTypes['pg/int8@1']['output'] | null;
+      readonly resolved_via_override: CodecTypes['pg/bool@1']['output'];
+      readonly user_agent: CodecTypes['pg/text@1']['output'] | null;
+    };
     readonly eifu_applicability: {
       readonly created_at: TimestamptzString<3>;
       readonly document_version_id: CodecTypes['pg/int8@1']['output'];
@@ -769,6 +864,25 @@ export type StorageColumnTypes = {
       readonly is_active: CodecTypes['pg/bool@1']['output'];
       readonly lot_id: CodecTypes['pg/int8@1']['output'];
       readonly reason: CodecTypes['pg/text@1']['output'];
+    };
+    readonly eifu_verification: {
+      readonly attempts_used: CodecTypes['pg/int4@1']['output'];
+      readonly catalog_number_input: CodecTypes['pg/text@1']['output'];
+      readonly client_address: CodecTypes['pg/bytea@1']['output'];
+      readonly code_hash: CodecTypes['pg/text@1']['output'];
+      readonly created_at: TimestamptzString<3>;
+      readonly email: CodecTypes['pg/bytea@1']['output'];
+      readonly email_lookup_hash: CodecTypes['pg/text@1']['output'];
+      readonly ended_at: TimestamptzString<3> | null;
+      readonly expires_at: TimestamptzString<3>;
+      readonly id: CodecTypes['pg/int8@1']['output'];
+      readonly identity_key_id: CodecTypes['pg/text@1']['output'];
+      readonly lot_number_input: CodecTypes['pg/text@1']['output'];
+      readonly notice_version: CodecTypes['pg/text@1']['output'];
+      readonly public_id: CodecTypes['pg/uuid@1']['output'];
+      readonly send_failed_at: TimestamptzString<3> | null;
+      readonly used_at: TimestamptzString<3> | null;
+      readonly user_agent: CodecTypes['pg/text@1']['output'] | null;
     };
     readonly identity_auth_token: {
       readonly created_at: TimestamptzString<3>;
@@ -904,6 +1018,25 @@ export type StorageColumnInputTypes = {
       readonly regulatory_status: CodecTypes['pg/text@1']['input'];
       readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
     };
+    readonly eifu_access_record: {
+      readonly acknowledged_notice_version: CodecTypes['pg/text@1']['input'];
+      readonly anonymized_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly catalog_number_input: CodecTypes['pg/text@1']['input'];
+      readonly client_address: CodecTypes['pg/bytea@1']['input'] | null;
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/bytea@1']['input'] | null;
+      readonly email_lookup_hash: CodecTypes['pg/text@1']['input'] | null;
+      readonly email_verified: CodecTypes['pg/bool@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly identity_key_id: CodecTypes['pg/text@1']['input'] | null;
+      readonly lot_number_input: CodecTypes['pg/text@1']['input'];
+      readonly outcome: CodecTypes['pg/text@1']['input'];
+      readonly request_id: CodecTypes['pg/text@1']['input'] | null;
+      readonly resolved_document_version_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly resolved_product_id: CodecTypes['pg/int8@1']['input'] | null;
+      readonly resolved_via_override: CodecTypes['pg/bool@1']['input'];
+      readonly user_agent: CodecTypes['pg/text@1']['input'] | null;
+    };
     readonly eifu_applicability: {
       readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly document_version_id: CodecTypes['pg/int8@1']['input'];
@@ -972,6 +1105,25 @@ export type StorageColumnInputTypes = {
       readonly is_active: CodecTypes['pg/bool@1']['input'];
       readonly lot_id: CodecTypes['pg/int8@1']['input'];
       readonly reason: CodecTypes['pg/text@1']['input'];
+    };
+    readonly eifu_verification: {
+      readonly attempts_used: CodecTypes['pg/int4@1']['input'];
+      readonly catalog_number_input: CodecTypes['pg/text@1']['input'];
+      readonly client_address: CodecTypes['pg/bytea@1']['input'];
+      readonly code_hash: CodecTypes['pg/text@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/bytea@1']['input'];
+      readonly email_lookup_hash: CodecTypes['pg/text@1']['input'];
+      readonly ended_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly expires_at: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly id: CodecTypes['pg/int8@1']['input'];
+      readonly identity_key_id: CodecTypes['pg/text@1']['input'];
+      readonly lot_number_input: CodecTypes['pg/text@1']['input'];
+      readonly notice_version: CodecTypes['pg/text@1']['input'];
+      readonly public_id: CodecTypes['pg/uuid@1']['input'];
+      readonly send_failed_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly used_at: CodecTypes['pg/timestamptz-string@1']['input'] | null;
+      readonly user_agent: CodecTypes['pg/text@1']['input'] | null;
     };
     readonly identity_auth_token: {
       readonly created_at: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -1127,6 +1279,26 @@ export namespace Models {
     lotImports: public_CatalogLotImport[];
     readonly [RelationKeys]?: 'applicabilities' | 'catalogNumbers' | 'documents' | 'lotImports';
   };
+  export type public_EifuAccessRecord = {
+    acknowledgedNoticeVersion: CodecTypes['pg/text@1']['output'];
+    anonymizedAt: TimestamptzString<3> | null;
+    catalogNumberInput: CodecTypes['pg/text@1']['output'];
+    clientAddress: CodecTypes['pg/bytea@1']['output'] | null;
+    createdAt: TimestamptzString<3>;
+    email: CodecTypes['pg/bytea@1']['output'] | null;
+    emailLookupHash: CodecTypes['pg/text@1']['output'] | null;
+    emailVerified: CodecTypes['pg/bool@1']['output'];
+    id: CodecTypes['pg/int8@1']['output'];
+    identityKeyId: CodecTypes['pg/text@1']['output'] | null;
+    lotNumberInput: CodecTypes['pg/text@1']['output'];
+    outcome: CodecTypes['pg/text@1']['output'];
+    requestId: CodecTypes['pg/text@1']['output'] | null;
+    resolvedDocumentVersionId: CodecTypes['pg/int8@1']['output'] | null;
+    resolvedProductId: CodecTypes['pg/int8@1']['output'] | null;
+    resolvedViaOverride: CodecTypes['pg/bool@1']['output'];
+    userAgent: CodecTypes['pg/text@1']['output'] | null;
+    readonly [RelationKeys]?: never;
+  };
   export type public_EifuApplicability = {
     createdAt: TimestamptzString<3>;
     documentVersionId: CodecTypes['pg/int8@1']['output'];
@@ -1219,6 +1391,26 @@ export namespace Models {
     documentVersion: public_EifuDocumentVersion;
     lot: public_CatalogLot;
     readonly [RelationKeys]?: 'documentVersion' | 'lot';
+  };
+  export type public_EifuVerification = {
+    attemptsUsed: CodecTypes['pg/int4@1']['output'];
+    catalogNumberInput: CodecTypes['pg/text@1']['output'];
+    clientAddress: CodecTypes['pg/bytea@1']['output'];
+    codeHash: CodecTypes['pg/text@1']['output'];
+    createdAt: TimestamptzString<3>;
+    email: CodecTypes['pg/bytea@1']['output'];
+    emailLookupHash: CodecTypes['pg/text@1']['output'];
+    endedAt: TimestamptzString<3> | null;
+    expiresAt: TimestamptzString<3>;
+    id: CodecTypes['pg/int8@1']['output'];
+    identityKeyId: CodecTypes['pg/text@1']['output'];
+    lotNumberInput: CodecTypes['pg/text@1']['output'];
+    noticeVersion: CodecTypes['pg/text@1']['output'];
+    publicId: CodecTypes['pg/uuid@1']['output'];
+    sendFailedAt: TimestamptzString<3> | null;
+    usedAt: TimestamptzString<3> | null;
+    userAgent: CodecTypes['pg/text@1']['output'] | null;
+    readonly [RelationKeys]?: never;
   };
   export type public_IdentityAuthToken = {
     createdAt: TimestamptzString<3>;
@@ -1325,12 +1517,14 @@ export declare const models: {
     CatalogLotImport: Models.public_CatalogLotImport;
     CatalogLotImportRow: Models.public_CatalogLotImportRow;
     CatalogProduct: Models.public_CatalogProduct;
+    EifuAccessRecord: Models.public_EifuAccessRecord;
     EifuApplicability: Models.public_EifuApplicability;
     EifuDocument: Models.public_EifuDocument;
     EifuDocumentFile: Models.public_EifuDocumentFile;
     EifuDocumentVersion: Models.public_EifuDocumentVersion;
     EifuFileReplacement: Models.public_EifuFileReplacement;
     EifuLotOverride: Models.public_EifuLotOverride;
+    EifuVerification: Models.public_EifuVerification;
     IdentityAuthToken: Models.public_IdentityAuthToken;
     IdentityPermission: Models.public_IdentityPermission;
     IdentityRole: Models.public_IdentityRole;
@@ -1881,6 +2075,136 @@ type ContractBase = Omit<
                 },
               ];
               indexes: readonly [];
+              foreignKeys: readonly [];
+            };
+            readonly eifu_access_record: {
+              columns: {
+                readonly acknowledged_notice_version: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly anonymized_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly catalog_number_input: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly client_address: {
+                  readonly dataType: 'pg/bytea';
+                  readonly codecId: 'pg/bytea@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly email: {
+                  readonly dataType: 'pg/bytea';
+                  readonly codecId: 'pg/bytea@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly email_lookup_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly email_verified: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly identity_key_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly lot_number_input: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly outcome: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly request_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly resolved_document_version_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly resolved_product_id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly resolved_via_override: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
+                  readonly many: false;
+                };
+                readonly user_agent: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'access_record_created_at_anonymized_at_idx';
+                  readonly columns: readonly ['created_at', 'anonymized_at'];
+                  readonly unique: false;
+                },
+              ];
               foreignKeys: readonly [];
             };
             readonly eifu_applicability: {
@@ -2539,6 +2863,145 @@ type ContractBase = Omit<
                   readonly name: 'eifu_lot_override_version_fk';
                 },
               ];
+            };
+            readonly eifu_verification: {
+              columns: {
+                readonly attempts_used: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly catalog_number_input: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly client_address: {
+                  readonly dataType: 'pg/bytea';
+                  readonly codecId: 'pg/bytea@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly code_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly email: {
+                  readonly dataType: 'pg/bytea';
+                  readonly codecId: 'pg/bytea@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly email_lookup_hash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly ended_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly expires_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly identity_key_id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly lot_number_input: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly notice_version: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly public_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly send_failed_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly used_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly user_agent: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [
+                {
+                  readonly columns: readonly ['public_id'];
+                  readonly name: 'verification_public_id_unique';
+                },
+              ];
+              indexes: readonly [
+                {
+                  readonly name: 'eifu_verification_ended_at_idx';
+                  readonly columns: readonly ['ended_at'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'eifu_verification_expires_at_idx';
+                  readonly columns: readonly ['expires_at'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
             };
             readonly identity_auth_token: {
               columns: {
@@ -3234,6 +3697,10 @@ type ContractBase = Omit<
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'CatalogProduct';
     };
+    readonly eifu_access_record: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'EifuAccessRecord';
+    };
     readonly eifu_applicability: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'EifuApplicability';
@@ -3257,6 +3724,10 @@ type ContractBase = Omit<
     readonly eifu_lot_override: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'EifuLotOverride';
+    };
+    readonly eifu_verification: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'EifuVerification';
     };
     readonly identity_auth_token: {
       readonly namespace: 'public' & NamespaceId;
@@ -3802,6 +4273,114 @@ type ContractBase = Omit<
                 readonly name: { readonly column: 'name' };
                 readonly regulatoryStatus: { readonly column: 'regulatory_status' };
                 readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly EifuAccessRecord: {
+            readonly fields: {
+              readonly acknowledgedNoticeVersion: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly anonymizedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly catalogNumberInput: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly clientAddress: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bytea@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly email: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bytea@1' };
+              };
+              readonly emailLookupHash: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly emailVerified: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly identityKeyId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly lotNumberInput: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly outcome: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly requestId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly resolvedDocumentVersionId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly resolvedProductId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly resolvedViaOverride: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly userAgent: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'eifu_access_record';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly acknowledgedNoticeVersion: {
+                  readonly column: 'acknowledged_notice_version';
+                };
+                readonly anonymizedAt: { readonly column: 'anonymized_at' };
+                readonly catalogNumberInput: { readonly column: 'catalog_number_input' };
+                readonly clientAddress: { readonly column: 'client_address' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly email: { readonly column: 'email' };
+                readonly emailLookupHash: { readonly column: 'email_lookup_hash' };
+                readonly emailVerified: { readonly column: 'email_verified' };
+                readonly id: { readonly column: 'id' };
+                readonly identityKeyId: { readonly column: 'identity_key_id' };
+                readonly lotNumberInput: { readonly column: 'lot_number_input' };
+                readonly outcome: { readonly column: 'outcome' };
+                readonly requestId: { readonly column: 'request_id' };
+                readonly resolvedDocumentVersionId: {
+                  readonly column: 'resolved_document_version_id';
+                };
+                readonly resolvedProductId: { readonly column: 'resolved_product_id' };
+                readonly resolvedViaOverride: { readonly column: 'resolved_via_override' };
+                readonly userAgent: { readonly column: 'user_agent' };
               };
             };
           };
@@ -4408,6 +4987,122 @@ type ContractBase = Omit<
                 readonly isActive: { readonly column: 'is_active' };
                 readonly lotId: { readonly column: 'lot_id' };
                 readonly reason: { readonly column: 'reason' };
+              };
+            };
+          };
+          readonly EifuVerification: {
+            readonly fields: {
+              readonly attemptsUsed: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly catalogNumberInput: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly clientAddress: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bytea@1' };
+              };
+              readonly codeHash: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly email: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bytea@1' };
+              };
+              readonly emailLookupHash: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly endedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly expiresAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly identityKeyId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly lotNumberInput: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly noticeVersion: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly publicId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly sendFailedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly usedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly userAgent: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'eifu_verification';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly attemptsUsed: { readonly column: 'attempts_used' };
+                readonly catalogNumberInput: { readonly column: 'catalog_number_input' };
+                readonly clientAddress: { readonly column: 'client_address' };
+                readonly codeHash: { readonly column: 'code_hash' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly email: { readonly column: 'email' };
+                readonly emailLookupHash: { readonly column: 'email_lookup_hash' };
+                readonly endedAt: { readonly column: 'ended_at' };
+                readonly expiresAt: { readonly column: 'expires_at' };
+                readonly id: { readonly column: 'id' };
+                readonly identityKeyId: { readonly column: 'identity_key_id' };
+                readonly lotNumberInput: { readonly column: 'lot_number_input' };
+                readonly noticeVersion: { readonly column: 'notice_version' };
+                readonly publicId: { readonly column: 'public_id' };
+                readonly sendFailedAt: { readonly column: 'send_failed_at' };
+                readonly usedAt: { readonly column: 'used_at' };
+                readonly userAgent: { readonly column: 'user_agent' };
               };
             };
           };
