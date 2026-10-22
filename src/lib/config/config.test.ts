@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ConfigError, evaluateConfig, inspectConfig, loadConfig } from ".";
+import { ConfigError, evaluateConfig, identityProviderOf, inspectConfig, loadConfig } from ".";
 import { usableEnvironment } from "./usable-environment";
 
 const valid: Record<string, string> = { ...usableEnvironment };
@@ -174,5 +174,115 @@ describe("configuration", () => {
   it("reports a failed state with the issues, and a ready state with the config", () => {
     expect(evaluateConfig(without(valid, "REDIS_URL")).status).toBe("failed");
     expect(evaluateConfig(valid).status).toBe("ready");
+  });
+});
+
+const identitySettings = Object.keys(valid).filter((name) => name.startsWith("ENTRA_"));
+
+/** The demo of DEC-135 before IT gives the Entra values. */
+const demo = { ...without(production, ...identitySettings), APP_ENV: "demo" };
+
+// Source: DEC-135; FND-03 rule 2 (the ENTRA_* row), AC4 and AC5.
+describe("configuration in the demo", () => {
+  it("accepts a demo with no identity setting, and has no identity provider", () => {
+    expect(inspectConfig(demo)).toEqual([]);
+
+    const config = loadConfig(demo);
+    expect(config.APP_ENV).toBe("demo");
+    expect(identityProviderOf(config)).toBeNull();
+  });
+
+  it("requires every identity setting outside the demo, and names each one", () => {
+    for (const appEnvironment of ["development", "test", "production"]) {
+      const issues = inspectConfig({ ...demo, APP_ENV: appEnvironment, TEST_SEAMS_ENABLED: "false" });
+
+      expect(
+        issues.map((issue) => [issue.setting, issue.code]),
+        appEnvironment,
+      ).toEqual(
+        expect.arrayContaining([
+          ["ENTRA_TENANT_ID", "CFG-5000"],
+          ["ENTRA_ISSUER", "CFG-5000"],
+          ["ENTRA_JWKS_URI", "CFG-5000"],
+          ["ENTRA_JWKS_MAX_AGE_SECONDS", "CFG-5000"],
+          ["ENTRA_AUDIENCE", "CFG-5000"],
+          ["ENTRA_CLIENT_ID", "CFG-5000"],
+          ["ENTRA_OPERATOR_SCOPE", "CFG-5000"],
+          ["ENTRA_CLIENT_SECRET", "CFG-5000"],
+        ]),
+      );
+    }
+  });
+
+  it("gives CFG-5000 for a missing ENTRA_ISSUER when the identity provider is otherwise set", () => {
+    const issues = inspectConfig(without({ ...production, APP_ENV: "demo" }, "ENTRA_ISSUER"));
+
+    expect(issues).toEqual([expect.objectContaining({ setting: "ENTRA_ISSUER", code: "CFG-5000" })]);
+  });
+
+  it("refuses a demo with some identity settings and not the rest", () => {
+    const issues = inspectConfig({ ...demo, ENTRA_ISSUER: "https://issuer.example.invalid/tenant-1/v2.0" });
+
+    expect(issues.map((issue) => issue.setting)).toEqual([
+      "ENTRA_TENANT_ID",
+      "ENTRA_JWKS_URI",
+      "ENTRA_JWKS_MAX_AGE_SECONDS",
+      "ENTRA_AUDIENCE",
+      "ENTRA_CLIENT_ID",
+      "ENTRA_OPERATOR_SCOPE",
+      "ENTRA_CLIENT_SECRET",
+    ]);
+    expect(issues.every((issue) => issue.code === "CFG-5000")).toBe(true);
+  });
+
+  it("treats an empty identity setting of the demo as a value that cannot be used", () => {
+    expect(inspectConfig({ ...demo, ENTRA_ISSUER: "" })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ setting: "ENTRA_ISSUER", code: "CFG-5001" })]),
+    );
+  });
+
+  it("refuses an identity setting of the demo that cannot be used", () => {
+    expect(inspectConfig({ ...production, APP_ENV: "demo", ENTRA_JWKS_URI: "not a url" })).toEqual([
+      expect.objectContaining({ setting: "ENTRA_JWKS_URI", code: "CFG-5001" }),
+    ]);
+  });
+
+  it("applies the other rules of production to the demo", () => {
+    expect(
+      inspectConfig(without(demo, "TRUSTED_PROXIES", "EIFU_IDENTITY_KEYS", "EIFU_IDENTITY_LOOKUP_PEPPER")).map((issue) => [
+        issue.setting,
+        issue.code,
+      ]),
+    ).toEqual([
+      ["TRUSTED_PROXIES", "CFG-5000"],
+      ["EIFU_IDENTITY_KEYS", "CFG-5000"],
+      ["EIFU_IDENTITY_LOOKUP_PEPPER", "CFG-5000"],
+    ]);
+    expect(inspectConfig({ ...demo, EIFU_IDENTITY_LOOKUP_PEPPER: "p".repeat(31) })).toEqual([
+      expect.objectContaining({ setting: "EIFU_IDENTITY_LOOKUP_PEPPER", code: "CFG-5001" }),
+    ]);
+    expect(inspectConfig({ ...demo, EIFU_IDENTITY_KEYS: "k1:c2VjcmV0" })).toEqual([
+      expect.objectContaining({ setting: "EIFU_IDENTITY_KEYS", code: "CFG-5001" }),
+    ]);
+  });
+
+  it("refuses the test seams in the demo with CFG-5001", () => {
+    expect(inspectConfig({ ...demo, TEST_SEAMS_ENABLED: "true" })).toEqual([
+      expect.objectContaining({ setting: "TEST_SEAMS_ENABLED", code: "CFG-5001" }),
+    ]);
+  });
+
+  it("gives the identity provider when every identity setting is set", () => {
+    const config = loadConfig({ ...production, APP_ENV: "demo" });
+
+    expect(identityProviderOf(config)).toEqual({
+      tenantId: "tenant-1",
+      issuer: "https://issuer.example.invalid/tenant-1/v2.0",
+      jwksUri: "http://127.0.0.1:1/keys",
+      jwksMaxAgeSeconds: 3600,
+      audience: "api://bioeksen-portal",
+      operatorScope: "operator.access",
+      clockSkewSeconds: 60,
+    });
   });
 });

@@ -84,8 +84,33 @@ const proxyList = nonEmpty
   .refine((value) => value.split(",").every((entry) => isProxyAddress(entry.trim())))
   .transform((value) => value.split(",").map((entry) => entry.trim()));
 
+/**
+ * The settings of the identity provider (`sds-auth`, `credentials.md`,
+ * **Configuration**). Each one is required, except when `APP_ENV` is `demo` and
+ * no identity setting is set (DEC-135). That rule joins several settings, so it
+ * is in `crossChecks`, and `configSchema` takes these settings as optional.
+ */
+const identityProviderSchema = z.object({
+  ENTRA_TENANT_ID: nonEmpty,
+  ENTRA_ISSUER: nonEmpty,
+  ENTRA_JWKS_URI: z.url(),
+  // At most one day: `sds-auth` wants the keys refreshed at least daily, so a key
+  // that the issuer removed does not stay accepted (`credentials.md`, **Rotation
+  // and revocation**).
+  ENTRA_JWKS_MAX_AGE_SECONDS: integerText.pipe(z.number().min(1).max(86_400)),
+  ENTRA_AUDIENCE: nonEmpty,
+  ENTRA_CLIENT_ID: nonEmpty,
+  ENTRA_OPERATOR_SCOPE: nonEmpty,
+});
+
+/** The identity settings that are required when the identity provider is configured. */
+const REQUIRED_IDENTITY_SETTINGS: readonly string[] = Object.keys(identityProviderSchema.shape);
+
+/** The client credential of `sds-auth`: the identity settings need one of the two. */
+const IDENTITY_CREDENTIAL_SETTINGS: readonly string[] = ["ENTRA_CLIENT_CERTIFICATE_PATH", "ENTRA_CLIENT_SECRET"];
+
 export const configSchema = z.object({
-  APP_ENV: z.enum(["development", "test", "production"]),
+  APP_ENV: z.enum(["development", "test", "demo", "production"]),
 
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
@@ -111,18 +136,9 @@ export const configSchema = z.object({
   EIFU_IDENTITY_LOOKUP_PEPPER: nonEmpty.optional(),
   EIFU_ACCESS_RECORD_RETENTION_DAYS: integerText.pipe(z.number().min(0)).default(3653),
 
-  ENTRA_TENANT_ID: nonEmpty,
-  ENTRA_ISSUER: nonEmpty,
-  ENTRA_JWKS_URI: z.url(),
-  // At most one day: `sds-auth` wants the keys refreshed at least daily, so a key
-  // that the issuer removed does not stay accepted (`credentials.md`, **Rotation
-  // and revocation**).
-  ENTRA_JWKS_MAX_AGE_SECONDS: integerText.pipe(z.number().min(1).max(86_400)),
-  ENTRA_AUDIENCE: nonEmpty,
-  ENTRA_CLIENT_ID: nonEmpty,
+  ...identityProviderSchema.partial().shape,
   ENTRA_CLIENT_CERTIFICATE_PATH: nonEmpty.optional(),
   ENTRA_CLIENT_SECRET: nonEmpty.optional(),
-  ENTRA_OPERATOR_SCOPE: nonEmpty,
   AUTH_CLOCK_SKEW_SECONDS: integerText.pipe(z.number().min(0)).default(60),
 
   LOG_LEVEL: z.enum(SEVERITIES).default("INFO"),
@@ -195,12 +211,15 @@ export function schemaIssues(env: ConfigEnvironment): ConfigIssue[] {
  */
 export function crossChecks(env: ConfigEnvironment): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
-  const production = env["APP_ENV"] === "production";
+  const appEnvironment = env["APP_ENV"];
+  const demo = appEnvironment === "demo";
+  // Each other rule of production also applies to the demo (DEC-135).
+  const strict = appEnvironment === "production" || demo;
 
-  if (production) {
+  if (strict) {
     for (const setting of ["TRUSTED_PROXIES", "EIFU_IDENTITY_KEYS", "EIFU_IDENTITY_LOOKUP_PEPPER"]) {
       if (env[setting] === undefined) {
-        issues.push({ setting, code: "CFG-5000", reason: "not set (production requires it)" });
+        issues.push({ setting, code: "CFG-5000", reason: `not set (${appEnvironment} requires it)` });
       }
     }
     const pepper = env["EIFU_IDENTITY_LOOKUP_PEPPER"];
@@ -213,20 +232,31 @@ export function crossChecks(env: ConfigEnvironment): ConfigIssue[] {
     }
   }
 
-  if (production && env["TEST_SEAMS_ENABLED"] === "true") {
+  if (strict && env["TEST_SEAMS_ENABLED"] === "true") {
     issues.push({
       setting: "TEST_SEAMS_ENABLED",
       code: "CFG-5001",
-      reason: "the test seams cannot be on in production",
+      reason: "the test seams cannot be on in production or in the demo",
     });
   }
 
-  if (env["ENTRA_CLIENT_CERTIFICATE_PATH"] === undefined && env["ENTRA_CLIENT_SECRET"] === undefined) {
-    issues.push({
-      setting: "ENTRA_CLIENT_SECRET",
-      code: "CFG-5000",
-      reason: "not set (one of ENTRA_CLIENT_CERTIFICATE_PATH and ENTRA_CLIENT_SECRET is required)",
-    });
+  // The demo runs without an identity provider only when no identity setting is
+  // set at all (DEC-135). A half-set group is a mistake, and it fails.
+  const identityProviderAbsent =
+    demo && [...REQUIRED_IDENTITY_SETTINGS, ...IDENTITY_CREDENTIAL_SETTINGS].every((setting) => env[setting] === undefined);
+  if (!identityProviderAbsent) {
+    for (const setting of REQUIRED_IDENTITY_SETTINGS) {
+      if (env[setting] === undefined) {
+        issues.push({ setting, code: "CFG-5000", reason: "not set" });
+      }
+    }
+    if (IDENTITY_CREDENTIAL_SETTINGS.every((setting) => env[setting] === undefined)) {
+      issues.push({
+        setting: "ENTRA_CLIENT_SECRET",
+        code: "CFG-5000",
+        reason: "not set (one of ENTRA_CLIENT_CERTIFICATE_PATH and ENTRA_CLIENT_SECRET is required)",
+      });
+    }
   }
 
   return issues;

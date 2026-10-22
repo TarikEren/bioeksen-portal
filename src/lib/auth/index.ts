@@ -3,7 +3,10 @@
  * `sds-auth`).
  *
  * The check follows the validation order of `sds-auth` and stops at the first
- * failure:
+ * failure. One check comes before the order: a demo with no identity provider
+ * (DEC-135) cannot verify any token, so every call gets 503 `AUTH-5500`, also
+ * a call with no credential. A 401 would tell the caller to send a credential
+ * that nothing can accept.
  *
  * 1. no `Authorization` header, or not the `Bearer` scheme: 401 `AUTH-4100`;
  * 2. the token does not parse: 401 `AUTH-4103`;
@@ -24,7 +27,7 @@ import "server-only";
 
 import { type JWTPayload, decodeJwt, decodeProtectedHeader, errors, jwtVerify } from "jose";
 
-import { getConfig } from "@/lib/config";
+import { type IdentityProvider, getIdentityProvider } from "@/lib/config";
 import { AppError } from "@/lib/errors";
 
 import { JwksCache } from "./jwks";
@@ -69,11 +72,8 @@ const UNAUTHORIZED_MESSAGES = {
 
 let cache: JwksCache | undefined;
 
-function getKeyCache(): JwksCache {
-  if (cache === undefined) {
-    const config = getConfig();
-    cache = new JwksCache({ uri: config.ENTRA_JWKS_URI, maxAgeSeconds: config.ENTRA_JWKS_MAX_AGE_SECONDS });
-  }
+function getKeyCache(provider: IdentityProvider): JwksCache {
+  cache ??= new JwksCache({ uri: provider.jwksUri, maxAgeSeconds: provider.jwksMaxAgeSeconds });
   return cache;
 }
 
@@ -107,9 +107,12 @@ export async function authenticateOperator(
   authorizationHeader: string | null,
   options: AuthenticateOptions = {},
 ): Promise<OperatorPrincipal> {
-  const config = getConfig();
+  const provider = getIdentityProvider();
+  if (provider === null) {
+    throw new AppError("AUTH-5500", "Identity provider unavailable", { reason: "no identity provider is configured" });
+  }
   const now = options.now ?? new Date();
-  const skewSeconds = config.AUTH_CLOCK_SKEW_SECONDS;
+  const skewSeconds = provider.clockSkewSeconds;
 
   const token = readBearerToken(authorizationHeader);
 
@@ -132,20 +135,20 @@ export async function authenticateOperator(
   // again, with the signature, below.
   const audiences = Array.isArray(unverified.aud) ? unverified.aud : [unverified.aud];
   if (
-    unverified.iss !== config.ENTRA_ISSUER ||
-    !audiences.includes(config.ENTRA_AUDIENCE) ||
-    unverified["tid"] !== config.ENTRA_TENANT_ID
+    unverified.iss !== provider.issuer ||
+    !audiences.includes(provider.audience) ||
+    unverified["tid"] !== provider.tenantId
   ) {
     throw unauthorized("AUTH-4101", "the issuer, audience or tenant is not the configured one");
   }
 
-  const keys = getKeyCache();
+  const keys = getKeyCache(provider);
   let payload: JWTPayload;
   try {
     const verified = await jwtVerify(token, (header) => keys.resolve(header.kid), {
       algorithms: [ALGORITHM],
-      issuer: config.ENTRA_ISSUER,
-      audience: config.ENTRA_AUDIENCE,
+      issuer: provider.issuer,
+      audience: provider.audience,
       clockTolerance: skewSeconds,
       currentDate: now,
       requiredClaims: ["exp", "iat", "sub", "azp", "tid"],
@@ -166,7 +169,7 @@ export async function authenticateOperator(
 
   const issuedAt = payload.iat;
   if (
-    payload["tid"] !== config.ENTRA_TENANT_ID ||
+    payload["tid"] !== provider.tenantId ||
     typeof payload["azp"] !== "string" ||
     payload["azp"] === "" ||
     typeof payload.sub !== "string" ||
@@ -177,7 +180,7 @@ export async function authenticateOperator(
     throw unauthorized("AUTH-4101", "a claim is rejected");
   }
 
-  switch (classifyPrincipal(payload, config.ENTRA_OPERATOR_SCOPE)) {
+  switch (classifyPrincipal(payload, provider.operatorScope)) {
     case "operator":
       return { kind: "operator", subject: payload.sub };
     case "none":

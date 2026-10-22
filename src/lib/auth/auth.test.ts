@@ -10,12 +10,12 @@ const issuer = String(usableEnvironment["ENTRA_ISSUER"]);
 const audience = String(usableEnvironment["ENTRA_AUDIENCE"]);
 const tenant = String(usableEnvironment["ENTRA_TENANT_ID"]);
 
-async function loadAuthenticate(): Promise<Authenticate> {
+async function loadAuthenticate(settings: Record<string, string> = usableEnvironment): Promise<Authenticate> {
   vi.resetModules();
   for (const key of Object.keys(process.env)) {
     Reflect.deleteProperty(process.env, key);
   }
-  Object.assign(process.env, usableEnvironment);
+  Object.assign(process.env, settings);
   const loaded = await import(".");
   return loaded.authenticateOperator;
 }
@@ -124,5 +124,50 @@ describe("authenticateOperator", () => {
     providerUp = false;
 
     expect(await codeOf(withFakeClock(authenticate(`Bearer ${await sign({}, "never-seen")}`)))).toBe("AUTH-5500");
+  });
+});
+
+// Source: DEC-135; FND-03.AC5; sds-auth, Validation order, step 6.
+describe("authenticateOperator in a demo without an identity provider", () => {
+  const demoEnvironment = {
+    ...Object.fromEntries(Object.entries(usableEnvironment).filter(([name]) => !name.startsWith("ENTRA_"))),
+    APP_ENV: "demo",
+    TRUSTED_PROXIES: "127.0.0.1",
+    EIFU_IDENTITY_KEYS: `demo-1:${Buffer.alloc(32, 7).toString("base64")}`,
+    EIFU_IDENTITY_LOOKUP_PEPPER: "p".repeat(32),
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    for (const key of Object.keys(process.env)) {
+      Reflect.deleteProperty(process.env, key);
+    }
+    Object.assign(process.env, environmentBefore);
+  });
+
+  it("gives AUTH-5500 for any header, and fetches no key", async () => {
+    const fetchSpy = vi.fn(() => Promise.reject(new TypeError("no network in this test")));
+    vi.stubGlobal("fetch", fetchSpy);
+    const authenticate = await loadAuthenticate(demoEnvironment);
+
+    expect(await codeOf(authenticate(null))).toBe("AUTH-5500");
+    expect(await codeOf(authenticate("Basic abc"))).toBe("AUTH-5500");
+    expect(await codeOf(authenticate("Bearer not-a-jwt"))).toBe("AUTH-5500");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("gives AUTH-5500, not AUTH-4101, for a well-formed token", async () => {
+    const authenticate = await loadAuthenticate(demoEnvironment);
+    const { privateKey } = await generateKeyPair("RS256");
+    const token = await new SignJWT({ tid: "tenant-1", azp: "client", scp: "operator.access", roles: ["operator"] })
+      .setProtectedHeader({ alg: "RS256", kid: "known" })
+      .setSubject("person-1")
+      .setIssuer(issuer)
+      .setAudience(audience)
+      .setIssuedAt()
+      .setExpirationTime("10m")
+      .sign(privateKey);
+
+    expect(await codeOf(authenticate(`Bearer ${token}`))).toBe("AUTH-5500");
   });
 });

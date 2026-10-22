@@ -127,11 +127,60 @@ export function getConfig(): Config {
   return current.config;
 }
 
+/** The identity provider that the app verifies tokens against (`sds-auth`). */
+export interface IdentityProvider {
+  readonly tenantId: string;
+  readonly issuer: string;
+  readonly jwksUri: string;
+  readonly jwksMaxAgeSeconds: number;
+  readonly audience: string;
+  readonly operatorScope: string;
+  readonly clockSkewSeconds: number;
+}
+
+/**
+ * The identity provider of `config`, or `null` when it has none. Only the demo
+ * can have none: every other `APP_ENV` fails the configuration check when an
+ * identity setting is missing (DEC-135, FND-03 rule 2).
+ */
+export function identityProviderOf(config: Config): IdentityProvider | null {
+  const {
+    ENTRA_TENANT_ID: tenantId,
+    ENTRA_ISSUER: issuer,
+    ENTRA_JWKS_URI: jwksUri,
+    ENTRA_JWKS_MAX_AGE_SECONDS: jwksMaxAgeSeconds,
+    ENTRA_AUDIENCE: audience,
+    ENTRA_OPERATOR_SCOPE: operatorScope,
+    AUTH_CLOCK_SKEW_SECONDS: clockSkewSeconds,
+  } = config;
+  if (
+    tenantId === undefined ||
+    issuer === undefined ||
+    jwksUri === undefined ||
+    jwksMaxAgeSeconds === undefined ||
+    audience === undefined ||
+    operatorScope === undefined
+  ) {
+    return null;
+  }
+  return { tenantId, issuer, jwksUri, jwksMaxAgeSeconds, audience, operatorScope, clockSkewSeconds };
+}
+
+/**
+ * The identity provider of the process, or `null` in a demo that has none.
+ *
+ * @throws ConfigError when the configuration is not usable.
+ */
+export function getIdentityProvider(): IdentityProvider | null {
+  return identityProviderOf(getConfig());
+}
+
 /**
  * Whether the test seams work (FND-03 rule 4). Both conditions must hold:
- * `TEST_SEAMS_ENABLED` is `true` and `APP_ENV` is a non-production value. The
- * answer does not depend on the other settings, so a seam is also closed in an
- * app whose configuration failed. A missing or unknown `APP_ENV` closes it.
+ * `TEST_SEAMS_ENABLED` is `true` and `APP_ENV` is `development` or `test`, so
+ * `demo` and `production` keep them closed. The answer does not depend on the
+ * other settings, so a seam is also closed in an app whose configuration failed.
+ * A missing or unknown `APP_ENV` closes it.
  */
 export function isTestSeamEnabled(): boolean {
   const env = environment();
