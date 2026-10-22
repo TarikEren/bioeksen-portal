@@ -128,12 +128,14 @@ export function getLogLevel(): Severity {
 }
 
 /**
- * Whether the app runs as the development server (`APP_ENV` is `development`).
- * It lets the Content Security Policy allow what the development server needs.
- * A missing or unknown `APP_ENV` is not development.
+ * Whether this process is the development server (`next dev`, which sets
+ * `NODE_ENV` to `development`). The Content Security Policy allows what only the
+ * development server needs (FND-07 rule 1). `APP_ENV` has no part in this: a
+ * production build started with `APP_ENV=development` is not a development
+ * server.
  */
-export function isDevelopmentEnvironment(): boolean {
-  return environment()["APP_ENV"] === "development";
+export function isDevelopmentServer(): boolean {
+  return environment()["NODE_ENV"] === "development";
 }
 
 /**

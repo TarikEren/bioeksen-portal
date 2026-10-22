@@ -12,14 +12,14 @@
  */
 import { type NextRequest, NextResponse } from "next/server";
 
-import { isDevelopmentEnvironment } from "@/lib/config";
+import { isDevelopmentServer } from "@/lib/config";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@/lib/request-context/request-id";
 import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { applySecurityHeaders } from "@/lib/security/headers";
 
 export function proxy(request: NextRequest): NextResponse {
   const nonce = generateNonce();
-  const policy = buildContentSecurityPolicy(nonce, { development: isDevelopmentEnvironment() });
+  const policy = buildContentSecurityPolicy(nonce, { development: isDevelopmentServer() });
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
 
   const requestHeaders = new Headers(request.headers);
