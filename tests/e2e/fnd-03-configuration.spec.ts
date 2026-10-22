@@ -29,12 +29,18 @@ async function production(port: number): Promise<AppEnvironment> {
   });
 }
 
-/** Asserts the readiness answer of an app that must not report ready (`sds-config`). */
+/**
+ * Asserts the readiness answer of an app that must not report ready
+ * (`sds-config`): 503 with the body `status` `fail` or `not-ready`
+ * (`sds-api-design`, `standard-api-endpoints.md`; stage plan B0, **API**).
+ */
 async function expectNotReady(request: APIRequestContext, app: SpawnedApp): Promise<void> {
   const response = await request.get(`${app.baseUrl}/api/health/ready`);
   const text = await response.text();
   expect(response.status(), `GET /api/health/ready: ${text.slice(0, 300)}`).toBe(503);
-  expect(JSON.parse(text)).toMatchObject({ status: "fail" });
+  const body: unknown = JSON.parse(text);
+  const status: unknown = typeof body === "object" && body !== null ? Reflect.get(body, "status") : undefined;
+  expect(["fail", "not-ready"], `the body status of the 503: ${text.slice(0, 300)}`).toContain(status);
 }
 
 function fatalWith(code: string, setting: string): (record: LogRecord) => boolean {
