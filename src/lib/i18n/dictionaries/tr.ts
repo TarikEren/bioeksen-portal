@@ -168,10 +168,12 @@ export const tr = {
     columns: {
       name: "Ad soyad",
       email: "E-posta adresi",
+      roles: "Roller",
       language: "Dil",
       status: "Durum",
       created: "Oluşturulma",
     },
+    noRole: "Rol yok",
     status: {
       active: "Etkin",
       inactive: "Pasif",

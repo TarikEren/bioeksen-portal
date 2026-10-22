@@ -63,6 +63,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/backoffice
   const columns: DataTableColumn[] = [
     { key: "name", label: text.users.columns.name, isRowHeader: true },
     { key: "email", label: text.users.columns.email },
+    { key: "roles", label: text.users.columns.roles },
     { key: "language", label: text.users.columns.language },
     { key: "status", label: text.users.columns.status },
     { key: "created", label: text.users.columns.created, cellClassName: "tabular-nums" },
@@ -73,6 +74,10 @@ export default async function UsersPage({ searchParams }: PageProps<"/backoffice
     cells: {
       name: `${user.firstName} ${user.lastName}`,
       email: user.email,
+      roles:
+        user.activeRoles.length === 0
+          ? text.users.noRole
+          : user.activeRoles.map((role) => role.name[language]).join(", "),
       language: <span lang={user.preferredLanguage}>{text.common.language[user.preferredLanguage]}</span>,
       status: (
         <Chip size="sm" color="default" variant="secondary">

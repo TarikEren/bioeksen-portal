@@ -82,6 +82,7 @@ export function toUserSummary(user: MockUser): UserSummary {
     preferredLanguage: user.preferredLanguage,
     isActive: user.isActive,
     createdAt: user.createdAt.toISOString(),
+    activeRoles: activeRoleCodes(user.id).map((code) => ({ code, name: findRole(code).name })),
   };
 }
 

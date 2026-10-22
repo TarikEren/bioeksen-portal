@@ -153,10 +153,12 @@ export const en: Dictionary = {
     columns: {
       name: "Name",
       email: "Email address",
+      roles: "Roles",
       language: "Language",
       status: "Status",
       created: "Created",
     },
+    noRole: "No role",
     status: {
       active: "Active",
       inactive: "Inactive",

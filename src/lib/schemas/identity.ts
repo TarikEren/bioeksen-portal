@@ -185,6 +185,8 @@ export const UserSummary = z.strictObject({
   preferredLanguage: PreferredLanguage,
   isActive: z.boolean(),
   createdAt: timestamp,
+  /** The roles of the active assignments, for the list rows (ACC-30). */
+  activeRoles: z.array(z.strictObject({ code: RoleCode, name: localizedName })),
 });
 export type UserSummary = z.infer<typeof UserSummary>;
 
