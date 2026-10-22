@@ -132,7 +132,7 @@ refuse. A suite the guard refuses is not run.
 | FND-02 | AC1, AC2, AC3 | pipeline | `pipeline/fnd-02-pipeline.test.ts` |
 | FND-02 | AC4 | smoke (stage exit) | `smoke/fnd-02-test-environment.spec.ts` |
 | FND-03 | AC1, AC2, AC3, AC4 | e2e | `e2e/fnd-03-configuration.spec.ts` |
-| FND-04 | AC1 | e2e | `e2e/fnd-04-probes.spec.ts` |
+| FND-04 | AC1, AC4 | e2e | `e2e/fnd-04-probes.spec.ts` |
 | FND-04 | AC2, AC3, AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
 | FND-04 | rule 1: the list contract of `GET /api/admin/logs` (contract cases) | integration | `integration/fnd-04-admin-logs.test.ts` |
 | FND-04 | AC4, and rule 1: 405 `RES-4500` after the credential check, 503 `SYS-5500` (contract cases) | e2e | `e2e/fnd-04-methods-and-readiness.spec.ts` |

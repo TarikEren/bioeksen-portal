@@ -192,6 +192,15 @@ describe("FND-04 standard endpoints, caching", () => {
     expect(report.status, "precondition: the operator gets the report").toBe(200);
   });
 
+  for (const [path, handler] of PROTECTED) {
+    /** The 403 of an operator endpoint carries Cache-Control: no-store. */
+    it(`FND-04.AC4: the refusal of a caller who is not an operator at ${path} carries Cache-Control: no-store`, async () => {
+      const refused = await call(handler, path, { headers: await withToken("person-without-role") });
+      expect(refused.status, "precondition: the caller who is not an operator is refused").toBe(403);
+      await expectNoStore(refused, `${path} with a person who is not an operator`);
+    });
+  }
+
   /** The 200 and the 401 of GET /api/admin/logs carry Cache-Control: no-store. */
   it("FND-04.AC4: GET /api/admin/logs answers with Cache-Control: no-store, also when it refuses", async () => {
     const refused = await call(getAdminLogs, "/api/admin/logs");
