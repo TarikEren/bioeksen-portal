@@ -5,7 +5,7 @@ This is the contract of stage B4, step 1 of the loop of `crisis_mode.md`
 B3 is in git: `git show feature/b3-documents:docs/plans/test_plan.md`. After
 B4, the test phase of B0 to B4 starts (`crisis_mode.md` §6).
 
-**Status.** Draft. The owner has not approved it.
+**Status.** The owner approved this contract on 2026-10-22.
 
 **Items** (README › *The B4 order*). IFU-90 first, then IFU-50 (with IFU-51),
 IFU-60 (with IFU-61, IFU-62), IFU-80 and IFU-70. With them: FND-05 (AC4),
@@ -120,20 +120,10 @@ DEC-018.
 | 6 Fix | Developers | Only a finding that blocks the test phase, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow and the fixture of IFU-60 in the demo; the SQL checks of FND-06.AC3 to AC5 |
 
-**Choices the specs leave open** (record them as Default decisions if the
-owner accepts them):
-- After a wrong code, the page reads `attemptsRemaining` with
-  `GET verifications/{id}`; the error envelope stays as `sds-api-design`
-  defines it.
-- The verification endpoint sends the code mail after the commit and waits for
-  the result, so that the answer carries `UP-5500`, `UP-5501` or `UP-5000`
-  (IFU-50 rule 4); a failure sets `send_failed_at`.
-- The lookup marks the verification used and writes the access record in one
-  transaction; the signed URLs are made after the commit.
-- Until LEG gives the consent text (DEC-074), the page shows the draft text of
-  the mockup (`ConsentNotice`) in Turkish and English, with the draft marker.
-- The client address in a log record keeps the first three octets of an IPv4
-  address or the first 48 bits of an IPv6 address (FND-05.AC4).
-- The table `eifu_access_record` gets the check
-  `access_record_anonymized_keeps_no_identity` now, ready for the retention
-  pass of B5.
+**Choices the specs left open.** The owner accepted them on 2026-10-22. They
+are Default decisions now: DEC-097 (the flow of the verification and the
+lookup: the awaited code mail, the one transaction of the lookup, the read of
+`attemptsRemaining`), DEC-098 (the draft consent text of the mockup) and
+DEC-139 (the part of a client address in a log record). The check
+`access_record_anonymized_keeps_no_identity` of IFU-81.AC6 comes with the table
+now; it needs no decision.

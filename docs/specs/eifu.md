@@ -43,6 +43,8 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-075 | The lookup page is at the path `/eifu` of the production host. The path never changes after it is printed on a package. A move of the page needs a permanent redirect that stays. | Pending | PO | questions.md 13 | IFU-70 | eng/eifu-domain.md §The public address |
 | DEC-076 | A download link is a signed storage URL that works for 5 minutes. The file downloads as an attachment with the name `{documentNumber}-rev{revisionLabel}-{languageCode}.pdf`. It never has the original file name of the upload. | Default | ENG | — | IFU-60 | eng/eifu-resolution-specification.md; eng/object-storage.md; audit D-3 |
 | DEC-077 | The public lookup collects no first name and no last name. | Default | ENG | — | IFU-50, IFU-51 | adr/0018 §1; eng/privacy-data-residency.md §Data minimisation; audit D-3 |
+| DEC-097 | The public lookup runs in this way. `POST /api/v1/eifu/verifications` sends the code mail after the commit and waits for the result, so that its answer carries `UP-5500`, `UP-5501` or `UP-5000` (IFU-50 rule 4); a failure sets `send_failed_at`. `POST /api/v1/eifu/lookups` marks the verification used and writes the access record in one transaction, and makes the signed URLs after the commit. After a wrong code, the page reads `attemptsRemaining` with `GET /api/v1/eifu/verifications/{id}`; the error envelope stays as `sds-api-design` defines it. | Default | ENG | — | IFU-50, IFU-51, IFU-60, IFU-70, IFU-80 | B4 contract; owner answer 2026-10-22 |
+| DEC-098 | Until the legal function gives the consent text (DEC-074), the page shows the draft text of the owner's mockup in Turkish and English, with the draft marker. | Default | PO | — | IFU-70 | B4 contract; owner answer 2026-10-22 |
 
 ### Access records and personal data
 
@@ -400,8 +402,9 @@ the consent, and sends a verification code.
 3. The answer is 201 with `Location`. Its body has `id` (a UUID, DEC-121) and
    `expiresAt`. The answer is the same whether or not the catalog number or
    the LOT exists.
-4. After the commit, the system sends the code mail (PLT-20, DEC-033). If the
-   system cannot send it, nobody can use the verification after that. The
+4. After the commit, the system sends the code mail (PLT-20, DEC-033,
+   DEC-097). If the system cannot send it, nobody can use the verification
+   after that. The
    answer has the error code of the failure:
    - `UP-5500` when the relay does not answer;
    - `UP-5501` when a timeout occurs at the relay;
@@ -497,7 +500,8 @@ fields `verificationId` and `code` (IFU-60).
 verification code, and finds the correct document version and its files.
 
 **Rules.**
-1. `POST /api/v1/eifu/lookups` runs after IFU-51 accepts the code (DEC-070).
+1. `POST /api/v1/eifu/lookups` runs after IFU-51 accepts the code (DEC-070,
+   DEC-097).
    It does not change the catalog or the documents. It writes the access
    record (IFU-80).
 2. The resolution follows DEC-060, DEC-061, DEC-062, DEC-045, DEC-046,
@@ -627,8 +631,8 @@ Each lookup follows IFU-50 and IFU-51.
    (ACC-50).
 2. One page holds both steps. The verification step shows the full consent
    text and its version. While the consent text is a draft, the step also
-   shows a draft marker (DEC-074). The consent box is not ticked when the page
-   opens (DEC-087).
+   shows a draft marker (DEC-074, DEC-098). The consent box is not ticked when
+   the page opens (DEC-087).
 3. The header has the language choice (DEC-017).
 4. The result shows the catalog number, the LOT number, the manufacturing
    date, the document number, the revision label and one download link for

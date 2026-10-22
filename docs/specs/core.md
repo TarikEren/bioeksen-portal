@@ -48,6 +48,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-122 | The interface shows the localized text for the code and the field of a failure, with the code beside it. It never shows the answer's `message`. If a call gets no answer in the form of `sds-api-design` (the network fails, or the server action is unknown), the interface shows the localized text of a failed call, with no code. | Default | ENG | — | FND-08, IFU-70 | sds-nextjs-frontend §6; review 1 Q-4 |
 | DEC-014 | For each controlled change, the app writes one row of `platform_audit_record` and one `AUDIT` log record, in the transaction of the change. The row names the actor, the action code, the entity type and id, the state before and after, and the request id. Where the action needs a reason, the row also names the reason. | Default | ENG | — | PLT-40, ACC-31, CAT-41, IFU-30, IFU-40, IFU-82 | eng/audit-traceability.md; sds-database §5; owner answer 2026-10-22 (no `@bioeksen/sdk`) |
 | DEC-127 | The app writes its log records through an in-app logger (`src/lib/logging`), not through `@bioeksen/sdk`. The logger writes records in the form of `sds-logging` (`log-record.md`) to stdout and to the local store `platform_log_record`. It sends nothing to the log aggregator. This departs from `sds-logging` (**Bindings**, **Transport**) and from `sds-nextjs-backend` §3. The departure ends when `@bioeksen/sdk` is available to this app. | Decided | PO | questions.md 24 | FND-04, FND-05, PLT-40, PLT-70 | Owner answer 2026-10-22 |
+| DEC-139 | A log record keeps only a part of a client address: the first three octets of an IPv4 address, or the first 48 bits of an IPv6 address. | Default | ENG | — | FND-05 | B4 contract; owner answer 2026-10-22 |
 
 ### Interface
 
@@ -315,7 +316,7 @@ across the answer and its log records.
 4. Every answer carries `X-Request-Id`, as `sds-logging` says.
 5. A log record never holds a password, a token, a session id or a
    verification code. It also never holds a signed URL, the email address of a
-   lookup or a full client address.
+   lookup or a full client address (DEC-139).
 6. An operation that has no code yet answers 500 `SYS-5000` (`sds-logging`,
    **Not implemented**).
 7. The body limit is 1 MiB (1,048,576 bytes), except where an item records
