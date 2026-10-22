@@ -40,6 +40,10 @@ Each claim is tested at the lowest tier that can prove it.
   the source document. For example, the auth cases of the operator
   endpoints cite `FND-04.AC3`, because FND-04 rule 1 adopts the principals of
   `sds-auth`.
+- A contract case that no criterion states cites no criterion id. Its title
+  names the rule of the item that adopts the convention, then the source,
+  for example `FND-04 rule 1, sds-api-design List defaults: the answer
+  echoes the page and the limit it used`.
 - The `sds-planning` checker reads the test folders only (stage plan B0,
   **Fixtures and helpers**), never this README or `tests/support/`. So an id
   in a comment or a table there does not count as a test, and the helpers and
@@ -139,7 +143,7 @@ refuse. A suite the guard refuses is not run.
 | FND-05 | AC1, AC2, AC3, AC5, and rule 2: `VAL-4006` (contract case) | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
 | FND-05 | AC1: an HTML page, and a path under `/api` that does not exist | e2e | `e2e/fnd-05-request-id.spec.ts` |
 | FND-05 | rules 1 and 5: severity, type and prose of a failure record, no bearer token in a record (contract cases) | integration | `integration/fnd-05-log-records.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
-| FND-05 | FND-03 rules 2 and 3: `LOG_LEVEL` (contract cases) | e2e | `e2e/fnd-05-log-level.spec.ts` |
+| FND-03 | rules 2 and 3: `LOG_LEVEL` (contract cases) | e2e | `e2e/fnd-05-log-level.spec.ts` |
 | FND-06 | AC1, AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
 | DEC-005 | none: the raw object `platform_refuse_delete()` of FND-06 rule 5 (review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
 | FND-07 | AC1, AC2, AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
