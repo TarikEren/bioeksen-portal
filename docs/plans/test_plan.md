@@ -120,6 +120,31 @@ DEC-018.
 | 6 Fix | Developers | Only a finding that blocks the test phase, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow and the fixture of IFU-60 in the demo; the SQL checks of FND-06.AC3 to AC5 |
 
+**Carried from step 2 to step 4** (step 2 is `46ddf63`, `d42ffd5`, `ea85b5f`).
+- The real reads of `ResolutionReads`: the catalog number, the LOT, the LOT
+  under another catalog number, the active override and its target, the
+  periods with a limit of 2, the active files.
+- `cleanTransport` reaches eifu from `src/modules/catalog/domain/lot-number.ts`
+  directly; step 4 gives it to eifu through a catalog service or a shared helper
+  (DEC-004).
+- The migration `eifu_lookup`, the encrypted columns, the limits of DEC-072 in
+  Redis, the code mail (Turkish and English, no link) awaited after the commit,
+  the one transaction of the lookup with 500 `DB-5001`, the signed URLs after
+  the commit, the two worker jobs, and the truncation of a client address in a
+  log record (DEC-139).
+
+**Filled by step 2.** The page calls three server actions
+(`createVerificationAction`, `getVerificationAction`, `lookupAction`); the routes
+stay the HTTP contract, and both call the same services. A success body is flat
+(`{ status, id, expiresAt }`). `LookupAnswer` is a union narrowed on `outcome`.
+`productName` and `documentTitle` are in the language of the request. A code
+that is not six digits counts as a wrong code (IFU-51.AC3). The checks of
+`noticeAccepted` and `noticeVersion` are in the service, so that they give
+`VAL-4006` (IFU-50.AC4, AC5). The code hash is HMAC-SHA-256 of
+`verificationId:code` with a key derived from the pepper by a fixed label; the
+key id is the additional data of AES-GCM. The issue phrases are one `as const`
+set, `LOOKUP_ISSUES`.
+
 **Choices the specs left open.** The owner accepted them on 2026-10-22. They
 are Default decisions now: DEC-097 (the flow of the verification and the
 lookup: the awaited code mail, the one transaction of the lookup, the read of
