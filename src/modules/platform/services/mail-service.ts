@@ -104,12 +104,17 @@ export async function deliverMail(template: MailTemplate, mail: OutgoingMail): P
  * rollback drops it (DEC-033).
  *
  * @param tx The transaction of the change.
+ * @param options `detached`: the caller does not wait for the send, so the time of
+ * its answer says nothing about the mail (ACC-11.AC1).
  */
-export function queueMail(tx: Transaction, message: MailMessage): Promise<void> {
+export function queueMail(tx: Transaction, message: MailMessage, options: { readonly detached?: boolean } = {}): Promise<void> {
   const rendered = renderMail(message, getConfig().PUBLIC_BASE_URL);
   const mail: OutgoingMail = { to: message.to, subject: rendered.subject, text: rendered.text };
-  tx.afterCommit(async () => {
-    await deliverMail(message.template, mail);
-  });
+  tx.afterCommit(
+    async () => {
+      await deliverMail(message.template, mail);
+    },
+    { detached: options.detached === true },
+  );
   return Promise.resolve();
 }

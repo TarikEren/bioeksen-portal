@@ -17,22 +17,52 @@ import { logger } from "@/lib/logging";
 
 import { type DbTransactionContext, type Executor, getDb, toDatabaseError } from "@/lib/db";
 
+export type { Executor } from "@/lib/db";
+
 /** An effect that runs after the commit. It must not throw: the change is done already. */
 export type AfterCommitEffect = () => void | Promise<void>;
+
+export interface AfterCommitOptions {
+  /**
+   * Start the effect and do not wait for it. The answer of the caller does not
+   * depend on the time of the effect, so the time cannot tell what the effect
+   * did (the password reset of ACC-11.AC1 sends a mail only to an active user).
+   */
+  readonly detached?: boolean;
+}
 
 /** The context of one transaction: the ORM of the transaction and the hook for the effects. */
 export interface Transaction extends Executor {
   /** Runs `effect` after the transaction commits. A rollback drops it. */
-  afterCommit(effect: AfterCommitEffect): void;
+  afterCommit(effect: AfterCommitEffect, options?: AfterCommitOptions): void;
 }
 
-function toTransaction(context: DbTransactionContext, effects: AfterCommitEffect[]): Transaction {
+/** The client for a read that needs no transaction. A service passes it to a repository. */
+export function readExecutor(): Executor {
+  return getDb();
+}
+
+interface PendingEffect {
+  readonly effect: AfterCommitEffect;
+  readonly detached: boolean;
+}
+
+function toTransaction(context: DbTransactionContext, effects: PendingEffect[]): Transaction {
   return {
     orm: context.orm,
-    afterCommit(effect) {
-      effects.push(effect);
+    afterCommit(effect, options = {}) {
+      effects.push({ effect, detached: options.detached === true });
     },
   };
+}
+
+/** Runs one effect. A failure is logged and never thrown: the change is committed. */
+async function runEffect(effect: AfterCommitEffect): Promise<void> {
+  try {
+    await effect();
+  } catch (error) {
+    logger.failure("SYS-5000", { tail: { step: "after-commit effect" }, error });
+  }
 }
 
 /**
@@ -43,18 +73,18 @@ function toTransaction(context: DbTransactionContext, effects: AfterCommitEffect
  * @throws AppError The error that `work` threw, or the code of the registry for a failure of the driver.
  */
 export async function runTransaction<TResult>(work: (tx: Transaction) => Promise<TResult>): Promise<TResult> {
-  const effects: AfterCommitEffect[] = [];
+  const effects: PendingEffect[] = [];
   let result: TResult;
   try {
     result = await getDb().transaction((context) => work(toTransaction(context, effects)));
   } catch (error) {
     throw toDatabaseError(error, "write");
   }
-  for (const effect of effects) {
-    try {
-      await effect();
-    } catch (error) {
-      logger.failure("SYS-5000", { tail: { step: "after-commit effect" }, error });
+  for (const { effect, detached } of effects) {
+    if (detached) {
+      void runEffect(effect);
+    } else {
+      await runEffect(effect);
     }
   }
   return result;

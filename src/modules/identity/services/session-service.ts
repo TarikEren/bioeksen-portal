@@ -8,20 +8,17 @@
  */
 import "server-only";
 
-import { timingSafeEqual } from "node:crypto";
-
 import { type SessionActor } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logging";
-import {
-  MOCK_PASSWORD,
-  endMockSession,
-  openMockSession,
-  touchMockSession,
-} from "@/lib/mock/identity";
 import type { Me, SignInInput } from "@/lib/schemas/identity";
+import { readExecutor } from "@/lib/transaction";
 
-import { findUserByEmail, findUserById, toMe } from "./identity-views";
+import { decoyHash, verifyPassword } from "../domain/password-hash";
+import { findActiveAssignments } from "../repositories/role-repository";
+import { endSession, openSession, touchSession } from "../repositories/session-repository";
+import { findUserByEmail, findUserById } from "../repositories/user-repository";
+import { normalizeEmail, parseEntityId, toMe } from "./identity-views";
 
 /** What the route knows about the request, for the rate limit of ACC-20 rule 3. */
 export interface SignInMeta {
@@ -45,12 +42,6 @@ function signInFailure(reason: string): AppError {
   return new AppError("AUTH-4101", "Credential invalid", { reason });
 }
 
-function passwordMatches(candidate: string): boolean {
-  const expected = Buffer.from(MOCK_PASSWORD);
-  const given = Buffer.from(candidate);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
-
 /**
  * Signs a person in and opens a new session (ACC-20.AC1, AC9).
  *
@@ -58,35 +49,34 @@ function passwordMatches(candidate: string): boolean {
  * and an inactive account, with one body. `RATE-4400` comes with the limits of
  * stage B1 step 4 (ACC-20.AC3 to AC5).
  */
-// MOCK: ACC-20
 export async function signIn(input: SignInInput, meta: SignInMeta): Promise<SignedIn> {
   void meta;
-  const user = findUserByEmail(input.email);
-  // The password is compared in every case, so the time does not tell the cases apart.
-  const passwordOk = passwordMatches(input.password);
+  const executor = readExecutor();
+  const user = await findUserByEmail(executor, normalizeEmail(input.email));
+  // The password is verified in every case, against a decoy when there is no hash,
+  // so the time of the answer does not tell the cases apart.
+  const passwordOk = await verifyPassword(input.password, user?.passwordHash ?? (await decoyHash()));
   if (user === null) {
-    return Promise.reject(signInFailure("no user has this email address"));
+    throw signInFailure("no user has this email address");
   }
   if (!user.isActive) {
-    return Promise.reject(signInFailure("the account is inactive"));
+    throw signInFailure("the account is inactive");
   }
-  if (!user.hasPassword) {
-    return Promise.reject(signInFailure("the account has no password yet"));
+  if (user.passwordHash === null) {
+    throw signInFailure("the account has no password yet");
   }
   if (!passwordOk) {
-    return Promise.reject(signInFailure("the password is wrong"));
+    throw signInFailure("the password is wrong");
   }
-  const sessionId = openMockSession(user.id);
-  logger.write({ severity: "INFO", type: "SECURITY", message: "sign-in granted", tail: { sub: user.id } });
-  return Promise.resolve({ sessionId, user: toMe(user) });
+  const sessionId = await openSession(String(user.id));
+  logger.write({ severity: "INFO", type: "SECURITY", message: "sign-in granted", tail: { sub: String(user.id) } });
+  return { sessionId, user: toMe(user, await findActiveAssignments(executor, [user.id])) };
 }
 
 /** Ends a session (ACC-20 rule 4, AC8). A session that has ended already is not an error. */
-// MOCK: ACC-20
 export async function signOut(sessionId: string): Promise<void> {
-  endMockSession(sessionId);
+  await endSession(sessionId);
   logger.write({ severity: "INFO", type: "SECURITY", message: "sign-out" });
-  return Promise.resolve();
 }
 
 /**
@@ -95,20 +85,21 @@ export async function signOut(sessionId: string): Promise<void> {
  * time. The permissions are read each time, so a revoked role counts at once
  * (ACC-30.AC4).
  */
-// MOCK: ACC-20
 export async function getSessionUser(sessionId: string): Promise<SessionUser | null> {
-  const session = touchMockSession(sessionId);
+  const session = await touchSession(sessionId);
   if (session === null) {
-    return Promise.resolve(null);
+    return null;
   }
-  const user = findUserById(session.userId);
+  const executor = readExecutor();
+  const key = parseEntityId(session.userId);
+  const user = key === null ? null : await findUserById(executor, key);
   if (user === null || !user.isActive) {
-    endMockSession(sessionId);
-    return Promise.resolve(null);
+    await endSession(sessionId);
+    return null;
   }
-  const me = toMe(user);
-  return Promise.resolve({
+  const me = toMe(user, await findActiveAssignments(executor, [user.id]));
+  return {
     actor: { kind: "session", userId: me.id, sessionId, permissions: new Set(me.permissions) },
     user: me,
-  });
+  };
 }
