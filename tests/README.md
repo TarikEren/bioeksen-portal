@@ -63,7 +63,10 @@ tier with tests could not run (`NOT RUN`, with the reason).
 
 ## Variables of each tier
 
-No tier reads `.env`. The variables come from the shell.
+No tier reads `.env`. The variables come from the shell. The e2e tier has no
+Playwright web server and no base URL: each test file starts the production
+build with `support/spawn-app.ts`, on a free port, with exactly the settings
+of the test.
 
 | Variable | Tiers | Value |
 |---|---|---|
@@ -71,7 +74,6 @@ No tier reads `.env`. The variables come from the shell.
 | `TEST_E2E_DATABASE_URL` | e2e | A database whose name ends in `_e2e`, for example `bioeksen_portal_<role>_e2e` |
 | `TEST_DATABASE_HOSTS` | integration, e2e, pipeline | The hosts a suite may reset a database on, comma separated. Default: loopback only |
 | `TEST_REDIS_URL` | integration, e2e | A Redis 7. Default: `redis://127.0.0.1:6379` |
-| `E2E_PORT` | e2e | The port of the Playwright web server. Default: 3100 |
 | `TEST_ENVIRONMENT_URL` | smoke | The base URL of the test environment that IT deployed. Without it, the smoke test fails and says so |
 | `SDS_PLANNING_CHECKER` | pipeline (FND-02.AC2) | The path of `check_specs.py`. Default: the newest copy in the Claude plugin cache |
 | `PYTHON` | pipeline (FND-02.AC2) | The Python command. Default: `python` on Windows, `python3` elsewhere |
