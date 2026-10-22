@@ -126,3 +126,12 @@ export function getLogLevel(): Severity {
   const value = environment()["LOG_LEVEL"];
   return SEVERITIES.find((severity) => severity === value) ?? "INFO";
 }
+
+/**
+ * Whether the app runs as the development server (`APP_ENV` is `development`).
+ * It lets the Content Security Policy allow what the development server needs.
+ * A missing or unknown `APP_ENV` is not development.
+ */
+export function isDevelopmentEnvironment(): boolean {
+  return environment()["APP_ENV"] === "development";
+}
