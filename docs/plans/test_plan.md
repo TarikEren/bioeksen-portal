@@ -1,11 +1,11 @@
 # Stage B0: Foundation
 
-**Items.** FND-01 to FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2),
+**Items.** FND-01, FND-02 (AC1, AC2, AC3, AC5), FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2),
 FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2).
 
-**Exit criterion.** CI runs every check of FND-02 on a pull request. IT
-deploys a release tag of the empty app to the test environment (DEC-128).
-There, `GET /api/health/ready` answers 200. The `sds-planning` checker passes
+**Exit criterion.** CI runs every check of FND-02 on a pull request. The
+demo of DEC-135 starts from `compose.demo.yaml`, and there
+`GET /api/health/ready` answers 200. The `sds-planning` checker passes
 on the set.
 
 **Pending rules in force.**
@@ -13,6 +13,8 @@ on the set.
 - DEC-021: the software id is `bioeksen-portal`, in `.bioeksen/software-id`.
 - DEC-128: a release tag starts the deployment; this repository holds no
   deployment job.
+- DEC-135: until IT gives the Entra values and the servers, the app runs as a
+  demo from `compose.demo.yaml`, with `APP_ENV` `demo`.
 
 **Decisions this stage carries.** DEC-003, DEC-004, DEC-005, DEC-009,
 DEC-015, DEC-016, DEC-017, DEC-018, DEC-020, DEC-022, DEC-127, DEC-130,
@@ -114,13 +116,14 @@ fail for the missing behavior.
 | Task | Closes | Tier for each criterion |
 |---|---|---|
 | T1 Toolchain, layout and import rules | FND-01.AC1 to AC4 | AC1 pipeline (the commands on a clean copy); AC2 to AC4 pipeline (ESLint on fixture source text with a file path under `src/`) |
-| T2 Pipeline proposal and commit check | FND-02.AC1 to AC4 | AC1 to AC3 pipeline (fixtures); AC4 smoke tier (`tests/smoke/`, its own Playwright configuration with no global setup and no web server, script `test:smoke`, base URL from `TEST_ENVIRONMENT_URL`). The pull request pipeline does not run the smoke tier. The main session runs it at the stage exit, after IT deploys the release tag |
+| T2 Pipeline proposal and commit check | FND-02.AC1 to AC3, AC5 | AC1 to AC3 pipeline (fixtures); AC5 (and AC4 in B5) smoke tier (`tests/smoke/`, its own Playwright configuration with no global setup and no web server, script `test:smoke`, base URL from `TEST_ENVIRONMENT_URL`). The pull request pipeline does not run the smoke tier. The main session runs it at the stage exit, after IT deploys the release tag |
 | T3 Configuration and start hook | FND-03.AC1 to AC4 | e2e (spawned app with a broken environment) |
 | T4 Standard endpoints and operator tokens | FND-04.AC1 to AC4 | AC1 e2e (spawned app with a database that does not answer); AC2 to AC4 integration |
 | T5 Errors, logger, request id, route wrapper | FND-05.AC1, AC2, AC3, AC5 | integration |
 | T6 Data layer and drift check | FND-06.AC1, AC2 | pipeline |
 | T7 Headers, nonce, proxy, server action origin, dependency check | FND-07.AC1, AC2, AC4, AC5 | AC1, AC2 e2e; AC4 integration; AC5 pipeline |
 | T8 Languages, formats, layout, fonts | FND-08.AC1 to AC4, AC6 | AC1 pipeline (type check of a fixture dictionary); AC2 to AC4 e2e; AC6 unit |
+| T10 Demo (DEC-135) | FND-02.AC5, FND-03.AC5 | FND-02.AC5 smoke tier against the demo; FND-03.AC5 e2e (spawned app, `APP_ENV` `demo`, no `ENTRA_*`). The build: a multi-stage `Dockerfile` (pinned base by digest, Node 24, non-root, Next.js standalone output), `.dockerignore`, `compose.demo.yaml` (the app image, PostgreSQL 16, Redis 7, MinIO, Mailpit; the migrations run once before the app starts), and `APP_ENV` `demo` in the configuration |
 | T9 Contrast of `src/app/globals.css` | FND-09.AC2 | unit (the pairs of the `sds-nextjs-frontend` reference page, read from the CSS file) |
 
 **The order.** T1, T3, T5, T6, T4, T7, T8, T9, T2. The spike of DEC-005 comes

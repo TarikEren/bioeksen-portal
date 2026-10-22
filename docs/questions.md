@@ -424,3 +424,20 @@ kullanır; bu ayar yoksa `S3_ENDPOINT_URL` kullanılır.
 **For:** DEC-132. **Owner:** IT.
 
 **Answer:**
+
+## 27. Entra ID ve sunucular gelene kadar demo
+
+Entra ID değerleri henüz hazır değil. Test ve üretim sunucuları da yok.
+Entra ID, yalnızca `GET /api/health` ve `GET /api/admin/logs` uç noktalarının
+operatör belirteci için gerekir. Bu değerler ve sunucular ne zaman hazır
+olur? Hazır olana kadar uygulamanın tek bir makinede, Docker Compose ile demo
+olarak çalışmasını kabul ediyor musunuz?
+
+Yürürlükteki kural: uygulama `compose.demo.yaml` ile tek bir makinede demo
+olarak çalışır (`APP_ENV` `demo`). Demoda `ENTRA_*` ayarları isteğe bağlıdır.
+Bu ayarlar yoksa iki operatör uç noktası 503 `AUTH-5500` döner. Uygulama yine
+de hazır olduğunu bildirir. Demo gerçek kullanıcılar için değildir.
+
+**For:** DEC-135. **Owner:** IT.
+
+**Answer:**

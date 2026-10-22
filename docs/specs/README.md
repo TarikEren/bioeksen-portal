@@ -30,12 +30,12 @@ The text follows ASD-STE-100 (Simplified Technical English).
 - The items `IFU` are in `eifu.md`.
 - The items `ACD` are in `academy.md`.
 - Each decision is in the file of its subject:
-  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-134.
+  - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-135.
   - `catalog.md`: DEC-040 to DEC-053.
   - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-091.
   - `academy.md`: DEC-100 to DEC-112.
 - A new decision takes the next free number of its file's block. The free
-  numbers are 129 and 135 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
+  numbers are 129 and 136 to 139 for `core.md`, 054 to 059 for `catalog.md`, 092 to
   099 for `eifu.md` and 113 to 119 for `academy.md`. Change the list above
   when you add a decision. Do not use the number 086 again.
 
@@ -177,9 +177,10 @@ B0 Foundation
 
 | Need from IT | For | First needed in |
 |---|---|---|
-| A test environment in Türkiye with Docker, and a CI runner that can deploy to it | FND-02 | B0 |
-| PostgreSQL 16 and Redis 7 for the test environment | FND-04, FND-06, ACC-20 | B0 |
-| The values of `sds-auth` (`credentials.md`, **Configuration**) for this app, and `TRUSTED_PROXIES` | FND-03, FND-04 | B0 |
+| A CI runner for the pull request pipeline | FND-02 | B0 |
+| A test environment in Türkiye with Docker, and the deploy repository (DEC-128). The demo of DEC-135 stands in until then | FND-02 | B5 |
+| PostgreSQL 16 and Redis 7 for the test environment | FND-04, FND-06, ACC-20 | B5 |
+| The values of `sds-auth` (`credentials.md`, **Configuration**) for this app, and `TRUSTED_PROXIES`. The demo runs without them (DEC-135) | FND-03, FND-04 | B5 |
 | An SMTP relay in Türkiye with STARTTLS, and a sender address | PLT-20 | B1 |
 | An S3-compatible object store in Türkiye, and an access key limited to the buckets of the app. The store refuses a write with `If-None-Match: *` to a key that exists | PLT-10 | B1 |
 | The production host, its TLS proxy and its public host name | IFU-70 | B4 |
@@ -195,12 +196,12 @@ B0 Foundation
 
 | Stage | Items | Exit criterion |
 |---|---|---|
-| **B0 Foundation** | FND-01 to FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2), FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2) | CI runs every check of FND-02 on a pull request. IT deploys a release tag of the empty app to the test environment (DEC-128). There, `GET /api/health/ready` answers 200. The `sds-planning` checker passes on this set. |
+| **B0 Foundation** | FND-01, FND-02 (AC1, AC2, AC3, AC5), FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2), FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2) | CI runs every check of FND-02 on a pull request. The demo of DEC-135 starts from `compose.demo.yaml`, and there `GET /api/health/ready` answers 200. The `sds-planning` checker passes on this set. |
 | **B1 Identity and platform services** | FND-04 (AC5), FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10, ACC-20, ACC-30 (AC1, AC3, AC4), ACC-40, PLT-10, PLT-30, ACC-50 (AC1, AC2) | The first Platform Administrator gets an invitation, sets a password, completes the sign-in, invites a second user and grants the IFU Manager role. Each grant has its audit record. |
 | **B2 Product catalog** | FND-09 (AC3), CAT-10, CAT-20, CAT-30, CAT-40, CAT-50, CAT-60 | An IFU Manager enters a product with two catalog numbers, imports LOTs with a row report, and corrects a LOT whose dates disagree. |
 | **B3 Documents and publication** | IFU-10, IFU-20, IFU-30, IFU-40 | An IFU Manager publishes three versions of one document, replaces a published file, withdraws a version and sets an override. The periods match IFU-30. |
 | **B4 Public lookup** | FND-05 (AC4), FND-06 (AC3, AC4, AC5), FND-09 (AC1, AC4), ACC-50 (AC3), IFU-90, IFU-50, IFU-60, IFU-80, IFU-70 | A visitor proves an email address with the emailed code and gets the files of the correct version. The public endpoints pass the fixture of IFU-60. Each lookup has its access record, which holds the encrypted identity. |
-| **B5 Personal data and operations** | ACC-30 (AC2), IFU-81, IFU-82, IFU-83, IFU-84, IFU-91, PLT-60, PLT-70 | The retention pass anonymizes the records that are older than the period. An erasure request clears a person's records. A backup restores into an empty database. A failed mail send shows in the log records that the alerts read. Each permission has its two tests. Release 1 is complete. |
+| **B5 Personal data and operations** | FND-02 (AC4), ACC-30 (AC2), IFU-81, IFU-82, IFU-83, IFU-84, IFU-91, PLT-60, PLT-70 | The retention pass anonymizes the records that are older than the period. An erasure request clears a person's records. A backup restores into an empty database. A failed mail send shows in the log records that the alerts read. Each permission has its two tests. Release 1 is complete. |
 | **B6 Academy foundation** | ACD-10, ACD-20, ACC-60 | Release 2: the outline items of `academy.md` have their full detail. A course version moves from `DRAFT` to `PUBLISHED` with the approval of a second person. |
 | **B7 Learning** | ACD-30, ACD-40, ACD-50 | A learner with an assigned course completes its lessons and passes its assessment. |
 | **B8 Certificates and Training Studio** | ACD-60, ACD-70, ACD-80 | A learner gets a certificate that verifies publicly. An author builds a course in the Training Studio. |
@@ -222,7 +223,7 @@ question are in the row of the decision.
 |---|---|
 | DEC-013 | B0 |
 | DEC-021 | B0 |
-| DEC-128 | B0 |
+| DEC-135 | B0 |
 | DEC-039 | B2 |
 | DEC-040 | B2 |
 | DEC-044 | B2 |
@@ -239,6 +240,7 @@ question are in the row of the decision.
 | DEC-083 | B4 |
 | DEC-132 | B4 |
 | DEC-034 | B5 |
+| DEC-128 | B5 |
 | DEC-035 | B5 |
 | DEC-036 | B5 |
 | DEC-082 | B5 |

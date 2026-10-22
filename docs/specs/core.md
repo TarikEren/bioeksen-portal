@@ -37,6 +37,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-012 | The database stores timestamps as `timestamptz`, in UTC. Business dates (a manufacturing date, an effective date, an expiry date) are `date` columns with no time. The interface shows timestamps and counts days in the time zone `Europe/Istanbul`. | Default | ENG | — | FND-08, CAT-40, IFU-30, IFU-83 | eng/localization.md §Data representation |
 | DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. It shows a file size in decimal units with the symbols `B`, `kB`, `MB` and `GB` (1 kB is 1000 bytes), with at most one decimal, and a decimal comma in Turkish (`1,5 kB`, `2 MB`). | Default | ENG | — | FND-08 | B0 test review, 2026-10-22; reviews 1 and 2 |
 | DEC-134 | The dependency check of FND-07 fails on an advisory of severity high or critical in any dependency, also a development tool. When a patched version exists, a pnpm override forces it. An advisory with no patched version is ignored only by its GHSA id, and only while this row names it with a review date. Ignored now: GHSA-vfj7-8cjw-p6xm (`braces` 3.0.3 and earlier, through `eslint-config-next`), review on 2027-01-22. | Decided | PO | — | FND-07 | Owner answer 2026-10-22 |
+| DEC-135 | Until IT gives the Entra values and the test and production servers, the app runs as a demo. The demo is the app image with PostgreSQL 16, Redis 7, MinIO and Mailpit, from `compose.demo.yaml` on one machine, with `APP_ENV` `demo`. In the demo, the `ENTRA_*` settings are optional. When they are not set, `GET /api/health` and `GET /api/admin/logs` answer 503 `AUTH-5500`, and the app still reports ready. The test seams stay closed. Each other rule of `production` also applies to `demo`. The demo is not for real users. | Pending | IT | questions.md 27 | FND-02, FND-03, FND-04 | Owner answer 2026-10-22 |
 | DEC-039 | In JSON, a business date is `YYYY-MM-DD`, with no time and no offset. This departs from `sds-api-design` (`standard-api-endpoints.md`, **Types and units**). That skill gives each date an offset. The departure ends when SDS answers. | Pending | SDS | questions.md 2 | CAT-40, IFU-30, IFU-60, IFU-83 | — |
 
 ### Errors and audit
@@ -176,6 +177,9 @@ and nothing changes.
 3. A pull request merges into `main` only when every check passes (DEC-022).
 4. A release tag starts the deployment, through the deploy repository of IT
    (DEC-128). The app repository holds no deployment job.
+5. Until the test environment exists, the demo of DEC-135 stands in for it.
+   The repository holds `compose.demo.yaml` and the image definition that it
+   builds (`sds-ci`, **The container image**).
 
 **Acceptance.**
 - **AC1.** If a pull request has a type error, a lint error, a failed test or
@@ -188,6 +192,9 @@ and nothing changes.
   does not carry the software id of DEC-021, the pipeline also fails.
 - **AC4.** When IT deploys a release tag to the test environment,
   `GET /api/health/ready` answers 200 there.
+- **AC5.** When a person starts `compose.demo.yaml` with the values of
+  `.env.example` on a machine with Docker, `GET /api/health/ready` of the demo
+  answers 200 within 3 minutes.
 
 **Trace.** eng/git-workflow.md; eng/definition-of-done.md; sds-ci §The jobs
 
@@ -205,7 +212,7 @@ setting.
 
 | Setting | Required | Default |
 |---|---|---|
-| `APP_ENV` (`development`, `test` or `production`) | yes | — |
+| `APP_ENV` (`development`, `test`, `demo` or `production`; DEC-135) | yes | — |
 | `DATABASE_URL`, `REDIS_URL` | yes | — |
 | `S3_ENDPOINT_URL`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | yes | — |
 | `S3_PUBLIC_ENDPOINT_URL` (DEC-132) | no | the value of `S3_ENDPOINT_URL` |
@@ -216,7 +223,7 @@ setting.
 | `EIFU_IDENTITY_KEYS` (`id:base64key`, newest first; each key decodes to 32 bytes, the key of AES-256-GCM (DEC-081); each id once; IFU-90) | in production | — |
 | `EIFU_IDENTITY_LOOKUP_PEPPER` (at least 32 characters; IFU-90) | in production | — |
 | `EIFU_ACCESS_RECORD_RETENTION_DAYS` | no | as DEC-080 says |
-| The values of `sds-auth` (`credentials.md`, **Configuration**): `ENTRA_TENANT_ID`, `ENTRA_ISSUER`, `ENTRA_JWKS_URI`, `ENTRA_JWKS_MAX_AGE_SECONDS`, `ENTRA_AUDIENCE`, `ENTRA_CLIENT_ID`, the client credential, `ENTRA_OPERATOR_SCOPE`, `AUTH_CLOCK_SKEW_SECONDS` | as `sds-auth` says | as `sds-auth` says |
+| The values of `sds-auth` (`credentials.md`, **Configuration**): `ENTRA_TENANT_ID`, `ENTRA_ISSUER`, `ENTRA_JWKS_URI`, `ENTRA_JWKS_MAX_AGE_SECONDS`, `ENTRA_AUDIENCE`, `ENTRA_CLIENT_ID`, the client credential, `ENTRA_OPERATOR_SCOPE`, `AUTH_CLOCK_SKEW_SECONDS` | as `sds-auth` says; the `ENTRA_*` settings are optional when `APP_ENV` is `demo` (DEC-135) | as `sds-auth` says |
 | `LOG_LEVEL` (`sds-logging`) | no | `INFO` |
 | `TEST_SEAMS_ENABLED` | no | `false` |
 | `BOOTSTRAP_ADMIN_EMAIL` (only the command of ACC-40 reads it) | no | — |
@@ -244,8 +251,12 @@ setting.
 - **AC3.** If `TEST_SEAMS_ENABLED` is `true` when `APP_ENV` is `production`,
   the app does not report ready, a `FATAL` record carries `CFG-5001`, and no
   test seam works.
-- **AC4.** If `ENTRA_ISSUER` is not set when the app starts, the app does not
-  report ready, and a `FATAL` record carries `CFG-5000`.
+- **AC4.** If `ENTRA_ISSUER` is not set when the app starts and `APP_ENV` is
+  not `demo`, the app does not report ready, and a `FATAL` record carries
+  `CFG-5000`.
+- **AC5.** If no `ENTRA_*` setting is set when the app starts and `APP_ENV` is
+  `demo`, the app reports ready, and `GET /api/health` with a bearer token
+  answers 503 `AUTH-5500`.
 
 **Trace.** sds-config; sds-auth (credentials.md §Configuration); adr/0017 item 7; ops/deploy.md
 
