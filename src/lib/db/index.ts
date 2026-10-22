@@ -140,7 +140,7 @@ function* walk(error: unknown): Generator<{ code: string | undefined; message: s
  * failures** table of `code-prefixes.md`. A raw driver error never reaches a
  * caller. The text of the driver goes to the log record, redacted by the logger.
  */
-export function toDatabaseError(error: unknown, operation: "read" | "write"): AppError {
+export function toDatabaseError(error: unknown, operation: "read" | "write" | "delete"): AppError {
   if (error instanceof AppError) {
     return error;
   }
@@ -152,8 +152,23 @@ export function toDatabaseError(error: unknown, operation: "read" | "write"): Ap
       if (code === "23505") {
         return new AppError("RES-4300", "Resource already exists", { cause: error });
       }
-      if (code === "40001" || code === "40P01") {
+      if (code === "23503") {
+        // A foreign key: a write names a record that does not exist (a field value),
+        // or a delete is refused because other rows still reference the row.
+        return operation === "delete"
+          ? new AppError("RES-4302", "Operation not allowed in current state", { cause: error })
+          : new AppError("VAL-4006", "Field value invalid", { cause: error });
+      }
+      if (code === "23001") {
+        // `restrict_violation`: platform_refuse_delete() refuses the delete of a controlled record (DEC-010).
+        return new AppError("RES-4302", "Operation not allowed in current state", { cause: error });
+      }
+      if (code === "40001") {
         return new AppError("RES-4301", "Conflicting concurrent update", { cause: error });
+      }
+      if (code.startsWith("40")) {
+        // Any other transaction rollback, a deadlock for one.
+        return new AppError("DB-5002", "Transaction rolled back", { cause: error });
       }
       if (code.startsWith("23")) {
         return new AppError("DB-5001", "Write failed", { cause: error });
