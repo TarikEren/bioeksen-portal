@@ -1,97 +1,104 @@
 /**
  * The DTOs of the catalog services: what an answer shows, never a record
  * (`sds-nextjs-backend` §3). The routes, the actions and the pages share them.
- *
- * MOCK: CAT-10, CAT-20, CAT-40, CAT-60. The mappers read the mock rows. Step 4
- * maps the rows of the repositories to the same views.
+ * The mappers read the rows of the repositories.
  */
 import "server-only";
 
-import {
-  type MockCatalogNumber,
-  type MockLot,
-  type MockLotImport,
-  type MockLotImportRow,
-  type MockProduct,
-  getCatalogMock,
-} from "@/lib/mock/catalog";
 import { AppError, CODE_MEANINGS } from "@/lib/errors";
-import type {
-  CatalogNumberView,
-  LotImportRowView,
-  LotImportView,
-  LotView,
-  Paging,
-  ProductDetail,
-  ProductSummary,
+import {
+  type CatalogNumberView,
+  type LotImportRowView,
+  type LotImportView,
+  type LotView,
+  type Paging,
+  type ProductDetail,
+  type ProductSummary,
 } from "@/lib/schemas/catalog";
+import { EntityId } from "@/lib/schemas/identity";
 
 import { readEncodedDate } from "../domain/lot-number";
+import type { CatalogNumberRow } from "../repositories/catalog-number-repository";
+import type { LotImportRecord, LotImportRowRecord } from "../repositories/lot-import-repository";
+import type { LotRow } from "../repositories/lot-repository";
+import type { ProductRow } from "../repositories/product-repository";
 
 /** 404 `RES-4200`. The answer does not tell a missing record from a record that the caller may not see. */
 export function notFound(): AppError {
   return new AppError("RES-4200", CODE_MEANINGS["RES-4200"]);
 }
 
-/** The catalog numbers of a product, in the order of the ids. */
-export function catalogNumbersOf(productId: string): MockCatalogNumber[] {
-  return [...getCatalogMock().catalogNumbers.values()].filter((candidate) => candidate.productId === productId);
+/** The `bigint` key of a text id, or `null` for an id of a wrong form (a malformed id names no record). */
+export function parseCatalogId(id: string): bigint | null {
+  return EntityId.safeParse(id).success ? BigInt(id) : null;
 }
 
-/** The LOTs of a catalog number. */
-export function lotsOfCatalogNumber(catalogNumberId: string): MockLot[] {
-  return [...getCatalogMock().lots.values()].filter((candidate) => candidate.catalogNumberId === catalogNumberId);
+/** The `bigint` key of a text id that a service reads for a record that must exist. @throws AppError `RES-4200`. */
+export function requireCatalogId(id: string): bigint {
+  const parsed = parseCatalogId(id);
+  if (parsed === null) {
+    throw notFound();
+  }
+  return parsed;
 }
 
-/** The number of LOTs under a product, through its catalog numbers. */
-export function lotCountOfProduct(productId: string): number {
-  return catalogNumbersOf(productId).reduce((total, candidate) => total + lotsOfCatalogNumber(candidate.id).length, 0);
-}
-
-export function toCatalogNumberView(row: MockCatalogNumber): CatalogNumberView {
+export function toCatalogNumberView(row: CatalogNumberRow, lotCount: number): CatalogNumberView {
   return {
-    id: row.id,
-    productId: row.productId,
+    id: String(row.id),
+    productId: String(row.productId),
     catalogNumber: row.catalogNumber,
     packSize: row.packSize,
     format: row.format,
     isActive: row.isActive,
-    lotCount: lotsOfCatalogNumber(row.id).length,
+    lotCount,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-export function toProductSummary(row: MockProduct): ProductSummary {
+/** The number of LOTs under one product: the sum over its catalog numbers. */
+export function lotCountOfCatalogNumbers(catalogNumbers: readonly CatalogNumberRow[], lotCounts: ReadonlyMap<bigint, number>): number {
+  return catalogNumbers.reduce((total, row) => total + (lotCounts.get(row.id) ?? 0), 0);
+}
+
+export function toProductSummary(
+  row: ProductRow,
+  catalogNumbers: readonly CatalogNumberRow[],
+  lotCounts: ReadonlyMap<bigint, number>,
+): ProductSummary {
   return {
-    id: row.id,
+    id: String(row.id),
     internalCode: row.internalCode,
     name: row.name,
     regulatoryStatus: row.regulatoryStatus,
     kitCodeBase: row.kitCodeBase,
     isActive: row.isActive,
-    catalogNumberCount: catalogNumbersOf(row.id).length,
-    lotCount: lotCountOfProduct(row.id),
+    catalogNumberCount: catalogNumbers.length,
+    lotCount: lotCountOfCatalogNumbers(catalogNumbers, lotCounts),
     createdAt: row.createdAt.toISOString(),
   };
 }
 
-export function toProductDetail(row: MockProduct): ProductDetail {
+export function toProductDetail(
+  row: ProductRow,
+  catalogNumbers: readonly CatalogNumberRow[],
+  lotCounts: ReadonlyMap<bigint, number>,
+): ProductDetail {
   return {
-    ...toProductSummary(row),
+    ...toProductSummary(row, catalogNumbers, lotCounts),
     description: row.description,
     updatedAt: row.updatedAt.toISOString(),
-    catalogNumbers: catalogNumbersOf(row.id).map(toCatalogNumberView),
+    catalogNumbers: catalogNumbers.map((catalogNumber) => toCatalogNumberView(catalogNumber, lotCounts.get(catalogNumber.id) ?? 0)),
   };
 }
 
-export function toLotView(row: MockLot, catalogNumber: MockCatalogNumber): LotView {
+export function toLotView(row: LotRow, catalogNumber: CatalogNumberRow): LotView {
   const encoded = readEncodedDate(row.lotNumber);
   return {
-    id: row.id,
-    catalogNumberId: catalogNumber.id,
+    id: String(row.id),
+    catalogNumberId: String(catalogNumber.id),
     catalogNumber: catalogNumber.catalogNumber,
-    productId: catalogNumber.productId,
+    productId: String(catalogNumber.productId),
     lotNumber: row.lotNumber,
     manufacturingDate: row.manufacturingDate,
     manufacturingDateSource: row.manufacturingDateSource,
@@ -100,19 +107,19 @@ export function toLotView(row: MockLot, catalogNumber: MockCatalogNumber): LotVi
     encodedManufacturingDate: encoded.status === "ok" ? encoded.date : row.manufacturingDate,
     expiryDate: row.expiryDate,
     hasDateConflict: row.hasDateConflict,
-    lotImportId: row.lotImportId,
+    lotImportId: row.lotImportId === null ? null : String(row.lotImportId),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-export function toLotImportView(row: MockLotImport): LotImportView {
+export function toLotImportView(row: LotImportRecord): LotImportView {
   return {
-    id: row.id,
+    id: String(row.id),
     sourceFilename: row.sourceFilename,
     sourceHash: row.sourceHash,
-    productId: row.productId,
-    uploadedByUserId: row.uploadedByUserId,
+    productId: row.productId === null ? null : String(row.productId),
+    uploadedByUserId: String(row.uploadedByUserId),
     status: row.status,
     rowCount: row.rowCount,
     createdCount: row.createdCount,
@@ -125,18 +132,15 @@ export function toLotImportView(row: MockLotImport): LotImportView {
   };
 }
 
-export function toLotImportRowView(row: MockLotImportRow): LotImportRowView {
-  return { id: row.id, rowNumber: row.rowNumber, outcome: row.outcome, reason: row.reason, rawCells: row.rawCells, lotId: row.lotId };
-}
-
-/** Orders by id, ascending. A key is a `bigint` as text (DEC-009). */
-export function byIdAscending<T extends { readonly id: string }>(left: T, right: T): number {
-  return Number(left.id) - Number(right.id);
-}
-
-/** Orders by id, descending: the newest first. */
-export function byIdDescending<T extends { readonly id: string }>(left: T, right: T): number {
-  return Number(right.id) - Number(left.id);
+export function toLotImportRowView(row: LotImportRowRecord): LotImportRowView {
+  return {
+    id: String(row.id),
+    rowNumber: row.rowNumber,
+    outcome: row.outcome,
+    reason: row.reason,
+    rawCells: row.rawCells,
+    lotId: row.lotId === null ? null : String(row.lotId),
+  };
 }
 
 /** One page of an ordered list, and the size of the whole list. A page beyond the last is empty (`sds-api-design`, **Lists**). */

@@ -1,16 +1,17 @@
 /**
- * The audit rows of the catalog (PLT-40). The actions are the list of the B2
- * contract, **Data**.
+ * The audit rows of the catalog (PLT-40, DEC-014). The actions are the list of
+ * the B2 contract, **Data**.
  *
- * MOCK: PLT-40. The row goes to the mock store. Step 4 calls `appendAudit` of
- * the platform service inside the transaction of the change, so that the row and
- * the change commit or roll back together.
+ * `recordAudit` calls `appendAudit` of the platform service inside the
+ * transaction of the change, so that the row and the change commit or roll back
+ * together (PLT-40.AC1, AC2).
  */
 import "server-only";
 
 import type { SessionActor } from "@/lib/auth/session";
-import { now } from "@/lib/clock";
-import { appendMockAudit } from "@/lib/mock/catalog";
+import type { JsonValue } from "@/lib/errors";
+import type { Transaction } from "@/lib/transaction";
+import { appendAudit } from "@/modules/platform/services/audit-service";
 
 export type CatalogAuditAction =
   | "catalog.product.created"
@@ -23,18 +24,32 @@ export type CatalogAuditAction =
   | "catalog.lot.manufacturing_date_corrected"
   | "catalog.lot_import.committed";
 
+/** The state of an entity: ids, flags and dates as JSON. It never holds a secret. */
+export type CatalogAuditState = { readonly [key: string]: JsonValue };
+
 export interface CatalogAuditEntry {
   readonly actionCode: CatalogAuditAction;
   readonly entityType: "catalog_product" | "catalog_catalog_number" | "catalog_lot" | "catalog_lot_import";
   readonly entityId: string;
-  /** The state before the change. `null` for a creation. It holds ids, flags and dates, never a secret. */
-  readonly stateBefore: Readonly<Record<string, unknown>> | null;
-  readonly stateAfter: Readonly<Record<string, unknown>> | null;
+  /** The state before the change. `null` for a creation. */
+  readonly stateBefore: CatalogAuditState | null;
+  readonly stateAfter: CatalogAuditState | null;
   readonly reason?: string;
 }
 
-/** Writes one audit row for the actor. */
-export function recordAudit(actor: SessionActor, entry: CatalogAuditEntry): void {
-  // MOCK: PLT-40
-  appendMockAudit({ ...entry, actorUserId: actor.userId }, now());
+/**
+ * Writes one audit row for the actor, inside `tx`.
+ *
+ * @throws AppError The failure of the store. The change then rolls back.
+ */
+export async function recordAudit(tx: Transaction, actor: SessionActor, entry: CatalogAuditEntry): Promise<void> {
+  await appendAudit(tx, {
+    actor: { type: "USER", userId: actor.userId },
+    actionCode: entry.actionCode,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    stateBefore: entry.stateBefore,
+    stateAfter: entry.stateAfter,
+    ...(entry.reason === undefined ? {} : { reason: entry.reason }),
+  });
 }

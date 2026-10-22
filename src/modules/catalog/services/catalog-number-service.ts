@@ -2,13 +2,9 @@
  * Catalog numbers (CAT-20, DEC-042).
  *
  * Each function checks the permission of the actor first (DEC-029). A change
- * writes one audit row (PLT-40). A catalog number is unique in the whole catalog.
- * It moves to another product only while it has no LOT (CAT-20 rule 3). The
- * system never deletes a catalog number (DEC-010).
- *
- * MOCK: CAT-20. The functions read and write the mock store. Step 4 moves the
- * work to the repositories and one transaction for each change, with the same
- * signatures.
+ * runs in one transaction with its audit row (PLT-40). A catalog number is
+ * unique in the whole catalog. It moves to another product only while it has no
+ * LOT (CAT-20 rule 3). The system never deletes a catalog number (DEC-010).
  */
 import "server-only";
 
@@ -16,7 +12,7 @@ import { type SessionActor, requirePermission } from "@/lib/auth/session";
 import { now } from "@/lib/clock";
 import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { validationError } from "@/lib/http/validation";
-import { type MockCatalogNumber, getCatalogMock } from "@/lib/mock/catalog";
+import { type Executor, runTransaction } from "@/lib/transaction";
 import {
   CATALOG_NUMBER_MAX,
   type CatalogNumberInput,
@@ -25,19 +21,40 @@ import {
 } from "@/lib/schemas/catalog";
 
 import { cleanTransport } from "../domain/lot-number";
-import { recordAudit } from "./catalog-audit";
-import { lotsOfCatalogNumber, notFound, toCatalogNumberView } from "./catalog-views";
+import {
+  type CatalogNumberRow,
+  findCatalogNumberById,
+  findCatalogNumbersByValues,
+  insertCatalogNumber,
+  markCatalogNumberInactive,
+  updateCatalogNumberRow,
+} from "../repositories/catalog-number-repository";
+import { countLotsOfCatalogNumbers } from "../repositories/lot-repository";
+import { findProductById } from "../repositories/product-repository";
+import { type CatalogAuditState, recordAudit } from "./catalog-audit";
+import { notFound, requireCatalogId, toCatalogNumberView } from "./catalog-views";
 
-function requireCatalogNumber(id: string): MockCatalogNumber {
-  const found = getCatalogMock().catalogNumbers.get(id);
-  if (found === undefined) {
+/** The catalog number with the text id, locked for a change when `lock` is set. @throws AppError `RES-4200`. */
+async function requireCatalogNumber(executor: Executor, id: string, lock: "none" | "update" = "none"): Promise<CatalogNumberRow> {
+  const found = await findCatalogNumberById(executor, requireCatalogId(id), lock);
+  if (found === null) {
     throw notFound();
   }
   return found;
 }
 
-function auditState(row: MockCatalogNumber): Record<string, unknown> {
-  return { productId: row.productId, catalogNumber: row.catalogNumber, packSize: row.packSize, format: row.format, isActive: row.isActive };
+function auditState(row: Pick<CatalogNumberRow, "productId" | "catalogNumber" | "packSize" | "format" | "isActive">): CatalogAuditState {
+  return {
+    productId: String(row.productId),
+    catalogNumber: row.catalogNumber,
+    packSize: row.packSize,
+    format: row.format,
+    isActive: row.isActive,
+  };
+}
+
+async function viewOf(executor: Executor, row: CatalogNumberRow): Promise<CatalogNumberView> {
+  return toCatalogNumberView(row, await countLotsOfCatalogNumbers(executor, [row.id]));
 }
 
 /**
@@ -55,39 +72,36 @@ export async function addCatalogNumber(
   input: CatalogNumberInput,
 ): Promise<CatalogNumberView> {
   requirePermission(actor, "catalog.catalog_number.manage");
-  // MOCK: CAT-20 (create)
-  const state = getCatalogMock();
-  if (!state.products.has(productId)) {
-    throw notFound();
-  }
+  const productKey = requireCatalogId(productId);
   const catalogNumber = cleanTransport(input.catalogNumber);
-  if (catalogNumber === "" || catalogNumber.length > CATALOG_NUMBER_MAX) {
-    throw validationError([{ code: "VAL-4006", entry: { field: "catalogNumber", issue: "is out of range" } }]);
-  }
-  if ([...state.catalogNumbers.values()].some((candidate) => candidate.catalogNumber === catalogNumber)) {
-    throw new AppError("RES-4300", CODE_MEANINGS["RES-4300"], { reason: "the catalog number exists in the catalog" });
-  }
-  const created = now();
-  const row: MockCatalogNumber = {
-    id: String(state.nextCatalogNumberId),
-    productId,
-    catalogNumber,
-    packSize: input.packSize ?? null,
-    format: input.format ?? null,
-    isActive: true,
-    createdAt: created,
-    updatedAt: created,
-  };
-  state.nextCatalogNumberId += 1;
-  state.catalogNumbers.set(row.id, row);
-  recordAudit(actor, {
-    actionCode: "catalog.catalog_number.created",
-    entityType: "catalog_catalog_number",
-    entityId: row.id,
-    stateBefore: null,
-    stateAfter: auditState(row),
+  return runTransaction(async (tx) => {
+    if ((await findProductById(tx, productKey)) === null) {
+      throw notFound();
+    }
+    if (catalogNumber === "" || catalogNumber.length > CATALOG_NUMBER_MAX) {
+      throw validationError([{ code: "VAL-4006", entry: { field: "catalogNumber", issue: "is out of range" } }]);
+    }
+    // A second creation with the same value between this check and the insert
+    // fails on `catalog_number_unique` with the same `RES-4300`.
+    if ((await findCatalogNumbersByValues(tx, [catalogNumber])).length > 0) {
+      throw new AppError("RES-4300", CODE_MEANINGS["RES-4300"], { reason: "the catalog number exists in the catalog" });
+    }
+    const row = await insertCatalogNumber(tx, {
+      productId: productKey,
+      catalogNumber,
+      packSize: input.packSize ?? null,
+      format: input.format ?? null,
+      now: now(),
+    });
+    await recordAudit(tx, actor, {
+      actionCode: "catalog.catalog_number.created",
+      entityType: "catalog_catalog_number",
+      entityId: String(row.id),
+      stateBefore: null,
+      stateAfter: auditState(row),
+    });
+    return toCatalogNumberView(row, 0);
   });
-  return toCatalogNumberView(row);
 }
 
 /**
@@ -105,33 +119,50 @@ export async function updateCatalogNumber(
   patch: UpdateCatalogNumberInput,
 ): Promise<CatalogNumberView> {
   requirePermission(actor, "catalog.catalog_number.manage");
-  // MOCK: CAT-20 (change, move)
-  const state = getCatalogMock();
-  const row = requireCatalogNumber(id);
-  const moves = patch.productId !== undefined && patch.productId !== row.productId;
-  if (patch.productId !== undefined && !state.products.has(patch.productId)) {
-    throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: "is not a product" } }]);
-  }
-  if (moves && lotsOfCatalogNumber(row.id).length > 0) {
-    throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "a catalog number with a LOT moves" });
-  }
+  return runTransaction(async (tx) => {
+    // The row stays locked until the commit: a LOT registration takes a shared
+    // lock of the catalog number, so it cannot slip in between the check and the move.
+    const row = await requireCatalogNumber(tx, id, "update");
+    const targetKey = patch.productId === undefined ? null : requireTargetId(patch.productId);
+    const moves = targetKey !== null && targetKey !== row.productId;
+    if (targetKey !== null && (await findProductById(tx, targetKey)) === null) {
+      throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: "is not a product" } }]);
+    }
+    if (moves && (await countLotsOfCatalogNumbers(tx, [row.id])) > 0) {
+      throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "a catalog number with a LOT moves" });
+    }
 
-  const before = auditState(row);
-  row.productId = patch.productId ?? row.productId;
-  row.packSize = patch.packSize === undefined ? row.packSize : patch.packSize;
-  row.format = patch.format === undefined ? row.format : patch.format;
-  const after = auditState(row);
-  if (JSON.stringify(before) !== JSON.stringify(after)) {
-    row.updatedAt = now();
-    recordAudit(actor, {
+    const changed: CatalogNumberRow = {
+      ...row,
+      productId: targetKey ?? row.productId,
+      packSize: patch.packSize === undefined ? row.packSize : patch.packSize,
+      format: patch.format === undefined ? row.format : patch.format,
+    };
+    const before = auditState(row);
+    const after = auditState(changed);
+    if (JSON.stringify(before) === JSON.stringify(after)) {
+      return viewOf(tx, row);
+    }
+    const at = now();
+    await updateCatalogNumberRow(tx, row.id, { productId: changed.productId, packSize: changed.packSize, format: changed.format, now: at });
+    await recordAudit(tx, actor, {
       actionCode: "catalog.catalog_number.changed",
       entityType: "catalog_catalog_number",
-      entityId: row.id,
+      entityId: String(row.id),
       stateBefore: before,
       stateAfter: after,
     });
+    return viewOf(tx, { ...changed, updatedAt: at });
+  });
+}
+
+/** The key of the product of a move. A text that is no id names no product (`VAL-4006`, as a product that does not exist). */
+function requireTargetId(productId: string): bigint {
+  try {
+    return requireCatalogId(productId);
+  } catch {
+    throw validationError([{ code: "VAL-4006", entry: { field: "productId", issue: "is not a product" } }]);
   }
-  return toCatalogNumberView(row);
 }
 
 /**
@@ -143,19 +174,20 @@ export async function updateCatalogNumber(
  */
 export async function deactivateCatalogNumber(actor: SessionActor, id: string): Promise<CatalogNumberView> {
   requirePermission(actor, "catalog.catalog_number.manage");
-  // MOCK: CAT-20 (deactivate)
-  const row = requireCatalogNumber(id);
-  if (!row.isActive) {
-    throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the catalog number is inactive" });
-  }
-  row.isActive = false;
-  row.updatedAt = now();
-  recordAudit(actor, {
-    actionCode: "catalog.catalog_number.deactivated",
-    entityType: "catalog_catalog_number",
-    entityId: row.id,
-    stateBefore: { isActive: true },
-    stateAfter: { isActive: false },
+  return runTransaction(async (tx) => {
+    const row = await requireCatalogNumber(tx, id, "update");
+    if (!row.isActive) {
+      throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the catalog number is inactive" });
+    }
+    const at = now();
+    await markCatalogNumberInactive(tx, row.id, at);
+    await recordAudit(tx, actor, {
+      actionCode: "catalog.catalog_number.deactivated",
+      entityType: "catalog_catalog_number",
+      entityId: String(row.id),
+      stateBefore: { isActive: true },
+      stateAfter: { isActive: false },
+    });
+    return viewOf(tx, { ...row, isActive: false, updatedAt: at });
   });
-  return toCatalogNumberView(row);
 }

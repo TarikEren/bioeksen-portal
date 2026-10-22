@@ -2,13 +2,9 @@
  * Products (CAT-10).
  *
  * Each function checks the permission of the actor first (DEC-029). A change
- * writes one audit row (PLT-40). The stem and the regulatory status change only
- * while the product has no LOT (CAT-10 rule 3; the check of the documents comes
- * in B3). The system never deletes a product (DEC-010).
- *
- * MOCK: CAT-10. The functions read and write the mock store. Step 4 moves the
- * work to the repositories and one transaction for each change, with the same
- * signatures.
+ * runs in one transaction with its audit row (PLT-40). The stem and the
+ * regulatory status change only while the product has no LOT (CAT-10 rule 3).
+ * The system never deletes a product (DEC-010).
  */
 import "server-only";
 
@@ -16,7 +12,7 @@ import { type SessionActor, requirePermission } from "@/lib/auth/session";
 import { now } from "@/lib/clock";
 import { AppError, CODE_MEANINGS, type FieldIssue } from "@/lib/errors";
 import { validationError } from "@/lib/http/validation";
-import { type MockProduct, getCatalogMock } from "@/lib/mock/catalog";
+import { type Executor, readExecutor, runTransaction } from "@/lib/transaction";
 import type {
   CreateProductInput,
   LocalizedDescription,
@@ -27,16 +23,22 @@ import type {
   UpdateProductInput,
 } from "@/lib/schemas/catalog";
 
-import { recordAudit } from "./catalog-audit";
 import {
-  byIdAscending,
-  catalogNumbersOf,
-  lotCountOfProduct,
-  notFound,
-  pageOf,
-  toProductDetail,
-  toProductSummary,
-} from "./catalog-views";
+  findProductIdsByCatalogNumberContaining,
+  listCatalogNumbersOfProducts,
+} from "../repositories/catalog-number-repository";
+import { countLotsByCatalogNumber, countLotsOfCatalogNumbers } from "../repositories/lot-repository";
+import {
+  type ProductRow,
+  findProductById,
+  findProductByIdentity,
+  insertProduct,
+  listProductRows,
+  markProductInactive,
+  updateProductRow,
+} from "../repositories/product-repository";
+import { type CatalogAuditState, recordAudit } from "./catalog-audit";
+import { notFound, pageOf, requireCatalogId, toProductDetail, toProductSummary } from "./catalog-views";
 
 /** 400 `VAL-4001` with one entry for each blank entry of a localized text (CAT-10.AC3). A blank text is an absent text. */
 function missingEntries(field: string, entries: Readonly<Record<"tr" | "en", string | null | undefined>>): AppError | null {
@@ -54,16 +56,18 @@ function lockedByLot(): AppError {
   return new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the stem or the status of a product with a LOT" });
 }
 
-function requireProduct(id: string): MockProduct {
-  const product = getCatalogMock().products.get(id);
-  if (product === undefined) {
+/** The product with the text id, locked for a change when `lock` is set. @throws AppError `RES-4200`. */
+async function requireProduct(executor: Executor, id: string, lock: "none" | "update" = "none"): Promise<ProductRow> {
+  const key = requireCatalogId(id);
+  const product = await findProductById(executor, key, lock);
+  if (product === null) {
     throw notFound();
   }
   return product;
 }
 
 /** The fields of a product that the audit row shows. */
-function auditState(product: MockProduct): Record<string, unknown> {
+function auditState(product: Pick<ProductRow, "internalCode" | "name" | "description" | "regulatoryStatus" | "kitCodeBase" | "isActive">): CatalogAuditState {
   return {
     internalCode: product.internalCode,
     name: product.name,
@@ -74,45 +78,53 @@ function auditState(product: MockProduct): Record<string, unknown> {
   };
 }
 
-/** Whether another product has the stem and the status (`product_unique_identity`). */
-function identityTaken(internalCode: string, status: MockProduct["regulatoryStatus"], exceptId: string | null): boolean {
-  return [...getCatalogMock().products.values()].some(
-    (candidate) => candidate.id !== exceptId && candidate.internalCode === internalCode && candidate.regulatoryStatus === status,
+/** The product with its catalog numbers and the LOT counts. */
+async function detailOf(executor: Executor, product: ProductRow): Promise<ProductDetail> {
+  const catalogNumbers = await listCatalogNumbersOfProducts(executor, [product.id]);
+  const lotCounts = await countLotsByCatalogNumber(
+    executor,
+    catalogNumbers.map((row) => row.id),
   );
+  return toProductDetail(product, catalogNumbers, lotCounts);
 }
 
-/** Whether the text is in the stem, the name of either language or a catalog number of the product. */
-function matchesSearch(product: MockProduct, needle: string): boolean {
-  const haystacks = [
-    product.internalCode,
-    product.name.tr,
-    product.name.en,
-    ...catalogNumbersOf(product.id).map((candidate) => candidate.catalogNumber),
-  ];
-  const lowered = needle.toLocaleLowerCase("tr");
-  return haystacks.some((text) => text.toLocaleLowerCase("tr").includes(lowered));
+/** Whether the text is in the stem or in the name of either language. */
+function matchesText(product: ProductRow, needle: string): boolean {
+  return [product.internalCode, product.name.tr, product.name.en].some((text) => text.toLocaleLowerCase("tr").includes(needle));
 }
 
 /**
- * Lists the products, one page, in the order of the stem and the status.
+ * Lists the products, one page, in the order of the stem and the status. The
+ * search matches the stem, the name in either language and a catalog number.
  *
  * @throws AppError `PERM-4150` without `catalog.product.view`.
  */
 export async function listProducts(actor: SessionActor, query: ProductListQuery): Promise<ProductListPage> {
   requirePermission(actor, "catalog.product.view");
-  // MOCK: CAT-10 (list, search)
-  const matching = [...getCatalogMock().products.values()]
-    .filter((product) => query.active === null || product.isActive === query.active)
-    .filter((product) => query.q === null || matchesSearch(product, query.q))
-    .sort(
-      (left, right) =>
-        left.internalCode.localeCompare(right.internalCode) ||
-        left.regulatoryStatus.localeCompare(right.regulatoryStatus) ||
-        byIdAscending(left, right),
-    );
+  const executor = readExecutor();
+  let matching = await listProductRows(executor, query.active);
+  if (query.q !== null) {
+    const needle = query.q.toLocaleLowerCase("tr");
+    const ownersOfCatalogNumber = new Set(await findProductIdsByCatalogNumberContaining(executor, query.q));
+    matching = matching.filter((product) => ownersOfCatalogNumber.has(product.id) || matchesText(product, needle));
+  }
   const { slice, totalCount } = pageOf(matching, query);
-  const products = slice.map(toProductSummary);
-  return Promise.resolve({ page: query.page, count: products.length, totalCount, products, filterParams: query });
+  const catalogNumbers = await listCatalogNumbersOfProducts(
+    executor,
+    slice.map((product) => product.id),
+  );
+  const lotCounts = await countLotsByCatalogNumber(
+    executor,
+    catalogNumbers.map((row) => row.id),
+  );
+  const products = slice.map((product) =>
+    toProductSummary(
+      product,
+      catalogNumbers.filter((row) => row.productId === product.id),
+      lotCounts,
+    ),
+  );
+  return { page: query.page, count: products.length, totalCount, products, filterParams: query };
 }
 
 /**
@@ -132,34 +144,30 @@ export async function createProduct(actor: SessionActor, input: CreateProductInp
   if (descriptionFault !== null) {
     throw descriptionFault;
   }
-  // MOCK: CAT-10 (create)
-  const state = getCatalogMock();
-  if (identityTaken(input.internalCode, input.regulatoryStatus, null)) {
-    throw duplicateIdentity();
-  }
-  const created = now();
-  const product: MockProduct = {
-    id: String(state.nextProductId),
-    internalCode: input.internalCode,
-    name: { tr: input.name.tr.trim(), en: input.name.en.trim() },
-    description:
-      input.description === undefined ? null : { tr: input.description.tr.trim(), en: input.description.en.trim() },
-    regulatoryStatus: input.regulatoryStatus,
-    kitCodeBase: input.kitCodeBase ?? null,
-    isActive: true,
-    createdAt: created,
-    updatedAt: created,
-  };
-  state.nextProductId += 1;
-  state.products.set(product.id, product);
-  recordAudit(actor, {
-    actionCode: "catalog.product.created",
-    entityType: "catalog_product",
-    entityId: product.id,
-    stateBefore: null,
-    stateAfter: auditState(product),
+  return runTransaction(async (tx) => {
+    // A second creation with the same identity between this check and the insert
+    // fails on `product_unique_identity` with the same `RES-4300`.
+    if ((await findProductByIdentity(tx, input.internalCode, input.regulatoryStatus)) !== null) {
+      throw duplicateIdentity();
+    }
+    const product = await insertProduct(tx, {
+      internalCode: input.internalCode,
+      name: { tr: input.name.tr.trim(), en: input.name.en.trim() },
+      description:
+        input.description === undefined ? null : { tr: input.description.tr.trim(), en: input.description.en.trim() },
+      regulatoryStatus: input.regulatoryStatus,
+      kitCodeBase: input.kitCodeBase ?? null,
+      now: now(),
+    });
+    await recordAudit(tx, actor, {
+      actionCode: "catalog.product.created",
+      entityType: "catalog_product",
+      entityId: String(product.id),
+      stateBefore: null,
+      stateAfter: auditState(product),
+    });
+    return toProductDetail(product, [], new Map());
   });
-  return toProductDetail(product);
 }
 
 /**
@@ -169,8 +177,8 @@ export async function createProduct(actor: SessionActor, input: CreateProductInp
  */
 export async function getProduct(actor: SessionActor, id: string): Promise<ProductDetail> {
   requirePermission(actor, "catalog.product.view");
-  // MOCK: CAT-10 (read)
-  return Promise.resolve(toProductDetail(requireProduct(id)));
+  const executor = readExecutor();
+  return detailOf(executor, await requireProduct(executor, id));
 }
 
 /** The localized text after a merge patch: a member that the patch names replaces, and `null` removes. */
@@ -204,57 +212,69 @@ function toDescription(merged: Record<"tr" | "en", string | null>): LocalizedDes
  */
 export async function updateProduct(actor: SessionActor, id: string, patch: UpdateProductInput): Promise<ProductDetail> {
   requirePermission(actor, "catalog.product.manage");
-  // MOCK: CAT-10 (change)
-  const product = requireProduct(id);
+  return runTransaction(async (tx) => {
+    // The row stays locked until the commit: a LOT registration takes a shared
+    // lock of the product, so it cannot slip in between the check and the write.
+    const product = await requireProduct(tx, id, "update");
 
-  const name = patch.name === undefined ? product.name : toName(mergeEntries(product.name, patch.name));
-  const nameFault = missingEntries("name", name);
-  if (nameFault !== null) {
-    throw nameFault;
-  }
-  let description: LocalizedDescription | null = product.description;
-  if (patch.description === null) {
-    description = null;
-  } else if (patch.description !== undefined) {
-    const merged = mergeEntries(product.description ?? { tr: null, en: null }, patch.description);
-    const kept = (["tr", "en"] as const).filter((language) => (merged[language]?.trim() ?? "") !== "");
-    description = kept.length === 0 ? null : toDescription(merged);
-    const descriptionFault = description === null ? null : missingEntries("description", description);
-    if (descriptionFault !== null) {
-      throw descriptionFault;
+    const name = patch.name === undefined ? product.name : toName(mergeEntries(product.name, patch.name));
+    const nameFault = missingEntries("name", name);
+    if (nameFault !== null) {
+      throw nameFault;
     }
-  }
+    let description: LocalizedDescription | null = product.description;
+    if (patch.description === null) {
+      description = null;
+    } else if (patch.description !== undefined) {
+      const merged = mergeEntries(product.description ?? { tr: null, en: null }, patch.description);
+      const kept = (["tr", "en"] as const).filter((language) => (merged[language]?.trim() ?? "") !== "");
+      description = kept.length === 0 ? null : toDescription(merged);
+      const descriptionFault = description === null ? null : missingEntries("description", description);
+      if (descriptionFault !== null) {
+        throw descriptionFault;
+      }
+    }
 
-  const internalCode = patch.internalCode ?? product.internalCode;
-  const regulatoryStatus = patch.regulatoryStatus ?? product.regulatoryStatus;
-  const kitCodeBase = patch.kitCodeBase === undefined ? product.kitCodeBase : patch.kitCodeBase;
+    const internalCode = patch.internalCode ?? product.internalCode;
+    const regulatoryStatus = patch.regulatoryStatus ?? product.regulatoryStatus;
+    const kitCodeBase = patch.kitCodeBase === undefined ? product.kitCodeBase : patch.kitCodeBase;
 
-  const identityChanged = internalCode !== product.internalCode || regulatoryStatus !== product.regulatoryStatus;
-  if (identityChanged && lotCountOfProduct(product.id) > 0) {
-    throw lockedByLot();
-  }
-  if (identityChanged && identityTaken(internalCode, regulatoryStatus, product.id)) {
-    throw duplicateIdentity();
-  }
+    const identityChanged = internalCode !== product.internalCode || regulatoryStatus !== product.regulatoryStatus;
+    if (identityChanged) {
+      // CAT-10 rule 3: the stem and the status change only while the product has
+      // no LOT and no document. B3 adds the check of the documents here (CAT-10.AC4).
+      const catalogNumbers = await listCatalogNumbersOfProducts(tx, [product.id]);
+      if (
+        (await countLotsOfCatalogNumbers(
+          tx,
+          catalogNumbers.map((row) => row.id),
+        )) > 0
+      ) {
+        throw lockedByLot();
+      }
+      const holder = await findProductByIdentity(tx, internalCode, regulatoryStatus);
+      if (holder !== null && holder.id !== product.id) {
+        throw duplicateIdentity();
+      }
+    }
 
-  const before = auditState(product);
-  product.internalCode = internalCode;
-  product.name = name;
-  product.description = description;
-  product.regulatoryStatus = regulatoryStatus;
-  product.kitCodeBase = kitCodeBase;
-  const after = auditState(product);
-  if (JSON.stringify(before) !== JSON.stringify(after)) {
-    product.updatedAt = now();
-    recordAudit(actor, {
+    const changed: ProductRow = { ...product, internalCode, name, description, regulatoryStatus, kitCodeBase };
+    const before = auditState(product);
+    const after = auditState(changed);
+    if (JSON.stringify(before) === JSON.stringify(after)) {
+      return detailOf(tx, product);
+    }
+    const at = now();
+    await updateProductRow(tx, product.id, { internalCode, name, description, regulatoryStatus, kitCodeBase, now: at });
+    await recordAudit(tx, actor, {
       actionCode: "catalog.product.changed",
       entityType: "catalog_product",
-      entityId: product.id,
+      entityId: String(product.id),
       stateBefore: before,
       stateAfter: after,
     });
-  }
-  return toProductDetail(product);
+    return detailOf(tx, { ...changed, updatedAt: at });
+  });
 }
 
 /**
@@ -266,19 +286,20 @@ export async function updateProduct(actor: SessionActor, id: string, patch: Upda
  */
 export async function deactivateProduct(actor: SessionActor, id: string): Promise<ProductDetail> {
   requirePermission(actor, "catalog.product.manage");
-  // MOCK: CAT-10 (deactivate)
-  const product = requireProduct(id);
-  if (!product.isActive) {
-    throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the product is inactive" });
-  }
-  product.isActive = false;
-  product.updatedAt = now();
-  recordAudit(actor, {
-    actionCode: "catalog.product.deactivated",
-    entityType: "catalog_product",
-    entityId: product.id,
-    stateBefore: { isActive: true },
-    stateAfter: { isActive: false },
+  return runTransaction(async (tx) => {
+    const product = await requireProduct(tx, id, "update");
+    if (!product.isActive) {
+      throw new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the product is inactive" });
+    }
+    const at = now();
+    await markProductInactive(tx, product.id, at);
+    await recordAudit(tx, actor, {
+      actionCode: "catalog.product.deactivated",
+      entityType: "catalog_product",
+      entityId: String(product.id),
+      stateBefore: { isActive: true },
+      stateAfter: { isActive: false },
+    });
+    return detailOf(tx, { ...product, isActive: false, updatedAt: at });
   });
-  return toProductDetail(product);
 }
