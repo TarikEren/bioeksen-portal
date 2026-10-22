@@ -42,6 +42,27 @@ function isProxyAddress(value: string): boolean {
   return /^\d{1,3}$/.test(prefix) && Number(prefix) <= limit;
 }
 
+/**
+ * A whole number written as text. An empty or blank text is refused before the
+ * conversion: `Number("")` is 0, and a setting of 0 would pass as a value that
+ * nobody set (FND-03 rule 3: an empty value cannot be used).
+ */
+const integerText = z.string().trim().min(1).transform(Number).pipe(z.number().int());
+
+/** `base64` text that decodes to at least one byte. */
+function isBase64(value: string): boolean {
+  return value.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(value);
+}
+
+/** `id:base64key` entries, comma separated, newest first (IFU-90). Each key must decode. */
+const identityKeys = nonEmpty.refine((value) =>
+  value.split(",").every((entry) => {
+    const separator = entry.trim().indexOf(":");
+    const id = entry.trim().slice(0, Math.max(separator, 0));
+    return separator > 0 && /^[A-Za-z0-9_-]+$/.test(id) && isBase64(entry.trim().slice(separator + 1));
+  }),
+);
+
 /** The proxy addresses of DEC-038, comma separated. The result is the list. */
 const proxyList = nonEmpty
   .refine((value) => value.split(",").every((entry) => isProxyAddress(entry.trim())))
@@ -61,7 +82,7 @@ export const configSchema = z.object({
   S3_SECRET_ACCESS_KEY: nonEmpty,
 
   SMTP_HOST: nonEmpty,
-  SMTP_PORT: z.coerce.number().int().min(1).max(65535),
+  SMTP_PORT: integerText.pipe(z.number().min(1).max(65535)),
   SMTP_USER: nonEmpty,
   SMTP_PASSWORD: nonEmpty,
   MAIL_FROM: nonEmpty,
@@ -70,20 +91,23 @@ export const configSchema = z.object({
   TRUSTED_PROXIES: proxyList.optional(),
 
   EIFU_LEGAL_NOTICE_VERSION: nonEmpty,
-  EIFU_IDENTITY_KEYS: nonEmpty.optional(),
+  EIFU_IDENTITY_KEYS: identityKeys.optional(),
   EIFU_IDENTITY_LOOKUP_PEPPER: nonEmpty.optional(),
-  EIFU_ACCESS_RECORD_RETENTION_DAYS: z.coerce.number().int().min(0).default(3653),
+  EIFU_ACCESS_RECORD_RETENTION_DAYS: integerText.pipe(z.number().min(0)).default(3653),
 
   ENTRA_TENANT_ID: nonEmpty,
   ENTRA_ISSUER: nonEmpty,
   ENTRA_JWKS_URI: z.url(),
-  ENTRA_JWKS_MAX_AGE_SECONDS: z.coerce.number().int().min(1),
+  // At most one day: `sds-auth` wants the keys refreshed at least daily, so a key
+  // that the issuer removed does not stay accepted (`credentials.md`, **Rotation
+  // and revocation**).
+  ENTRA_JWKS_MAX_AGE_SECONDS: integerText.pipe(z.number().min(1).max(86_400)),
   ENTRA_AUDIENCE: nonEmpty,
   ENTRA_CLIENT_ID: nonEmpty,
   ENTRA_CLIENT_CERTIFICATE_PATH: nonEmpty.optional(),
   ENTRA_CLIENT_SECRET: nonEmpty.optional(),
   ENTRA_OPERATOR_SCOPE: nonEmpty,
-  AUTH_CLOCK_SKEW_SECONDS: z.coerce.number().int().min(0).default(60),
+  AUTH_CLOCK_SKEW_SECONDS: integerText.pipe(z.number().min(0)).default(60),
 
   LOG_LEVEL: z.enum(SEVERITIES).default("INFO"),
   TEST_SEAMS_ENABLED: booleanFlag.default(false),

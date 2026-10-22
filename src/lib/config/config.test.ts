@@ -68,6 +68,40 @@ describe("configuration", () => {
     ]);
   });
 
+  // Source: review 1, R-004 and R-005; FND-03 rule 3 (an empty value cannot be used).
+  it("refuses an empty or blank number instead of reading it as 0", () => {
+    for (const setting of ["AUTH_CLOCK_SKEW_SECONDS", "EIFU_ACCESS_RECORD_RETENTION_DAYS", "SMTP_PORT", "ENTRA_JWKS_MAX_AGE_SECONDS"]) {
+      for (const empty of ["", "   "]) {
+        expect(inspectConfig({ ...valid, [setting]: empty }), `${setting} = "${empty}"`).toEqual([
+          expect.objectContaining({ setting, code: "CFG-5001" }),
+        ]);
+      }
+    }
+  });
+
+  it("refuses a number with a fraction or a letter, and accepts 0 where 0 is a value", () => {
+    expect(inspectConfig({ ...valid, AUTH_CLOCK_SKEW_SECONDS: "1.5" })).toHaveLength(1);
+    expect(inspectConfig({ ...valid, AUTH_CLOCK_SKEW_SECONDS: "10s" })).toHaveLength(1);
+    expect(inspectConfig({ ...valid, AUTH_CLOCK_SKEW_SECONDS: "0", EIFU_ACCESS_RECORD_RETENTION_DAYS: "0" })).toEqual([]);
+  });
+
+  it("refuses a key age of more than one day, and accepts one day", () => {
+    expect(inspectConfig({ ...valid, ENTRA_JWKS_MAX_AGE_SECONDS: "604800" })).toEqual([
+      expect.objectContaining({ setting: "ENTRA_JWKS_MAX_AGE_SECONDS", code: "CFG-5001" }),
+    ]);
+    expect(inspectConfig({ ...valid, ENTRA_JWKS_MAX_AGE_SECONDS: "86400" })).toEqual([]);
+    expect(inspectConfig({ ...valid, ENTRA_JWKS_MAX_AGE_SECONDS: "0" })).toHaveLength(1);
+  });
+
+  it("checks the form of the identity keys: id:base64key, comma separated", () => {
+    for (const bad of ["abc", ":c2VjcmV0", "k1:", "k1:not base64!", "k1:c2VjcmV0,abc", "k1:c2VjcmV0=="]) {
+      expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: bad }), bad).toEqual([
+        expect.objectContaining({ setting: "EIFU_IDENTITY_KEYS", code: "CFG-5001" }),
+      ]);
+    }
+    expect(inspectConfig({ ...production, EIFU_IDENTITY_KEYS: "k1:c2VjcmV0, k0:c2VjcmV0MQ==" })).toEqual([]);
+  });
+
   it("requires the settings of production only in production", () => {
     expect(inspectConfig(valid)).toEqual([]);
     expect(inspectConfig(without(production, "TRUSTED_PROXIES", "EIFU_IDENTITY_KEYS", "EIFU_IDENTITY_LOOKUP_PEPPER")).map(
