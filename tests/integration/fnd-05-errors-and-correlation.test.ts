@@ -72,6 +72,16 @@ describe("FND-05 request id", () => {
     expect(response.status, "precondition: the request without a credential fails").toBe(401);
   });
 
+  // The format of sds-logging, log-record.md (X-Request-Id): [A-Za-z0-9_-], 1 to 128 characters.
+  /** A request id at the longest length of the format is adopted as it is. */
+  it("FND-05.AC1: a request id of the longest valid length is adopted", async () => {
+    const requestId = `qa-${randomBytes(64).toString("hex")}`.slice(0, 128);
+    expect(requestId).toHaveLength(128);
+    const response = await call(getHealthLive, "/api/health/live", { headers: { "x-request-id": requestId } });
+
+    expect(response.headers.get("x-request-id")).toBe(requestId);
+  });
+
   // Contract case "Replaced" (sds-logging, log-record.md): a malformed id is never adopted.
   /** A malformed X-Request-Id is not adopted: the request succeeds with a new id. */
   it("FND-05.AC1: a malformed X-Request-Id is replaced by a new request id", async () => {

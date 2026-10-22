@@ -137,6 +137,7 @@ refuse. A suite the guard refuses is not run.
 | FND-04 | rule 1: the list contract of `GET /api/admin/logs` (contract cases) | integration | `integration/fnd-04-admin-logs.test.ts` |
 | FND-04 | AC4, and rule 1: 405 `RES-4500` after the credential check, 503 `SYS-5500` (contract cases) | e2e | `e2e/fnd-04-methods-and-readiness.spec.ts` |
 | FND-05 | AC1, AC2, AC3, AC5, and rule 2: `VAL-4006` (contract case) | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
+| FND-05 | AC1: an HTML page, and a path under `/api` that does not exist | e2e | `e2e/fnd-05-request-id.spec.ts` |
 | FND-05 | rules 1 and 5: severity, type and prose of a failure record, no bearer token in a record (contract cases) | integration | `integration/fnd-05-log-records.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
 | FND-05 | FND-03 rules 2 and 3: `LOG_LEVEL` (contract cases) | e2e | `e2e/fnd-05-log-level.spec.ts` |
 | FND-06 | AC1, AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
