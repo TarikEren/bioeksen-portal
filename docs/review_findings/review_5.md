@@ -48,7 +48,7 @@ Line numbers are as of `4afd75f`.
 
 ### R-065 — An import commit locks no product row, so the stem and status lock and the product scope can race
 
-- **Status:** **Open** (the owner called for its fix in step 4 of B3, 2026-10-22) · **Severity:** Major · **Found:** review 5 (phase reviewer; confirmed in the code by the main session; needs two requests at the same time)
+- **Status:** **Fixed (5c87336)** — checked in review 6 · **Severity:** Major · **Found:** review 5 (phase reviewer; confirmed in the code by the main session; needs two requests at the same time)
 - **Where:** `src/modules/catalog/services/lot-import-service.ts:109-113` (`findCatalogNumbersByValues`, `findProductsByIds` with no lock); compare `product-service.ts:216-218`, `:246-253` and `lot-service.ts:102-109`. `runTransaction` is READ COMMITTED.
 - **Problem:** `updateProduct` locks the product and counts 0 LOTs while a commit writes LOTs under it; the stem or the status of a product with LOTs then changes (CAT-10 rule 3, AC4). In the other order, a move of a catalog number lets a commit for product A write a LOT under product B (CAT-60 rule 5), with the kit code of the old product. The comment at `product-service.ts:216` holds only for `registerLot`.
 - **Fix:** in the commit transaction, before the plan, read the catalog numbers and the products of the rows `FOR SHARE`, sorted by id, as `registerLot` does.

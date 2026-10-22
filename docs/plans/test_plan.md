@@ -193,3 +193,25 @@ the document lock of a product).
 **R-065 in step 4** (owner answer 2026-10-22). The step-4 agent also fixes
 R-065 of review 5: the import commit reads the catalog numbers and the products
 of its rows `FOR SHARE`, sorted by id, before it plans, as `registerLot` does.
+
+## Stage check (2026-10-22)
+
+The gate of `crisis_mode.md` §5 at `8f4a601`:
+
+- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
+  ran in the image of the demo).
+- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
+  tests (RC-1).
+- No `MOCK:` comment remains in `src/`.
+- The demo starts from `compose.demo.yaml`, and the migration `eifu_documents`
+  applies there. The exit flow passed in the browser, as the IFU Manager:
+  three versions published with the periods of IFU-30, a published file
+  replaced with a reason, a version withdrawn (without and with reopen), and an
+  override to a `SUPERSEDED` version. Each change has its
+  `platform_audit_record` row. Screenshots: `docs/plans/b3-exit/`.
+- Review 6 is recorded: no Critical or Major finding, and R-065 is fixed. No
+  open finding blocks B4.
+- The demo data holds five files with the language `trtr` (R-093). Before the
+  walk of B4, publish versions with correct language codes.
+
+**Result:** B3 passes the gate.
