@@ -1,8 +1,10 @@
 /**
  * The root layout (FND-08 rule 2, FND-09 rule 2, DEC-016, DEC-017).
  *
- * `<html lang>` gives the active language: the cookie `bp_lang`, else Turkish
- * (the preference of a signed-in user comes with the sessions of stage B1).
+ * `<html lang>` gives the active language: the preferred language of a signed-in
+ * user (FND-08.AC5, DEC-017), else the cookie `bp_lang`, else Turkish. The
+ * session and the cookie come from `getRequestText`, which a page shares with
+ * the layout through React `cache`, so one request asks the session store once.
  * Reading the cookie makes every page dynamic. This is on purpose: the Content
  * Security Policy has a nonce that is new for each answer (FND-07 rule 1), and
  * a prerendered page cannot carry it, so the browser would block its scripts.
@@ -34,17 +36,17 @@ import "@fontsource/ibm-plex-mono/latin-ext-600.css";
 import "./globals.css";
 import "./fonts.css";
 
-import { dictionaries } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n/locale-provider";
-import { getActiveLanguage } from "@/lib/i18n/server";
+
+import { getRequestText } from "./_lib/request";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const language = await getActiveLanguage();
-  return { title: dictionaries[language].home.title };
+  const { text } = await getRequestText();
+  return { title: text.home.title };
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const language = await getActiveLanguage();
+  const { language } = await getRequestText();
 
   return (
     <html lang={language}>

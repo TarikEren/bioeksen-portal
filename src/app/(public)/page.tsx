@@ -1,41 +1,46 @@
 /**
- * The public entry page (FND-08, FND-09), a placeholder of stage B0.
+ * The public entry page (FND-08, FND-09, ACC-50 rule 3, stage B1 UI table, mockup
+ * of the landing page).
  *
- * It shows the heading `home.title` and the language switch. The server
- * component reads the dictionary of the active language and gives the switch
- * only the text it shows, so that no other text reaches the browser. The page
- * is dynamic because it reads the language cookie (see the root layout).
+ * It shows the public header (brand and language switch), the heading
+ * `home.title` with a short introduction, and one card with the link to the
+ * sign-in page (stage B1). The public lookup comes with stage B4, and its card
+ * comes with it: an entry arrives with its screen. The server component reads the
+ * dictionary of the active language. The page is dynamic because it reads the
+ * language cookie (see the root layout). The link to the sign-in page is a GET
+ * form around a submit `Button`: `Button` has no `href`, and a server component
+ * cannot pass it a handler (`sds-nextjs-frontend` §5).
  */
-import { Typography } from "@heroui/react";
+import { Button, Card, Typography } from "@heroui/react";
 
-import { dictionaries } from "@/lib/i18n";
-import { getActiveLanguage } from "@/lib/i18n/server";
-
-import { LanguageSwitch } from "./_components/language-switch";
+import { PublicHeader } from "@/app/_components/public-header";
+import { getRequestText } from "@/app/_lib/request";
 
 export default async function PublicHomePage() {
-  const language = await getActiveLanguage();
-  const text = dictionaries[language];
+  const { text } = await getRequestText();
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-10 p-6">
+      <PublicHeader />
+      <div className="flex flex-col gap-2">
         <Typography.Heading level={1} weight="semibold" className="min-w-0">
           {text.home.title}
         </Typography.Heading>
-        <LanguageSwitch
-          current={language}
-          labels={{
-            switch: text.common.language.switch,
-            tr: text.common.language.tr,
-            en: text.common.language.en,
-            failure: text.common.language.failure,
-            errorCode: text.common.errorCode,
-            errors: text.common.errors,
-            callFailed: text.common.callFailed,
-          }}
-        />
+        <Typography.Paragraph color="muted">{text.home.intro}</Typography.Paragraph>
       </div>
+      <Card className="max-w-md">
+        <Card.Header>
+          <Card.Title>{text.home.signInTitle}</Card.Title>
+          <Card.Description>{text.home.signInDescription}</Card.Description>
+        </Card.Header>
+        <Card.Footer>
+          <form action="/sign-in" method="get">
+            <Button type="submit" variant="primary">
+              {text.home.signIn}
+            </Button>
+          </form>
+        </Card.Footer>
+      </Card>
     </main>
   );
 }
