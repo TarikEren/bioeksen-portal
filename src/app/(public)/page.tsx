@@ -31,6 +31,7 @@ export default async function PublicHomePage() {
             en: text.common.language.en,
             failure: text.common.language.failure,
             errorCode: text.common.errorCode,
+            callFailed: text.common.callFailed,
           }}
         />
       </div>

@@ -13,6 +13,7 @@ export const en: Dictionary = {
       failure: "The language could not be changed.",
     },
     errorCode: "Error code",
+    callFailed: "The action could not be completed. Check your connection and try again.",
   },
   home: {
     title: "Bioeksen Portal",

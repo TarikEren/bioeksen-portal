@@ -6,7 +6,8 @@
  * follows DEC-122 and is added with the pages that show it.
  *
  * Stage B0 holds the keys of the contract and the text of a failed language
- * change (`common.language.failure`, `common.errorCode`, DEC-122).
+ * change (`common.language.failure`, `common.errorCode`, `common.callFailed`,
+ * DEC-122).
  */
 export const tr = {
   common: {
@@ -17,6 +18,7 @@ export const tr = {
       failure: "Dil değiştirilemedi.",
     },
     errorCode: "Hata kodu",
+    callFailed: "İşlem tamamlanamadı. Bağlantınızı kontrol edip yeniden deneyin.",
   },
   home: {
     title: "Bioeksen Portal",
