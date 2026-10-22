@@ -109,3 +109,17 @@ export function validationError(faults: readonly FieldFault[]): AppError {
 export function bodyValidationError(input: unknown, error: z.ZodError): AppError {
   return validationError(faultsOf(input, error.issues));
 }
+
+/**
+ * Checks a value that is not a request body, such as the argument of a server
+ * action, and returns the typed result (`sds-nextjs-backend` §2).
+ *
+ * @throws AppError `VAL-4001`, `VAL-4002`, `VAL-4006` or `VAL-4007` with one entry of `details` for each fault.
+ */
+export function parseWith<TValue>(schema: z.ZodType<TValue>, input: unknown): TValue {
+  const result = schema.safeParse(input);
+  if (!result.success) {
+    throw bodyValidationError(input, result.error);
+  }
+  return result.data;
+}

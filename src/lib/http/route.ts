@@ -9,7 +9,10 @@
  * 2. for a test seam, answers 404 when the seams are off (FND-03 rule 4);
  * 3. answers 503 `SYS-5500` when the configuration is unusable, except for a
  *    probe, which reports the state itself;
- * 4. checks the credential of the route (`sds-auth`);
+ * 4. checks the credential of the route (`sds-auth`): an operator token, or the
+ *    session cookie `bp_session` and the permission that the route names
+ *    (ACC-30 rule 2): 401 `AUTH-4100` without a session, 403 `PERM-4150`
+ *    without the permission;
  * 5. for a route with a body: the size (413 `VAL-4550`), the media type (415
  *    `VAL-4600`), the parse (400 `VAL-4000`) and the strict schema (400
  *    `VAL-4001`, `VAL-4002`, `VAL-4006`, `VAL-4007`);
@@ -26,9 +29,17 @@ import type { NextRequest } from "next/server";
 import type { z } from "zod";
 
 import { type OperatorPrincipal, authenticateOperator } from "@/lib/auth";
+import {
+  SESSION_COOKIE,
+  type SessionActor,
+  type SessionResolver,
+  authenticateSession,
+  parseSessionId,
+} from "@/lib/auth/session";
 import { getConfigState, isTestSeamEnabled } from "@/lib/config";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logging";
+import type { PermissionCode } from "@/lib/schemas/identity";
 import { REQUEST_ID_HEADER, resolveRequestId, runWithRequestContext } from "@/lib/request-context";
 import { applySecurityHeaders } from "@/lib/security";
 
@@ -39,9 +50,7 @@ import { bodyValidationError } from "./validation";
 /** The body limit is 1 MiB, except where an item records another (FND-05 rule 7). */
 export const DEFAULT_BODY_LIMIT_BYTES = 1_048_576;
 
-export interface RouteSpec {
-  /** The credential that the route needs. A probe needs none. */
-  readonly principal: "none" | "operator";
+interface RouteSpecBase {
   /** A test seam: the route answers 404 unless the seams are on (FND-03 rule 4). */
   readonly testSeam?: boolean;
   /** `true` for a probe. It answers while the configuration is unusable. */
@@ -50,22 +59,61 @@ export interface RouteSpec {
   readonly allow?: readonly string[];
 }
 
-export interface JsonRouteSpec<TBody> extends RouteSpec {
+/** A route that needs no credential, or an operator token. */
+export interface TokenRouteSpec extends RouteSpecBase {
+  /** The credential that the route needs. A probe needs none. */
+  readonly principal: "none" | "operator";
+}
+
+/**
+ * A route that needs a session (ACC-30 rule 2). The route gives the resolver,
+ * because `src/lib/` never imports a module (FND-01.AC4).
+ */
+export interface SessionRouteSpec extends RouteSpecBase {
+  readonly principal: "session";
+  /** Finds the actor of the session id in the cookie. */
+  readonly resolveSession: SessionResolver;
+  /** The permission that the route needs. A route without it needs a session only. */
+  readonly permission?: PermissionCode;
+}
+
+export type RouteSpec = TokenRouteSpec | SessionRouteSpec;
+
+export type JsonRouteSpec<TBody> = RouteSpec & {
   /** The strict schema of the JSON body. */
   readonly bodySchema: z.ZodType<TBody>;
   /** The body limit in bytes. Default: `DEFAULT_BODY_LIMIT_BYTES`. */
   readonly bodyLimitBytes?: number;
+};
+
+/** The values of the `[param]` folders of the path. Each one is untrusted input. */
+export type RouteParams = Readonly<Record<string, string | string[] | undefined>>;
+
+/** What the credential step and the path give to the loader of the input. */
+interface Credential {
+  readonly principal: OperatorPrincipal | null;
+  readonly actor: SessionActor | null;
+  readonly params: RouteParams;
 }
 
 export interface RouteInput<TBody> {
   readonly request: NextRequest;
   /** The parsed body. */
   readonly body: TBody;
-  /** The caller, `null` when the route needs no credential. */
+  /** The operator, `null` when the route needs no operator token. */
   readonly principal: OperatorPrincipal | null;
+  /** The signed-in person, `null` when the route needs no session. */
+  readonly actor: SessionActor | null;
+  /** The values of the `[param]` folders. The handler validates each one. */
+  readonly params: RouteParams;
 }
 
-export type RouteHandler = (request: NextRequest) => Promise<Response>;
+/** What Next.js passes as the second argument of a route handler. */
+export interface RouteHandlerContext {
+  readonly params: Promise<RouteParams>;
+}
+
+export type RouteHandler = (request: NextRequest, context?: RouteHandlerContext) => Promise<Response>;
 
 /** Gives the answer the headers that every answer carries. */
 function finalize(response: Response, requestId: string): Response {
@@ -100,10 +148,10 @@ function answerFailure(error: unknown, request: NextRequest, spec: RouteSpec): R
 /** Runs the steps of the wrapper. `load` reads the input of the route after the credential check. */
 function wrap<TInput>(
   spec: RouteSpec,
-  load: (request: NextRequest, principal: OperatorPrincipal | null) => Promise<TInput>,
+  load: (request: NextRequest, credential: Credential) => Promise<TInput>,
   handler: (input: TInput) => Promise<Response>,
 ): RouteHandler {
-  return async (request: NextRequest): Promise<Response> => {
+  return async (request: NextRequest, context?: RouteHandlerContext): Promise<Response> => {
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     return runWithRequestContext({ requestId }, async () => {
       let response: Response;
@@ -125,7 +173,16 @@ function wrap<TInput>(
             tail: { sub: principal.subject, method: request.method, path: request.nextUrl.pathname },
           });
         }
-        response = await handler(await load(request, principal));
+        const actor =
+          spec.principal === "session"
+            ? await authenticateSession(
+                parseSessionId(request.cookies.get(SESSION_COOKIE)?.value),
+                spec.resolveSession,
+                spec.permission,
+              )
+            : null;
+        const params = context === undefined ? {} : await context.params;
+        response = await handler(await load(request, { principal, actor, params }));
       } catch (error) {
         response = answerFailure(error, request, spec);
       }
@@ -138,7 +195,7 @@ function wrap<TInput>(
 export function defineRoute(spec: RouteSpec, handler: (input: RouteInput<undefined>) => Promise<Response>): RouteHandler {
   return wrap(
     spec,
-    (request, principal) => Promise.resolve<RouteInput<undefined>>({ request, body: undefined, principal }),
+    (request, credential) => Promise.resolve<RouteInput<undefined>>({ request, body: undefined, ...credential }),
     handler,
   );
 }
@@ -151,7 +208,7 @@ export function defineJsonRoute<TBody>(
   const limit = spec.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES;
   return wrap(
     spec,
-    async (request, principal) => {
+    async (request, credential) => {
       // Size before media type (step 11 before step 12). A body with no length
       // is counted as it arrives, so it is read before the media type is checked.
       assertDeclaredLength(request, limit);
@@ -162,7 +219,7 @@ export function defineJsonRoute<TBody>(
       if (!result.success) {
         throw bodyValidationError(parsed, result.error);
       }
-      return { request, body: result.data, principal };
+      return { request, body: result.data, ...credential };
     },
     handler,
   );
@@ -174,12 +231,7 @@ export function defineJsonRoute<TBody>(
  * learns nothing about the methods of the path (`code-prefixes.md`, step 10
  * after steps 2 to 9).
  */
-export function defineMethodNotAllowed(spec: {
-  readonly principal: "none" | "operator";
-  readonly allow: readonly string[];
-  readonly probe?: boolean;
-  readonly testSeam?: boolean;
-}): RouteHandler {
+export function defineMethodNotAllowed(spec: RouteSpec & { readonly allow: readonly string[] }): RouteHandler {
   return defineRoute(spec, () => Promise.reject(new AppError("RES-4500", "Method not allowed")));
 }
 
