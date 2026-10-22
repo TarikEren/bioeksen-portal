@@ -9,6 +9,13 @@ const pattern = new RegExp(`^${source}$`);
 
 // Source: FND-07 rule 1; proxy.md (matcher); review 1, R-022.
 describe("the matcher of the proxy", () => {
+  // Review 2, R-029: a prefetch of the browser can get an HTML answer, so no header excludes a request.
+  it("runs for a prefetch of the browser too: it has no condition on a header", () => {
+    expect(config.matcher).toHaveLength(1);
+    expect(matcher).not.toHaveProperty("missing");
+    expect(matcher).not.toHaveProperty("has");
+  });
+
   it("matches the pages", () => {
     for (const path of ["/", "/lookup", "/apis", "/api-docs", "/apiary/x", "/en/page"]) {
       expect(pattern.test(path), path).toBe(true);

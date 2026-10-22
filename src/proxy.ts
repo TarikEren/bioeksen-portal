@@ -34,16 +34,16 @@ export function proxy(request: NextRequest): NextResponse {
   return response;
 }
 
+// The proxy also runs for a prefetch of the browser (`Purpose: prefetch`,
+// `Next-Router-Prefetch`). A request with such a header can get an HTML answer,
+// and every HTML answer carries the policy (FND-07.AC1). An answer that is not
+// HTML, the RSC payload, gets the policy too, which does no harm.
 export const config = {
   matcher: [
     {
       // Everything except the API, the build files and the icon. `api` is a whole
       // path segment: a page such as /apis still gets its policy.
       source: "/((?!api(?:/|$)|_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
     },
   ],
 };
