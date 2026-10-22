@@ -1,191 +1,147 @@
-# Stage B0: Foundation
+# Stage B1: Identity and platform services (crisis mode)
 
-**Items.** FND-01, FND-02 (AC1, AC2, AC3, AC5), FND-03, FND-04 (AC1 to AC4), FND-05 (AC1, AC2, AC3, AC5), FND-06 (AC1, AC2),
-FND-07 (AC1, AC2, AC4, AC5), FND-08 (AC1 to AC4, AC6), FND-09 (AC2).
+This is the contract of stage B1, step 1 of the loop of `crisis_mode.md`
+(DEC-136). It names what the agents build. It writes no test. The plan of B0
+is in git: `git show c3de89c:docs/plans/test_plan.md`.
 
-**Exit criterion.** CI runs every check of FND-02 on a pull request. The
-demo of DEC-135 starts from `compose.demo.yaml`, and there
-`GET /api/health/ready` answers 200. The `sds-planning` checker passes
-on the set.
+**Items.** FND-04 (AC5), FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10
+(with ACC-11), ACC-20, ACC-30 (AC1, AC3, AC4; with ACC-31), ACC-40, PLT-10,
+PLT-30, ACC-50 (AC1, AC2).
 
-**Pending rules in force.**
-- DEC-013: a failure carries only a code of the `bioeksen-sds` registry.
-- DEC-021: the software id is `bioeksen-portal`, in `.bioeksen/software-id`.
-- DEC-128: a release tag starts the deployment; this repository holds no
-  deployment job.
-- DEC-135: until IT gives the Entra values and the servers, the app runs as a
-  demo from `compose.demo.yaml`, with `APP_ENV` `demo`.
+**Exit flow** (README › *Build order*). On the demo: bootstrap creates the
+first Platform Administrator and sends the invitation. The administrator sets
+a password from the mail in Mailpit, signs in, creates a second user, and
+grants the IFU Manager role. Each grant has its `platform_audit_record` row.
 
-**Decisions this stage carries.** DEC-003, DEC-004, DEC-005, DEC-009,
-DEC-015, DEC-016, DEC-017, DEC-018, DEC-020, DEC-022, DEC-127, DEC-130,
-DEC-131, DEC-133.
+**Rules in force that are Pending.** DEC-013, DEC-021 (SDS), DEC-135 (IT).
 
-## Contract
+## API
 
-The acceptance tests reach the code only through the names below.
+All paths are under `/api/v1/identity/`. Bodies and lists follow
+`sds-api-design` (camelCase, ids as strings, `status: "ok"`, 201 with
+`Location`, the list body). Each answer carries `X-Request-Id` and
+`Cache-Control: no-store`. "Session" means the cookie `bp_session`. A route
+that changes state and reads the session checks `Origin` (FND-07.AC3:
+401 `AUTH-4101`). Each session route answers 401 `AUTH-4100` without a
+session, and 403 `PERM-4150` without the permission (ACC-30).
 
-### API
+| Method and path | Caller | Body or query | Success | Failures |
+|---|---|---|---|---|
+| `POST sign-in` | anyone | `{ email, password }` | 200 `{ user: Me }`, sets `bp_session` (ACC-20.AC1) | 401 `AUTH-4101`, one body for the three cases (AC2); 429 `RATE-4400` with `Retry-After` (AC3–AC5, DEC-027) |
+| `POST sign-out` | session | — | 200, ends the session, clears the cookie | 401 `AUTH-4100` |
+| `GET me` | session | — | 200 `{ user: Me }` | 401 `AUTH-4100` |
+| `GET users` | `organization.users.view` | `page`, `limit`, `q` | 200 list of `UserSummary` | — |
+| `POST users` | `organization.users.manage` | `CreateUserInput` | 201 `{ user: UserDetail }`; one invitation mail after commit (ACC-10.AC1) | 409 `RES-4300` (AC2) |
+| `GET users/{id}` | `organization.users.view` | — | 200 `{ user: UserDetail }` with its active roles | 404 `RES-4200` |
+| `POST users/{id}/invitation` | `organization.users.manage` | — | 200; the earlier link ends (AC6) | 404; 409 `RES-4302` when the user already has a password |
+| `POST users/{id}/deactivation` | `organization.users.manage` | — | 200; each session of the user ends (AC7) | 403 `PERM-4150` for oneself (AC8); 409 `RES-4302` when inactive |
+| `POST invitations/accept` | anyone | `{ token, password }` | 200 (AC3) | 401 `AUTH-4101` used or ended; 401 `AUTH-4102` older than 14 days (AC4); 400 `VAL-4006` with each broken rule in `details` (AC5) |
+| `POST password-resets` | anyone | `{ email }` | 202, the same body always; a mail only to an active user (ACC-11.AC1) | 400 `VAL-4001` |
+| `POST password-resets/complete` | anyone | `{ token, password }` | 200; every other session ends (ACC-11.AC2) | 401 `AUTH-4102` (AC3); 401 `AUTH-4101` (AC4); 400 `VAL-4006`, also for the current password (AC5) |
+| `GET roles` | `iam.role.manage` | — | 200 `{ roles: RoleView[] }` | — |
+| `POST users/{id}/role-assignments` | `iam.role.manage` | `{ roleCode }` | 201; one audit row (ACC-31.AC1) | 403 `PERM-4150` for oneself (AC2) or without `iam.role.manage` (AC5); 409 `RES-4300` held already (AC3); 409 `RES-4302` inactive user |
+| `POST users/{id}/role-assignments/{roleCode}/revocation` | `iam.role.manage` | — | 200; `isActive` false; one audit row (ACC-31.AC4) | 404 `RES-4200` no active assignment |
 
-Every answer carries `X-Request-Id`. The four standard endpoints carry
-`Cache-Control: no-store`. Their bodies and codes are the ones of
-`sds-api-design` (`references/openapi.yaml`); this table does not repeat them.
+The operator endpoints of B0 gain the rate limit of FND-04 rule 4 and AC5.
+`setLanguage` (B0) also stores nothing for a user; FND-08.AC5 comes from the
+user's `preferredLanguage`.
 
-| Method and path | Request | Success | Errors |
-|---|---|---|---|
-| `GET /api/health/live` | — | 200, the `sds-api-design` live body | — |
-| `GET /api/health/ready` | — | 200, `status` `ok`, checks `db` and `cache` | 503, `status` `fail` or `not-ready`, no `code` |
-| `GET /api/health` | `Authorization: Bearer <operator token>` | 200, the full report; `checks.dependencies` holds `object-store` and `smtp`; 200 `ok` also when only these two fail (FND-04.AC2) | 401 `AUTH-4100`, `AUTH-4103`, `AUTH-4102`, `AUTH-4101`; 503 `AUTH-5500`; 403 `PERM-4151` |
-| `GET /api/admin/logs` | operator token; the query of `sds-api-design` | 200, the list body of `sds-api-design`, from `platform_log_record` | as `GET /api/health`; 400 `VAL-4003`, `VAL-4004`, `VAL-4005` |
-| Another method on the four paths | — | — | 405 `RES-4500` with `Allow`, after the credential check (`code-prefixes.md` step 10) |
-| `POST /api/test/echo` (test seam) | JSON body `{ "value": string }`, body limit 1 MiB | 200 `{ "status": "ok", "value": … }` | 400 `VAL-4000`, `VAL-4001`, `VAL-4007`; 413 `VAL-4550`; 404 when the seams are off |
+**Test seams** (the backend step adds them for the test phase; seams only):
+`POST /api/test/session { userId }` (a test sign-in), `POST /api/test/clock
+{ now }`, `GET /api/test/mail?to=` and `POST /api/test/mail/mode { mode }`
+(`ok`, `refuse`, `down`, `timeout`), `POST /api/test/files` (PLT-10).
 
-Server action (FND-08): `setLanguage(language: "tr" | "en")` in
-`src/app/_actions/language.ts`. It sets the cookie `bp_lang` for 365 days and
-answers the `sds-api-design` envelope.
+## Data
 
-### Data
+One migration `identity_and_audit` (`prisma migration plan`, never
+`db update`). The DELETE and TRUNCATE triggers call `platform_refuse_delete()`
+(B0) as `rawSql` in the same migration.
 
-| Table | Columns and constraints | Migration |
+| Table | Columns and constraints |
+|---|---|
+| `identity_user` | `id` BIGSERIAL; `email`; `email_normalized` (lower case), unique `identity_user_email_unique`; `first_name`; `last_name`; `preferred_language` check `tr`/`en`; `is_active` (default true); `password_hash` (null until set); `password_changed_at`; `created_at`, `updated_at` timestamptz(3). Refuses DELETE and TRUNCATE (DEC-010) |
+| `identity_auth_token` | `id`; `user_id` → `identity_user`; `purpose` check `INVITATION`/`PASSWORD_RESET`; `token_hash` (SHA-256), unique; `expires_at`; `used_at`; `ended_at`; `created_by_user_id` (null for bootstrap); `created_at`; partial unique (`user_id`, `purpose`) where `used_at` and `ended_at` are null |
+| `identity_permission` | `id`; `code` unique |
+| `identity_role` | `id`; `code` unique; `name` JSONB `{tr, en}` with its check (DEC-011) |
+| `identity_role_permission` | `role_id`, `permission_id`; unique pair |
+| `identity_role_assignment` | `id`; `user_id`; `role_id`; `is_active`; `granted_by_user_id` (null for bootstrap); `granted_at`; `revoked_by_user_id`; `revoked_at`; partial unique (`user_id`, `role_id`) where `is_active`. Refuses DELETE and TRUNCATE |
+| `platform_audit_record` | `id`; `occurred_at`; `actor_type` check `USER`/`SYSTEM`; `actor_user_id`; `action_code` (`<module>.<entity>.<verb>`); `entity_type`; `entity_id`; `state_before`, `state_after` JSONB; `reason`; `request_id`. Refuses UPDATE, DELETE and TRUNCATE |
+
+Audited actions: `identity.user.created`, `identity.user.invited`,
+`identity.user.deactivated`, `identity.role_assignment.granted`,
+`identity.role_assignment.revoked`. The audit row and its `AUDIT` log record
+are in the transaction of the change (DEC-014, PLT-40).
+
+**Redis.** Sessions: key from the SHA-256 of the session id, with `userId`,
+`createdAt`, `lastSeenAt`; a set of sessions for each user; 60 minutes idle
+and 12 hours in total (DEC-025). Rate limits: failed sign-ins by source
+(10 in a minute) and by email address (5 in a row, then 15 minutes), failed
+operator authentications by source (10 in a minute). The clock is `now()`
+(`src/lib`), so the test seam can move it.
+
+## Services and types
+
+Types and zod schemas: `src/lib/schemas/identity.ts` (`SignInInput`,
+`CreateUserInput`, `SetPasswordInput`, `UserListQuery`, `Me`, `UserSummary`,
+`UserDetail`, `RoleView`, `RoleAssignmentView`, `PermissionCode`). The
+registry of ACC-30 (permissions and the two roles) is one constant:
+`src/modules/identity/domain/registry.ts`.
+
+| Service file | Functions |
+|---|---|
+| `src/modules/identity/services/session-service.ts` | `signIn(input, meta)`, `signOut(sessionId)`, `getSessionUser(sessionId)` |
+| `src/modules/identity/services/user-service.ts` | `listUsers(actor, query)`, `createUser(actor, input)`, `getUser(actor, id)`, `reinviteUser(actor, id)`, `deactivateUser(actor, id)` |
+| `src/modules/identity/services/credential-service.ts` | `acceptInvitation(input)`, `requestPasswordReset(email)`, `completePasswordReset(input)` |
+| `src/modules/identity/services/role-service.ts` | `listRoles(actor)`, `grantRole(actor, userId, roleCode)`, `revokeRole(actor, userId, roleCode)` |
+| `src/modules/platform/services/audit-service.ts` | `appendAudit(tx, entry)` |
+| `src/modules/platform/services/mail-service.ts` | `queueMail(tx, message)` sent after commit; the invitation and reset templates in both languages |
+| `src/modules/platform/services/file-service.ts` | `storeDocumentFile(ids, bytes)`, `signedDownloadUrl(key)` (PLT-10; no page uses them in B1) |
+| `src/worker/main.ts`, `src/worker/bootstrap.ts` | the hourly pass with an advisory lock (PLT-30; no job yet); `pnpm run bootstrap` (ACC-40) |
+
+`actor` is the session principal: the user id and the set of permission
+codes. Each service checks its permission (`sds-nextjs-backend` §1).
+
+**Mock data** (step 2): `src/lib/mock/identity.ts`: three users (a Platform
+Administrator, an IFU Manager, an inactive user), the two roles, and a mock
+session store. Each mock sign-in accepts the password
+`mock-password-1234`. Each mock function carries `// MOCK: <item>`.
+
+## UI
+
+The text comes from the dictionaries, in the groups `signIn`, `invitation`,
+`passwordReset`, `backoffice`, `users`, `roles`, `noArea`, and
+`common.signOut`. The failure text follows DEC-122 (by code).
+
+| Page | Path | Content |
 |---|---|---|
-| `platform_log_record` | `id` BIGSERIAL primary key; `software_id` text; `timestamp` timestamptz(3); `severity` text; `type` text; `code` text, optional; `message` text; `shipped_at` timestamptz, optional | `src/prisma/migrations/app/<ts>_platform_log_record` (skeleton: the table and its columns only) |
-| `platform_log_record` | checks `log_record_severity_is_known` (DEBUG, INFO, WARNING, ERROR, FATAL), `log_record_type_is_known` (APP, SECURITY, AUDIT, ACCESS, JOB), `log_record_message_length` (at most 8192); indexes on (`timestamp`, `id`), (`code`), (`type`, `severity`); PostgreSQL reads the first one backward for the newest first (Prisma 8 keeps no sort direction in an index) | `<ts>_platform_log_record_constraints` (build) |
-| — | `rawSql`: the function `platform_refuse_delete()`, for the DELETE and TRUNCATE triggers of the controlled tables of later stages (FND-06 rule 5). It raises SQLSTATE `23001` (`restrict_violation`), which the app maps to `RES-4302` | the same build migration |
+| Sign-in | `/sign-in` | Email, password, submit, the link to the reset request. After sign-in: `/backoffice` when the user holds a permission (ACC-50.AC1), else `/no-area` (AC2) |
+| Set a password | `/invitation` (token in the fragment `#token=`) | Password, submit, the broken rules (ACC-10.AC5) |
+| Request a reset | `/password-reset` | Email, submit, the same message always |
+| Set a new password | `/password-reset/complete` (token in the fragment) | Password, submit |
+| Backoffice shell | `/backoffice/**` | Navigation (Users with `organization.users.view`), the user menu with sign-out, the language switch. Without a session, the proxy and the layout send the person to `/sign-in` (ACC-30.AC1) |
+| Start page | `/backoffice` | The name of the user and the areas that the permissions open |
+| Users | `/backoffice/users` | The list; "new user" with `organization.users.manage` |
+| New user | `/backoffice/users/new` | Email, first name, last name, preferred language |
+| User | `/backoffice/users/[id]` | The details; re-invite and deactivate (`organization.users.manage`); the roles with grant and revoke (`iam.role.manage`) |
+| No area | `/no-area` | "The account has no area yet", and sign-out (ACC-50.AC2) |
+| Entry page | `/` | Adds a link to the sign-in |
 
-### UI
-
-| Page or component | Accessible names | Dictionary keys |
-|---|---|---|
-| `src/app/layout.tsx`: `<html lang>` from the session (B1) or the cookie `bp_lang`, else `tr` | — | — |
-| `src/app/(public)/page.tsx`: a placeholder entry page | the language switch: `common.language.switch` | `common.language.tr`, `common.language.en`, `common.language.switch`, `home.title` |
-| `src/app/(public)/_components/language-switch.tsx` (HeroUI) | as above | as above |
-
-### Exports that tests can call
-
-| Export | Path | For |
-|---|---|---|
-| Route handlers `GET` of the four standard endpoints, `POST` of the echo seam | `src/app/api/**/route.ts` | FND-04, FND-05 |
-| `formatDateTime(instant: Date, locale: "tr" \| "en"): string` | `src/lib/format/date-time.ts` | FND-08.AC6 |
-| `dictionaries` (`tr`, `en`) | `src/lib/i18n/dictionaries/` | FND-08.AC1 |
-
-### Test seams
-
-- The seams work only when `TEST_SEAMS_ENABLED` is `true` and `APP_ENV` is
-  not `production` (FND-03 rule 4).
-- **Operator token:** the integration global setup starts a local JWKS
-  server. `ENTRA_JWKS_URI` points to it. A helper mints tokens with and
-  without the operator scope and role, expired tokens and tokens with a wrong
-  signature.
-- **Echo route:** `POST /api/test/echo` proves the body checks of the route
-  wrapper.
-- **Logs:** a test reads log records through `GET /api/admin/logs` with an
-  operator token, or from the stdout of a spawned app.
-- **Spawned app:** a helper starts `next start` on a free port with a given
-  environment, for the configuration and header criteria.
-
-## Skeleton
-
-The developer builds this before any behavior, so that the tests compile and
-fail for the missing behavior.
-
-1. Move `app/` to `src/app/`; set the `tsconfig.json` path `@/*` to
-   `./src/*`; `next.config.ts` without `cacheComponents`,
-   `partialPrefetching` and `experimental.agentFeedback` (DEC-130).
-2. Add the dependencies of the plan (Prisma CLI, `pg`, `zod`, `server-only`,
-   `redis`, `jose`, the HeroUI packages, the `@fontsource` IBM Plex packages;
-   dev: `vitest`, `@playwright/test`, `@axe-core/playwright`, Testing Library,
-   `jsdom`, `esbuild`). Pin exact versions of the Prisma packages.
-3. `.nvmrc` (24), `.bioeksen/software-id` (`bioeksen-portal`),
-   `compose.dev.yaml`, `.env.example`.
-4. `package.json` scripts: `typecheck`, `lint`, `test`, `test:integration`,
-   `test:pipeline`, `test:e2e`, `test:results`, `build`, `prebuild`,
-   `contract:emit`, `db:migrate`, `db:check`.
-5. Runner configuration: `vitest.config.ts` (projects `unit`, `component`,
-   `integration`, `pipeline`), `playwright.config.ts`, the database guard and
-   the global setup in `tests/support/`.
-6. Modules with their final names and signatures, whose bodies throw
-   `NotImplemented`: `src/lib/config`, `src/lib/errors`, `src/lib/logging`,
-   `src/lib/request-context`, `src/lib/http`, `src/lib/db`, `src/lib/auth`,
-   `src/lib/format`, `src/lib/i18n`, `src/lib/security`.
-7. Route handlers at their final paths that answer 500 `SYS-5000`.
-8. `src/proxy.ts` and `src/instrumentation.ts` that do nothing yet.
-9. The skeleton migration of `platform_log_record`.
-10. The dictionaries `tr.ts` and `en.ts` with the keys of the UI table.
+The language of a signed-in user is the user's `preferredLanguage`
+(FND-08.AC5, DEC-017).
 
 ## Tasks
 
-| Task | Closes | Tier for each criterion |
+| Step | Who | Done when |
 |---|---|---|
-| T1 Toolchain, layout and import rules | FND-01.AC1 to AC4 | AC1 pipeline (the commands on a clean copy); AC2 to AC4 pipeline (ESLint on fixture source text with a file path under `src/`) |
-| T2 Pipeline proposal and commit check | FND-02.AC1 to AC3, AC5 | AC1 to AC3 pipeline (fixtures); AC5 (and AC4 in B5) smoke tier (`tests/smoke/`, its own Playwright configuration with no global setup and no web server, script `test:smoke`, base URL from `TEST_ENVIRONMENT_URL`). The pull request pipeline does not run the smoke tier. The main session runs it at the stage exit, after IT deploys the release tag |
-| T3 Configuration and start hook | FND-03.AC1 to AC4 | e2e (spawned app with a broken environment) |
-| T4 Standard endpoints and operator tokens | FND-04.AC1 to AC4 | AC1 e2e (spawned app with a database that does not answer); AC2 to AC4 integration |
-| T5 Errors, logger, request id, route wrapper | FND-05.AC1, AC2, AC3, AC5 | integration |
-| T6 Data layer and drift check | FND-06.AC1, AC2 | pipeline |
-| T7 Headers, nonce, proxy, server action origin, dependency check | FND-07.AC1, AC2, AC4, AC5 | AC1, AC2 e2e; AC4 integration; AC5 pipeline |
-| T8 Languages, formats, layout, fonts | FND-08.AC1 to AC4, AC6 | AC1 pipeline (type check of a fixture dictionary); AC2 to AC4 e2e; AC6 unit |
-| T10 Demo (DEC-135) | FND-02.AC5, FND-03.AC5 | FND-02.AC5 smoke tier against the demo; FND-03.AC5 e2e (spawned app, `APP_ENV` `demo`, no `ENTRA_*`). The build: a multi-stage `Dockerfile` (pinned base by digest, Node 24, non-root, Next.js standalone output), `.dockerignore`, `compose.demo.yaml` (the app image, PostgreSQL 16, Redis 7, MinIO, Mailpit; the migrations run once before the app starts), and `APP_ENV` `demo` in the configuration |
-| T9 Contrast of `src/app/globals.css` | FND-09.AC2 | unit (the pairs of the `sds-nextjs-frontend` reference page, read from the CSS file) |
+| 2 Mock skeleton | Backend agent | The schemas, the registry, every service of the table on mocks, the routes of the API on the services, the session principal in the route wrapper, the proxy redirect for `/backoffice` |
+| 3 Frontend | Frontend agent | Each page of the UI table works on the mocks, in Turkish and English |
+| 4 Backend | Backend agent | The migration, the repositories and the real services, in the B1 order (audit and mail first). Sessions and rate limits in Redis, FND-04.AC5, FND-07.AC3, FND-08.AC5. Mail by SMTP (Mailpit in the demo), files in MinIO, the worker, bootstrap. `compose.demo.yaml` runs bootstrap after the migrations, and runs the worker. Each `MOCK:` goes. New packages: `nodemailer`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` |
+| 5 Phase review | `code-reviewer` | The commits of B1, against the items above |
+| 6 Fix | Developers | Critical and Major findings fixed |
+| 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**The order.** T1, T3, T5, T6, T4, T7, T8, T9, T2. The spike of DEC-005 comes
-first in T6: the build migration with its `rawSql` function applies to an
-empty database, and `db verify` passes.
-
-## Fixtures and helpers
-
-- `tests/support/db-guard.ts`: it refuses a database whose name does not end
-  in `_integration` or `_e2e`, or whose host is not in `TEST_DATABASE_HOSTS`.
-- `tests/support/global-setup/`: recreate the disposable database, apply the
-  migrations, start the JWKS server.
-- `tests/support/operator-token.ts`, `tests/support/spawn-app.ts`,
-  `tests/support/results.ts` (the results-only runner).
-- `tests/README.md`: the tiers, the folders, the helpers, how a test cites its
-  criterion.
-- The `sds-planning` checker reads the test folders only:
-  `--tests tests/unit tests/integration tests/pipeline tests/e2e tests/smoke`.
-  It never reads `tests/README.md` or `tests/support/`, so an id in a comment
-  or a table does not count as a test.
-
-## Open point for the exit
-
-`src/app/globals.css` fails pairs of the reference page of
-`sds-nextjs-frontend` at WCAG 2.2 AA (measured by the B0 tests, 2026-10-22):
-
-- Light theme, 8 pairs: link on the page 4.28; accent text on the page 4.28;
-  primary button, hovered 3.99; soft warning chip 4.21; danger, solid 3.48;
-  error text on a surface 3.57; placeholder 2.64; field edge 1.00.
-- Dark theme, 11 pairs: muted text on a surface 3.94; accent text on a
-  surface 4.32; primary button 4.32; primary button, hovered 3.77; soft accent
-  chip 4.45; success, solid 4.32; soft success chip 4.45; danger, solid 4.35;
-  soft danger chip 3.42; error text 2.33; field edge 1.25.
-- The region `.sidebar-theme`: 8 pairs in the light theme and 8 in the dark
-  theme.
-
-FND-09.AC2 stays red until the file changes, and the stage cannot exit with a
-red criterion. The owner changes the file before the exit.
-
-## Owner decisions on the slow tiers (2026-10-22)
-
-- Nobody runs `pnpm run test:integration` until the e-IFU stages (B3 and B4)
-  are built.
-- Nobody runs `pnpm run test:e2e` until the e-IFU frontend (the public lookup
-  of B4) is built.
-- The agents still write those tests; `typecheck` and `lint` check them. At
-  the B0 exit, each of the two tiers is reported as "not run (owner
-  decision)", never as passed.
-- No general code review runs until the e-IFU is built. The review record
-  lists the commits that no review checked (`docs/review_findings/README.md`).
-
-## Answers to the test questions (2026-10-22)
-
-- FND-09.AC2 measures `.sidebar-theme` in both themes, as the reference page
-  does. The pairs that come from the HeroUI tokens count too.
-- FND-03.AC3 now says "no test seam works". In B0, the seam is
-  `POST /api/test/echo`, which answers 404.
-- FND-04 rule 4 and AC5 (the rate limit of failed authentication, `sds-auth`)
-  are new. AC5 is due in B1, with the rate limits of ACC-20.
-- FND-04.AC2 now gives the status of `GET /api/health`: 200 `ok`.
-- FND-08.AC6 now gives the forms of DEC-133.
-- FND-02.AC1: the pipeline runs `test:pipeline` too (`sds-ci`).
-- FND-02.AC3 and FND-07.AC5: no local script runs the commit check or the
-  audit. The tests read the workflow. A person commits the workflow
-  (`sds-ci`).
+**Choices the specs leave open** (record them as Default decisions if the
+review asks): passwords are hashed with `scrypt` of `node:crypto`; the
+common-password list is a bundled file of the entries of 15 characters or more
+from a public list; the token goes in the URL fragment, so that no server log
+holds it.
