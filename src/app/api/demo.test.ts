@@ -1,3 +1,4 @@
+import { SignJWT, generateKeyPair } from "jose";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,17 +9,26 @@ vi.mock("@/lib/logging", () => ({
   logger: { failure: () => undefined, write: () => undefined, flush: () => Promise.resolve() },
   findLogRecords: () => Promise.reject(new Error("no store in this test")),
 }));
-// PostgreSQL and Redis answer. The fakes also keep the import small (see routes.test.ts).
-vi.mock("@/lib/db", () => ({
-  getDb: () => {
-    throw new Error("no database in this test");
-  },
-  getPoolStats: () => ({ open: 0, inUse: 0, idle: 0 }),
-  pingDatabase: () => Promise.resolve(true),
-  toDatabaseError: (error: unknown) => error,
-}));
+// PostgreSQL and Redis answer the probes. The fakes also keep the import small (see routes.test.ts).
+vi.mock("@/lib/db", async () => {
+  const { AppError } = await import("@/lib/errors");
+  return {
+    getDb: () => {
+      throw new Error("no database in this test");
+    },
+    getPoolStats: () => ({ open: 0, inUse: 0, idle: 0 }),
+    pingDatabase: () => Promise.resolve(true),
+    toDatabaseError: (error: unknown) =>
+      error instanceof AppError ? error : new AppError("DB-5000", "Query failed", { cause: error }),
+  };
+});
 vi.mock("@/lib/cache", () => ({
   pingCache: () => Promise.resolve(true),
+}));
+// The failure limit of the operator endpoints needs Redis. Here no request is limited.
+vi.mock("@/lib/rate-limit", () => ({
+  assertBelowLimit: () => Promise.resolve(),
+  recordFailure: () => Promise.resolve(),
 }));
 
 type Handler = (request: NextRequest) => Promise<Response>;
@@ -67,7 +77,20 @@ afterEach(() => {
   Object.assign(process.env, environmentBefore);
 });
 
-// Source: DEC-135; FND-03.AC5; FND-04 rule 1; sds-auth, Validation order, step 6.
+/** A token that is well formed and not expired. A demo with no identity provider cannot verify it. */
+async function wellFormedToken(): Promise<string> {
+  const { privateKey } = await generateKeyPair("RS256");
+  return new SignJWT({ tid: "tenant-1", azp: "client", scp: "operator.access", roles: ["operator"] })
+    .setProtectedHeader({ alg: "RS256", kid: "known" })
+    .setSubject("person-1")
+    .setIssuer("https://issuer.example.invalid")
+    .setAudience("api://portal")
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(privateKey);
+}
+
+// Source: DEC-135; FND-03.AC5; FND-04 rule 1; sds-auth, Validation order, steps 2 to 4 and 6; review 3, R-049.
 describe("the demo without an identity provider", () => {
   it("reports ready", async () => {
     const routes = await load(demoEnvironment);
@@ -81,17 +104,22 @@ describe("the demo without an identity provider", () => {
   it.each([
     ["GET /api/health", "health", "/api/health"],
     ["GET /api/admin/logs", "logs", "/api/admin/logs"],
-  ] as const)("answers 503 AUTH-5500 at %s, with a bearer token and without one", async (_name, route, path) => {
+  ] as const)("answers %s by the order of sds-auth: 401 until a token can be checked, then 503 AUTH-5500", async (_name, route, path) => {
     const routes = await load(demoEnvironment);
+    const token = await wellFormedToken();
 
-    const callers: Record<string, string>[] = [{ authorization: "Bearer not-checked" }, {}];
-    for (const headers of callers) {
+    const cases: readonly { headers: Record<string, string>; status: number; code: string }[] = [
+      { headers: {}, status: 401, code: "AUTH-4100" },
+      { headers: { authorization: "Bearer not-a-jwt" }, status: 401, code: "AUTH-4103" },
+      { headers: { authorization: `Bearer ${token}` }, status: 503, code: "AUTH-5500" },
+    ];
+    for (const { headers, status, code } of cases) {
       const response = await get(routes[route], path, headers);
 
-      expect(response.status).toBe(503);
+      expect(response.status).toBe(status);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(response.headers.get("x-request-id")).not.toBeNull();
-      expect(await response.json()).toMatchObject({ status: "fail", code: "AUTH-5500" });
+      expect(await response.json()).toMatchObject({ status: "fail", code });
     }
   });
 

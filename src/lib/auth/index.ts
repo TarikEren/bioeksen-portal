@@ -3,10 +3,7 @@
  * `sds-auth`).
  *
  * The check follows the validation order of `sds-auth` and stops at the first
- * failure. One check comes before the order: a demo with no identity provider
- * (DEC-135) cannot verify any token, so every call gets 503 `AUTH-5500`, also
- * a call with no credential. A 401 would tell the caller to send a credential
- * that nothing can accept.
+ * failure:
  *
  * 1. no `Authorization` header, or not the `Bearer` scheme: 401 `AUTH-4100`;
  * 2. the token does not parse: 401 `AUTH-4103`;
@@ -16,8 +13,14 @@
  * 5. the keys cannot be fetched: 503 `AUTH-5500`;
  * 6. the token is valid and its principal is not an operator: 403 `PERM-4151`.
  *
+ * A demo with no identity provider (DEC-135) cannot verify a signature. Steps 1
+ * to 3 need no provider, so they answer as they do everywhere (R-049, FND-03.AC5:
+ * the 503 is for a request that has a bearer token to check). A token that
+ * passes them cannot be verified, so it gets 503 `AUTH-5500` where step 4 would
+ * be.
+ *
  * The rate limit of failed authentication (step 1 of the order, FND-04.AC5) is
- * due in stage B1.
+ * in `./operator-request.ts`.
  *
  * An app credential never satisfies an operator requirement. A rejection never
  * says which claim failed or whether the principal exists: the answer holds the
@@ -27,7 +30,7 @@ import "server-only";
 
 import { type JWTPayload, decodeJwt, decodeProtectedHeader, errors, jwtVerify } from "jose";
 
-import { type IdentityProvider, getIdentityProvider } from "@/lib/config";
+import { type IdentityProvider, getConfig, getIdentityProvider } from "@/lib/config";
 import { AppError } from "@/lib/errors";
 
 import { JwksCache } from "./jwks";
@@ -108,11 +111,8 @@ export async function authenticateOperator(
   options: AuthenticateOptions = {},
 ): Promise<OperatorPrincipal> {
   const provider = getIdentityProvider();
-  if (provider === null) {
-    throw new AppError("AUTH-5500", "Identity provider unavailable", { reason: "no identity provider is configured" });
-  }
   const now = options.now ?? new Date();
-  const skewSeconds = provider.clockSkewSeconds;
+  const skewSeconds = provider === null ? getConfig().AUTH_CLOCK_SKEW_SECONDS : provider.clockSkewSeconds;
 
   const token = readBearerToken(authorizationHeader);
 
@@ -127,6 +127,12 @@ export async function authenticateOperator(
   // Expiry first: an expired token yields AUTH-4102 whatever its signature.
   if (unverified.exp !== undefined && unverified.exp < now.getTime() / 1000 - skewSeconds) {
     throw unauthorized("AUTH-4102", "the token is expired");
+  }
+
+  // A demo with no identity provider verifies nothing: a token that is well formed
+  // and not expired cannot be checked (R-049, DEC-135).
+  if (provider === null) {
+    throw new AppError("AUTH-5500", "Identity provider unavailable", { reason: "no identity provider is configured" });
   }
 
   // A token for another issuer, app or tenant is refused (step 5) before the keys

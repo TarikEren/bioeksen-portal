@@ -11,4 +11,4 @@ export { buildContentSecurityPolicy, generateNonce } from "./csp";
 export type { ContentSecurityPolicyOptions } from "./csp";
 export { SECURITY_HEADERS, applySecurityHeaders } from "./headers";
 export type { SecurityHeader } from "./headers";
-export { isAllowedOrigin, resolveSourceAddress } from "./origin";
+export { isAllowedOrigin, resolveForwardedSource, resolveSourceAddress } from "./origin";

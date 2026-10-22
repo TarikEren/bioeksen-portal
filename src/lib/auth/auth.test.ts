@@ -137,7 +137,7 @@ describe("authenticateOperator", () => {
   });
 });
 
-// Source: DEC-135; FND-03.AC5; sds-auth, Validation order, step 6.
+// Source: DEC-135; FND-03.AC5; sds-auth, Validation order, steps 2 to 4 and 6; review 3, R-049.
 describe("authenticateOperator in a demo without an identity provider", () => {
   const demoEnvironment = {
     ...Object.fromEntries(Object.entries(usableEnvironment).filter(([name]) => !name.startsWith("ENTRA_"))),
@@ -155,14 +155,24 @@ describe("authenticateOperator in a demo without an identity provider", () => {
     Object.assign(process.env, environmentBefore);
   });
 
-  it("gives AUTH-5500 for any header, and fetches no key", async () => {
+  it("answers steps 2 to 4 as everywhere, and fetches no key", async () => {
     const fetchSpy = vi.fn(() => Promise.reject(new TypeError("no network in this test")));
     vi.stubGlobal("fetch", fetchSpy);
     const authenticate = await loadAuthenticate(demoEnvironment);
+    const { privateKey } = await generateKeyPair("RS256");
+    const expired = await new SignJWT({ tid: "tenant-1", azp: "client", scp: "operator.access", roles: ["operator"] })
+      .setProtectedHeader({ alg: "RS256", kid: "known" })
+      .setSubject("person-1")
+      .setIssuer(issuer)
+      .setAudience(audience)
+      .setIssuedAt(Math.floor(Date.now() / 1000) - 7200)
+      .setExpirationTime(Math.floor(Date.now() / 1000) - 3600)
+      .sign(privateKey);
 
-    expect(await codeOf(authenticate(null))).toBe("AUTH-5500");
-    expect(await codeOf(authenticate("Basic abc"))).toBe("AUTH-5500");
-    expect(await codeOf(authenticate("Bearer not-a-jwt"))).toBe("AUTH-5500");
+    expect(await codeOf(authenticate(null))).toBe("AUTH-4100");
+    expect(await codeOf(authenticate("Basic abc"))).toBe("AUTH-4100");
+    expect(await codeOf(authenticate("Bearer not-a-jwt"))).toBe("AUTH-4103");
+    expect(await codeOf(authenticate(`Bearer ${expired}`))).toBe("AUTH-4102");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

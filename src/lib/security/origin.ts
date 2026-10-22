@@ -63,18 +63,39 @@ export function resolveSourceAddress(
   if (connectionAddress === null) {
     return null;
   }
+  return pickSource([...splitForwardedFor(forwardedFor), connectionAddress], trustedProxies);
+}
+
+/**
+ * The source address of a request of a route handler or a server action (DEC-038).
+ *
+ * Next.js gives the code no socket address. It writes the address of the socket
+ * into `X-Forwarded-For` when the header is absent, and it leaves a header that
+ * is there. So the last entry of the header is the address that the last hop
+ * wrote: the chain is the header alone, and the rule of `resolveSourceAddress`
+ * applies to it. The deployment puts a trusted proxy before the app, and the
+ * proxy appends the address of its caller (`TRUSTED_PROXIES`).
+ *
+ * @returns `null` when the header holds no address.
+ */
+export function resolveForwardedSource(forwardedFor: string | null, trustedProxies: readonly string[]): string | null {
+  return pickSource(splitForwardedFor(forwardedFor), trustedProxies);
+}
+
+function splitForwardedFor(forwardedFor: string | null): string[] {
+  return (forwardedFor ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+}
+
+/** The rightmost entry of the chain that is not a trusted proxy. Never the leftmost entry, unless every hop is trusted. */
+function pickSource(chain: readonly string[], trustedProxies: readonly string[]): string | null {
   const trusted = buildTrustedList(trustedProxies);
   const isTrusted = (address: string): boolean => {
     const family = familyOf(address);
     return family !== null && trusted.check(address, family);
   };
-
-  const forwarded = (forwardedFor ?? "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry !== "");
-  const chain = [...forwarded, connectionAddress];
-
   for (let index = chain.length - 1; index >= 0; index -= 1) {
     const candidate = chain[index];
     if (candidate === undefined) {

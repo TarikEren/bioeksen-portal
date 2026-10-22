@@ -9,10 +9,13 @@
  * 2. for a test seam, answers 404 when the seams are off (FND-03 rule 4);
  * 3. answers 503 `SYS-5500` when the configuration is unusable, except for a
  *    probe, which reports the state itself;
- * 4. checks the credential of the route (`sds-auth`): an operator token, or the
+ * 4. checks the credential of the route (`sds-auth`): an operator token (after
+ *    the failure limit of the source: 429 `RATE-4400`, FND-04.AC5), or the
  *    session cookie `bp_session` and the permission that the route names
- *    (ACC-30 rule 2): 401 `AUTH-4100` without a session, 403 `PERM-4150`
- *    without the permission;
+ *    (ACC-30 rule 2): 401 `AUTH-4100` without a session, 401 `AUTH-4101` for a
+ *    request that changes state and has a foreign `Origin` (FND-07.AC3), 403
+ *    `PERM-4150` without the permission. Each granted request is logged as
+ *    `SECURITY`;
  * 5. for a route with a body: the size (413 `VAL-4550`), the media type (415
  *    `VAL-4600`), the parse (400 `VAL-4000`) and the strict schema (400
  *    `VAL-4001`, `VAL-4002`, `VAL-4006`, `VAL-4007`);
@@ -21,27 +24,30 @@
  *    sets `X-Request-Id`, `Cache-Control: no-store` and the headers of FND-07 on
  *    the answer.
  *
- * Rate limiting (step 1 of the order of `sds-auth`) comes in stage B1.
+ * The rate limit of a sign-in is in the service, because it needs the email
+ * address of the body (ACC-20 rule 3).
  */
 import "server-only";
 
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 
-import { type OperatorPrincipal, authenticateOperator } from "@/lib/auth";
+import type { OperatorPrincipal } from "@/lib/auth";
+import { authenticateOperatorRequest } from "@/lib/auth/operator-request";
 import {
   SESSION_COOKIE,
   type SessionActor,
   type SessionResolver,
   authenticateSession,
   parseSessionId,
+  requirePermission,
 } from "@/lib/auth/session";
-import { getConfigState, isTestSeamEnabled } from "@/lib/config";
-import { AppError } from "@/lib/errors";
+import { getConfig, getConfigState, isTestSeamEnabled } from "@/lib/config";
+import { AppError, RateLimitedError } from "@/lib/errors";
 import { logger } from "@/lib/logging";
 import type { PermissionCode } from "@/lib/schemas/identity";
 import { REQUEST_ID_HEADER, resolveRequestId, runWithRequestContext } from "@/lib/request-context";
-import { applySecurityHeaders } from "@/lib/security";
+import { applySecurityHeaders, isAllowedOrigin } from "@/lib/security";
 
 import { assertDeclaredLength, assertJsonMediaType, parseJsonBytes, readBoundedBody } from "./body";
 import { failureResponse } from "./respond";
@@ -142,7 +148,30 @@ function answerFailure(error: unknown, request: NextRequest, spec: RouteSpec): R
   if (appError.code === "RES-4500" && spec.allow !== undefined) {
     headers.set("Allow", spec.allow.join(", "));
   }
+  if (appError instanceof RateLimitedError) {
+    headers.set("Retry-After", String(appError.retryAfterSeconds));
+  }
   return failureResponse(appError, headers);
+}
+
+/** The methods that only read. A request with another method changes state (FND-07 rule 3). */
+const SAFE_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * A request that changes state and carries a session must come from the origin
+ * of `PUBLIC_BASE_URL` (FND-07.AC3). A route handler gets no such check from
+ * Next.js, so the wrapper makes it. The answer is 401 `AUTH-4101` and nothing
+ * changes.
+ *
+ * @throws AppError `AUTH-4101`.
+ */
+function assertSameOrigin(request: NextRequest): void {
+  if (SAFE_METHODS.has(request.method)) {
+    return;
+  }
+  if (!isAllowedOrigin(request.headers.get("origin"), getConfig().PUBLIC_BASE_URL)) {
+    throw new AppError("AUTH-4101", "Credential invalid", { reason: "the Origin is not the origin of PUBLIC_BASE_URL" });
+  }
 }
 
 /** Runs the steps of the wrapper. `load` reads the input of the route after the credential check. */
@@ -162,8 +191,7 @@ function wrap<TInput>(
         if (spec.probe !== true && getConfigState().status === "failed") {
           throw new AppError("SYS-5500", "Not ready", { reason: "the configuration is unusable" });
         }
-        const principal =
-          spec.principal === "operator" ? await authenticateOperator(request.headers.get("authorization")) : null;
+        const principal = spec.principal === "operator" ? await authenticateOperatorRequest(request.headers) : null;
         if (principal !== null) {
           // Each authorization decision is logged, the grant too (`sds-logging`, **What to log**).
           logger.write({
@@ -173,14 +201,22 @@ function wrap<TInput>(
             tail: { sub: principal.subject, method: request.method, path: request.nextUrl.pathname },
           });
         }
-        const actor =
-          spec.principal === "session"
-            ? await authenticateSession(
-                parseSessionId(request.cookies.get(SESSION_COOKIE)?.value),
-                spec.resolveSession,
-                spec.permission,
-              )
-            : null;
+        let actor: SessionActor | null = null;
+        if (spec.principal === "session") {
+          actor = await authenticateSession(parseSessionId(request.cookies.get(SESSION_COOKIE)?.value), spec.resolveSession);
+          // The origin comes before the permission: a request from another site is not the request of the person.
+          assertSameOrigin(request);
+          if (spec.permission !== undefined) {
+            requirePermission(actor, spec.permission);
+          }
+          // Each authorization decision is logged, the grant too. The session id is never logged.
+          logger.write({
+            severity: "INFO",
+            type: "SECURITY",
+            message: "session request granted",
+            tail: { sub: actor.userId, method: request.method, path: request.nextUrl.pathname },
+          });
+        }
         const params = context === undefined ? {} : await context.params;
         response = await handler(await load(request, { principal, actor, params }));
       } catch (error) {

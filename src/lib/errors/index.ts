@@ -1,4 +1,4 @@
-export { AppError, NotImplemented } from "./app-error";
+export { AppError, NotImplemented, RateLimitedError } from "./app-error";
 export type { AppErrorOptions, ErrorDetails, FieldIssue, JsonValue } from "./app-error";
 export { CODE_MEANINGS, ERROR_CODES, httpStatusOf } from "./codes";
 export type { ErrorCode } from "./codes";

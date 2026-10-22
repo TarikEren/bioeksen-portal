@@ -14,16 +14,25 @@ vi.mock("@/lib/logging", () => ({
 // or more to import when the disk is cold. The first test paid that cost in its
 // hook and ran into the time limit under load. Fakes with the same signatures
 // keep the import small and the test deterministic.
-vi.mock("@/lib/db", () => ({
-  getDb: () => {
-    throw new Error("no database in this test");
-  },
-  getPoolStats: () => ({ open: 0, inUse: 0, idle: 0 }),
-  pingDatabase: () => Promise.resolve(false),
-  toDatabaseError: (error: unknown) => error,
-}));
+vi.mock("@/lib/db", async () => {
+  const { AppError } = await import("@/lib/errors");
+  return {
+    getDb: () => {
+      throw new Error("no database in this test");
+    },
+    getPoolStats: () => ({ open: 0, inUse: 0, idle: 0 }),
+    pingDatabase: () => Promise.resolve(false),
+    toDatabaseError: (error: unknown) =>
+      error instanceof AppError ? error : new AppError("DB-5000", "Query failed", { cause: error }),
+  };
+});
 vi.mock("@/lib/cache", () => ({
   pingCache: () => Promise.resolve(false),
+}));
+// The failure limit of the operator endpoints needs Redis. Here no request is limited.
+vi.mock("@/lib/rate-limit", () => ({
+  assertBelowLimit: () => Promise.resolve(),
+  recordFailure: () => Promise.resolve(),
 }));
 
 interface Handlers {

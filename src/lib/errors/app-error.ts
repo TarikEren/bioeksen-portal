@@ -5,7 +5,7 @@
  * registry (DEC-013). A route handler and a server action map it to the same
  * envelope (`./envelope.ts`).
  */
-import { type ErrorCode, httpStatusOf } from "./codes";
+import { CODE_MEANINGS, type ErrorCode, httpStatusOf } from "./codes";
 
 /** A JSON value. `details` holds only values that JSON can carry. */
 export type JsonValue =
@@ -75,5 +75,21 @@ export class NotImplemented extends AppError {
     super("SYS-5000", "Not implemented");
     this.name = "NotImplemented";
     this.operation = operation;
+  }
+}
+
+/**
+ * A caller over a limit: 429 `RATE-4400`. The answer carries `Retry-After` with
+ * the whole seconds until the caller may try again (`sds-api-design`,
+ * **Rate limited responses**). A route handler sets the header from
+ * `retryAfterSeconds`.
+ */
+export class RateLimitedError extends AppError {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds: number, reason: string) {
+    super("RATE-4400", CODE_MEANINGS["RATE-4400"], { reason });
+    this.name = "RateLimitedError";
+    this.retryAfterSeconds = Math.max(1, Math.ceil(retryAfterSeconds));
   }
 }

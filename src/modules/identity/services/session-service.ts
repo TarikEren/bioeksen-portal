@@ -9,8 +9,19 @@
 import "server-only";
 
 import { type SessionActor } from "@/lib/auth/session";
+import { getConfig } from "@/lib/config";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logging";
+import {
+  type ConsecutiveLimit,
+  type WindowLimit,
+  assertBelowLimit,
+  assertNotLocked,
+  clearConsecutiveFailures,
+  recordConsecutiveFailure,
+  recordFailure,
+} from "@/lib/rate-limit";
+import { resolveForwardedSource } from "@/lib/security";
 import type { Me, SignInInput } from "@/lib/schemas/identity";
 import { readExecutor } from "@/lib/transaction";
 
@@ -19,6 +30,16 @@ import { findActiveAssignments } from "../repositories/role-repository";
 import { endSession, openSession, touchSession } from "../repositories/session-repository";
 import { findUserByEmail, findUserById } from "../repositories/user-repository";
 import { normalizeEmail, parseEntityId, toMe } from "./identity-views";
+
+/** DEC-027: 10 failed sign-ins in one minute for each source address. */
+const SOURCE_LIMIT: WindowLimit = { limit: 10, windowMs: 60_000 };
+/** DEC-027: after 5 failed sign-ins in a row with one email address, the address is locked for 15 minutes. */
+const EMAIL_LIMIT: ConsecutiveLimit = { threshold: 5, lockMs: 15 * 60_000 };
+
+const SOURCE_SCOPE = "sign-in-source";
+const EMAIL_SCOPE = "sign-in-email";
+/** The source of a request that carries no address. All such requests share one count. */
+const UNKNOWN_SOURCE = "unknown";
 
 /** What the route knows about the request, for the rate limit of ACC-20 rule 3. */
 export interface SignInMeta {
@@ -45,29 +66,43 @@ function signInFailure(reason: string): AppError {
 /**
  * Signs a person in and opens a new session (ACC-20.AC1, AC9).
  *
+ * The limits of DEC-027 come first (step 1 of the order of `sds-auth`): 10
+ * failed sign-ins in a minute for a source address, and 5 in a row for an email
+ * address. A limited request is 429 before the password is looked at, also when
+ * the password is right (ACC-20.AC3 to AC5). The email address counts whether or
+ * not it has an account.
+ *
  * @throws AppError `AUTH-4101` for a wrong password, an unknown email address
- * and an inactive account, with one body. `RATE-4400` comes with the limits of
- * stage B1 step 4 (ACC-20.AC3 to AC5).
+ * and an inactive account, with one body; `RATE-4400` (with `Retry-After`) over a limit.
  */
 export async function signIn(input: SignInInput, meta: SignInMeta): Promise<SignedIn> {
-  void meta;
+  const source = resolveForwardedSource(meta.forwardedFor, getConfig().TRUSTED_PROXIES ?? []) ?? UNKNOWN_SOURCE;
+  const emailNormalized = normalizeEmail(input.email);
+  await assertBelowLimit(SOURCE_SCOPE, source, SOURCE_LIMIT);
+  await assertNotLocked(EMAIL_SCOPE, emailNormalized);
+
   const executor = readExecutor();
-  const user = await findUserByEmail(executor, normalizeEmail(input.email));
+  const user = await findUserByEmail(executor, emailNormalized);
   // The password is verified in every case, against a decoy when there is no hash,
   // so the time of the answer does not tell the cases apart.
   const passwordOk = await verifyPassword(input.password, user?.passwordHash ?? (await decoyHash()));
-  if (user === null) {
-    throw signInFailure("no user has this email address");
+  const failure =
+    user === null
+      ? "no user has this email address"
+      : !user.isActive
+        ? "the account is inactive"
+        : user.passwordHash === null
+          ? "the account has no password yet"
+          : !passwordOk
+            ? "the password is wrong"
+            : null;
+  if (user === null || failure !== null) {
+    await recordFailure(SOURCE_SCOPE, source, SOURCE_LIMIT);
+    await recordConsecutiveFailure(EMAIL_SCOPE, emailNormalized, EMAIL_LIMIT);
+    throw signInFailure(failure ?? "the password is wrong");
   }
-  if (!user.isActive) {
-    throw signInFailure("the account is inactive");
-  }
-  if (user.passwordHash === null) {
-    throw signInFailure("the account has no password yet");
-  }
-  if (!passwordOk) {
-    throw signInFailure("the password is wrong");
-  }
+
+  await clearConsecutiveFailures(EMAIL_SCOPE, emailNormalized);
   const sessionId = await openSession(String(user.id));
   logger.write({ severity: "INFO", type: "SECURITY", message: "sign-in granted", tail: { sub: String(user.id) } });
   return { sessionId, user: toMe(user, await findActiveAssignments(executor, [user.id])) };
