@@ -81,6 +81,9 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-027 | The system limits the failed sign-ins of each source address to 10 in one minute (`sds-auth`). After 5 consecutive failed sign-ins with an email address, the system locks that email address for 15 minutes. This applies whether or not the email address has an account. | Default | ENG | — | ACC-20 | eng/error-codes.md §Authentication; sds-auth §What a rejection may say |
 | DEC-028 | A password has 15 to 128 characters. It does not hold the email address of the account. It is not on the common-password list. There are no composition rules (NIST SP 800-63B revision 4, for a password used alone). | Default | ENG | — | ACC-10 | eng/error-codes.md §AUTH_PASSWORD_TOO_WEAK |
 | DEC-123 | An invitation link works for 14 days. A reset link works for 1 hour. Each link works once. A new link for the same purpose ends the earlier link. | Default | ENG | — | ACC-10 | eng/data-model-fields.md §AuthToken |
+| DEC-129 | The app stores a password only as a `scrypt` hash of `node:crypto`, with a random salt for each password. The stored value holds the salt and the parameters of `scrypt` with the hash. | Default | ENG | — | ACC-10, ACC-11, ACC-20 | B1 contract; owner answer 2026-10-22 |
+| DEC-137 | The common-password list of DEC-028 is a file in the repository. It holds the entries of 15 characters or more of a public list of common passwords. It needs no shorter entry, because DEC-028 refuses each password with fewer than 15 characters. | Default | ENG | — | ACC-10, ACC-11 | B1 contract; owner answer 2026-10-22 |
+| DEC-138 | An invitation link and a reset link hold the token in the URL fragment (`#token=`), not in the path or the query. The browser does not send the fragment, so no server log and no proxy log holds the token. The page sends the token in the body of its request. | Default | ENG | — | ACC-10, ACC-11, PLT-20 | B1 contract; owner answer 2026-10-22 |
 | DEC-029 | An authorization check names a permission code, never a role. A role is a named bundle of permissions. In release 1, each grant of a role applies to the whole platform. The Academy adds grants that apply to one organization (DEC-102). | Default | ENG | — | ACC-30, ACD-10 | eng/permission-matrix.md |
 | DEC-030 | Only a holder of `iam.role.manage` grants or revokes a role. Nobody grants a role to themselves. The system audits each grant and each revocation. | Decided | PO | — | ACC-31 | eng/permission-matrix.md §Role assignment scope (decided 2026-08-23) |
 | DEC-031 | Each permission has one test that allows and one test that refuses. | Default | ENG | — | ACC-30 | eng/testing.md §Authorization |
@@ -480,8 +483,9 @@ through an emailed invitation.
 2. When the system creates a user, it sends an invitation (PLT-20, DEC-033) in
    the preferred language of the user. The link holds a random 256-bit token.
    The database keeps only the SHA-256 hash of the token. The link follows
-   DEC-123.
-3. To open the account, the person sets a password that follows DEC-028.
+   DEC-123 and DEC-138.
+3. To open the account, the person sets a password that follows DEC-028 and
+   DEC-137. The system stores it as DEC-129 says.
 4. Deactivation ends every session of the user. The user row stays (DEC-010).
    Nobody deactivates their own account.
 5. A holder of `organization.users.view` can list users. A holder of

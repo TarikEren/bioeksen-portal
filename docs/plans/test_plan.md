@@ -4,6 +4,8 @@ This is the contract of stage B1, step 1 of the loop of `crisis_mode.md`
 (DEC-136). It names what the agents build. It writes no test. The plan of B0
 is in git: `git show c3de89c:docs/plans/test_plan.md`.
 
+**Status.** The owner approved this contract on 2026-10-22.
+
 **Items.** FND-04 (AC5), FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10
 (with ACC-11), ACC-20, ACC-30 (AC1, AC3, AC4; with ACC-31), ACC-40, PLT-10,
 PLT-30, ACC-50 (AC1, AC2).
@@ -135,13 +137,20 @@ The language of a signed-in user is the user's `preferredLanguage`
 |---|---|---|
 | 2 Mock skeleton | Backend agent | The schemas, the registry, every service of the table on mocks, the routes of the API on the services, the session principal in the route wrapper, the proxy redirect for `/backoffice` |
 | 3 Frontend | Frontend agent | Each page of the UI table works on the mocks, in Turkish and English |
-| 4 Backend | Backend agent | The migration, the repositories and the real services, in the B1 order (audit and mail first). Sessions and rate limits in Redis, FND-04.AC5, FND-07.AC3, FND-08.AC5. Mail by SMTP (Mailpit in the demo), files in MinIO, the worker, bootstrap. `compose.demo.yaml` runs bootstrap after the migrations, and runs the worker. Each `MOCK:` goes. New packages: `nodemailer`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` |
+| 4 Backend | Backend agent | The migration, the repositories and the real services, in the B1 order (audit and mail first). Sessions and rate limits in Redis, FND-04.AC5, FND-07.AC3, FND-08.AC5. Mail by SMTP (Mailpit in the demo, with STARTTLS: see *The demo relay*), files in MinIO, the worker, bootstrap. `compose.demo.yaml` runs bootstrap after the migrations, and runs the worker. Each `MOCK:` goes. New packages: `nodemailer`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` |
 | 5 Phase review | `code-reviewer` | The commits of B1, against the items above |
 | 6 Fix | Developers | Critical and Major findings fixed |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**Choices the specs leave open** (record them as Default decisions if the
-review asks): passwords are hashed with `scrypt` of `node:crypto`; the
-common-password list is a bundled file of the entries of 15 characters or more
-from a public list; the token goes in the URL fragment, so that no server log
-holds it.
+**Choices the specs left open.** The owner accepted them on 2026-10-22, and
+they are Default decisions now: DEC-129 (`scrypt` hashes), DEC-137 (the
+bundled common-password list, entries of 15 characters or more) and DEC-138
+(the token in the URL fragment).
+
+**The demo relay** (owner answer 2026-10-22). DEC-135 applies each rule of
+`production` to the demo, so PLT-20.AC3 applies there too: the app sends
+nothing to a relay that offers no STARTTLS. In `compose.demo.yaml`, a one-shot
+service makes a self-signed certificate for the host `mailpit` in a shared
+volume. Mailpit offers STARTTLS with this certificate. The app, the worker and
+bootstrap trust it through `NODE_EXTRA_CA_CERTS`. No setting of the app
+changes, and no check of TLS is switched off.
