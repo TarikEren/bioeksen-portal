@@ -50,3 +50,6 @@ dist/
 # playwright
 /test-results/
 /playwright-report/
+
+# agent worktrees of claude code
+/.claude/worktrees/
