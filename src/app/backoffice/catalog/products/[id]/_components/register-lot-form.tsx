@@ -28,8 +28,8 @@ import { type FailureLabels, fieldErrorsOf, fieldIssuesOf, hasShownFieldError } 
 import { failureOf, readText, useFormAction } from "@/app/_components/use-action-outcome";
 import type { RegisterLotInput } from "@/lib/schemas/catalog";
 
-import { DateInput } from "../../../_components/date-input";
-import { DoneNotice } from "../../../_components/done-notice";
+import { DateInput } from "@/app/backoffice/_components/date-input";
+import { DoneNotice } from "@/app/backoffice/_components/done-notice";
 
 /**
  * The fixed phrase that the service puts in `details` for a kit-code mismatch

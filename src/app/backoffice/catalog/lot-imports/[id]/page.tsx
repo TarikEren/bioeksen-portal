@@ -33,7 +33,7 @@ import { getProduct } from "@/modules/catalog/services/product-service";
 import { ForbiddenNotice } from "../../../_components/forbidden-notice";
 import { ImportRowsTable } from "../../_components/import-rows-table";
 import { ImportStatusChip } from "../../_components/import-status-chip";
-import { PaginationNav } from "../../_components/pagination-nav";
+import { PaginationNav } from "@/app/backoffice/_components/pagination-nav";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { text } = await getRequestText();

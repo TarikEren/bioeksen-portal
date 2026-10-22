@@ -40,7 +40,7 @@ import { listLots } from "@/modules/catalog/services/lot-service";
 import { getProduct, listProducts } from "@/modules/catalog/services/product-service";
 
 import { ForbiddenNotice } from "../../../_components/forbidden-notice";
-import { PaginationNav } from "../../_components/pagination-nav";
+import { PaginationNav } from "@/app/backoffice/_components/pagination-nav";
 import { formatOptions, statusOptions } from "../../_lib/options";
 import { CatalogNumbersSection } from "./_components/catalog-numbers-section";
 import { CorrectDateButton } from "./_components/correct-date-button";

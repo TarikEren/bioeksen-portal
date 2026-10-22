@@ -24,9 +24,9 @@ import { FailureAlert } from "@/app/_components/failure-alert";
 import { type FailureLabels, fieldErrorsOf, hasShownFieldError } from "@/app/_components/failure";
 import { failureOf, readText, useFormAction } from "@/app/_components/use-action-outcome";
 
-import { DateInput } from "../../../_components/date-input";
-import { DoneNotice } from "../../../_components/done-notice";
-import { FormDrawer } from "../../../_components/form-drawer";
+import { DateInput } from "@/app/backoffice/_components/date-input";
+import { DoneNotice } from "@/app/backoffice/_components/done-notice";
+import { FormDrawer } from "@/app/backoffice/_components/form-drawer";
 
 interface CorrectDateFormProps {
   readonly lotId: string;

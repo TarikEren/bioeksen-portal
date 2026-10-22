@@ -34,7 +34,7 @@ import { listProducts } from "@/modules/catalog/services/product-service";
 
 import { ForbiddenNotice } from "../../_components/forbidden-notice";
 import { ImportStatusChip } from "../_components/import-status-chip";
-import { PaginationNav } from "../_components/pagination-nav";
+import { PaginationNav } from "@/app/backoffice/_components/pagination-nav";
 
 const BASE_PATH = "/backoffice/catalog/lot-imports";
 const TEMPLATE_PATH = "/api/v1/catalog/lot-imports/template";

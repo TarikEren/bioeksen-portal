@@ -27,9 +27,9 @@ import { failureOf, useActionOutcome } from "@/app/_components/use-action-outcom
 import { fmt } from "@/lib/i18n/messages";
 import type { Format } from "@/lib/schemas/catalog";
 
-import { ConfirmDialog } from "../../../_components/confirm-dialog";
-import { DoneNotice } from "../../../_components/done-notice";
-import { FormDrawer } from "../../../_components/form-drawer";
+import { ConfirmDialog } from "@/app/backoffice/_components/confirm-dialog";
+import { DoneNotice } from "@/app/backoffice/_components/done-notice";
+import { FormDrawer } from "@/app/backoffice/_components/form-drawer";
 import type { Option } from "../../../_lib/options";
 import {
   AddCatalogNumberForm,

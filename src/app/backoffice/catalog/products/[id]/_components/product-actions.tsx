@@ -21,9 +21,9 @@ import { FailureAlert } from "@/app/_components/failure-alert";
 import type { FailureLabels } from "@/app/_components/failure";
 import { failureOf, useActionOutcome } from "@/app/_components/use-action-outcome";
 
-import { ConfirmDialog } from "../../../_components/confirm-dialog";
-import { DoneNotice } from "../../../_components/done-notice";
-import { FormDrawer } from "../../../_components/form-drawer";
+import { ConfirmDialog } from "@/app/backoffice/_components/confirm-dialog";
+import { DoneNotice } from "@/app/backoffice/_components/done-notice";
+import { FormDrawer } from "@/app/backoffice/_components/form-drawer";
 import type { ProductFieldLabels, ProductFieldValues, StatusOption } from "../../../_components/product-form-fields";
 import { EditProductForm } from "./edit-product-form";
 

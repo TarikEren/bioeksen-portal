@@ -29,7 +29,7 @@ import { type ProductListQuery, parseProductListQuery } from "@/lib/schemas/cata
 import { listProducts } from "@/modules/catalog/services/product-service";
 
 import { ForbiddenNotice } from "../../_components/forbidden-notice";
-import { PaginationNav } from "../_components/pagination-nav";
+import { PaginationNav } from "@/app/backoffice/_components/pagination-nav";
 import { ProductFilters } from "./_components/product-filters";
 
 const BASE_PATH = "/backoffice/catalog/products";
