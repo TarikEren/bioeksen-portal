@@ -4,6 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { usableEnvironment } from "@/lib/config/usable-environment";
 
+// The types of the real modules, to check the fakes below against them (review 3,
+// R-050). A type position loads nothing at run time.
+type DatabaseModule = typeof import("@/lib/db");
+type CacheModule = typeof import("@/lib/cache");
+type RateLimitModule = typeof import("@/lib/rate-limit");
+
 // The logger writes to the database. These tests need no store.
 vi.mock("@/lib/logging", () => ({
   logger: { failure: () => undefined, write: () => undefined, flush: () => Promise.resolve() },
@@ -20,16 +26,16 @@ vi.mock("@/lib/db", async () => {
     pingDatabase: () => Promise.resolve(true),
     toDatabaseError: (error: unknown) =>
       error instanceof AppError ? error : new AppError("DB-5000", "Query failed", { cause: error }),
-  };
+  } satisfies Partial<DatabaseModule>;
 });
 vi.mock("@/lib/cache", () => ({
   pingCache: () => Promise.resolve(true),
-}));
+} satisfies Partial<CacheModule>));
 // The failure limit of the operator endpoints needs Redis. Here no request is limited.
 vi.mock("@/lib/rate-limit", () => ({
   assertBelowLimit: () => Promise.resolve(),
   recordFailure: () => Promise.resolve(),
-}));
+} satisfies Partial<RateLimitModule>));
 
 type Handler = (request: NextRequest) => Promise<Response>;
 

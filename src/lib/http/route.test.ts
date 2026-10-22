@@ -29,7 +29,14 @@ vi.mock("@/lib/logging", () => ({
 
 vi.mock("@/lib/config", () => ({
   getConfigState: () => ({ status: "ready", config: {} }),
+  getConfig: () => ({ PUBLIC_BASE_URL: "http://localhost", TRUSTED_PROXIES: undefined }),
   isTestSeamEnabled: () => true,
+}));
+
+// The failure limit of the operator endpoints needs Redis. Here no request is limited.
+vi.mock("@/lib/rate-limit", () => ({
+  assertBelowLimit: () => Promise.resolve(),
+  recordFailure: () => Promise.resolve(),
 }));
 
 vi.mock("@/lib/auth", () => ({

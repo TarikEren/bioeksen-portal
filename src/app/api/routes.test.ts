@@ -3,6 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usableEnvironment } from "@/lib/config/usable-environment";
 
+// The types of the real modules, to check the fakes below against them (review 3,
+// R-050). A type position loads nothing at run time.
+type DatabaseModule = typeof import("@/lib/db");
+type CacheModule = typeof import("@/lib/cache");
+type RateLimitModule = typeof import("@/lib/rate-limit");
+
 // The logger writes to the database. These tests need no store.
 vi.mock("@/lib/logging", () => ({
   logger: { failure: () => undefined, write: () => undefined, flush: () => Promise.resolve() },
@@ -13,7 +19,9 @@ vi.mock("@/lib/logging", () => ({
 // The real modules load the Prisma runtime and the Redis client, which take 1 s
 // or more to import when the disk is cold. The first test paid that cost in its
 // hook and ran into the time limit under load. Fakes with the same signatures
-// keep the import small and the test deterministic.
+// keep the import small and the test deterministic. `satisfies Partial<Module>`
+// checks each fake against the real module, so a change of a signature fails
+// the type check here (review 3, R-050).
 vi.mock("@/lib/db", async () => {
   const { AppError } = await import("@/lib/errors");
   return {
@@ -24,16 +32,16 @@ vi.mock("@/lib/db", async () => {
     pingDatabase: () => Promise.resolve(false),
     toDatabaseError: (error: unknown) =>
       error instanceof AppError ? error : new AppError("DB-5000", "Query failed", { cause: error }),
-  };
+  } satisfies Partial<DatabaseModule>;
 });
 vi.mock("@/lib/cache", () => ({
   pingCache: () => Promise.resolve(false),
-}));
+} satisfies Partial<CacheModule>));
 // The failure limit of the operator endpoints needs Redis. Here no request is limited.
 vi.mock("@/lib/rate-limit", () => ({
   assertBelowLimit: () => Promise.resolve(),
   recordFailure: () => Promise.resolve(),
-}));
+} satisfies Partial<RateLimitModule>));
 
 interface Handlers {
   readonly [method: string]: ((request: NextRequest) => Promise<Response>) | undefined;

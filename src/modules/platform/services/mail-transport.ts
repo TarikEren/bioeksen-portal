@@ -11,13 +11,19 @@
  *
  * A failure is an `AppError` with a fixed reason. It never holds the recipient
  * or the text that the relay answered, because the text can name the recipient.
+ *
+ * With the test seams open (FND-03 rule 4) the transport is a fake that keeps the
+ * messages in Redis and fails as its mode says (`/api/test/mail`).
  */
 import "server-only";
 
 import { type Transporter, createTransport } from "nodemailer";
 
-import { getConfig } from "@/lib/config";
+import { getConfig, isTestSeamEnabled } from "@/lib/config";
+import { now } from "@/lib/clock";
 import { AppError } from "@/lib/errors";
+
+import { appendCapturedMail, readMailMode } from "../repositories/test-mail-repository";
 
 /** The message that the transport sends: plain text, no image, no tracking link (PLT-20 rule 5). */
 export interface OutgoingMail {
@@ -105,7 +111,30 @@ const smtpTransport: MailTransport = {
   },
 };
 
-/** The transport of the process. */
+/**
+ * The fake transport of the test seams (FND-03 rule 4). It keeps the message in
+ * Redis, where `GET /api/test/mail` reads it, or fails as the mode says: `refuse`
+ * as a relay that refuses the message (`UP-5000`), `down` as a relay that is not
+ * there (`UP-5500`), `timeout` as a relay that answers late (`UP-5501`).
+ */
+const fakeTransport: MailTransport = {
+  async send(mail) {
+    const mode = await readMailMode();
+    switch (mode) {
+      case "ok":
+        await appendCapturedMail({ ...mail, sentAt: now().toISOString() });
+        return;
+      case "refuse":
+        throw new AppError("UP-5000", "Upstream response unusable", { reason: "the mail relay refused the message" });
+      case "down":
+        throw new AppError("UP-5500", "Upstream unavailable", { reason: "the mail relay is not reachable" });
+      case "timeout":
+        throw new AppError("UP-5501", "Upstream timed out", { reason: "the mail relay did not answer in time" });
+    }
+  },
+};
+
+/** The transport of the process: the fake when the test seams are on, the SMTP relay otherwise. */
 export function getMailTransport(): MailTransport {
-  return smtpTransport;
+  return isTestSeamEnabled() ? fakeTransport : smtpTransport;
 }
