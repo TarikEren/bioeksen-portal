@@ -36,6 +36,20 @@ export interface OperatorPrincipal {
   readonly subject: string;
 }
 
+/**
+ * The operator that a route authenticated, or a refusal if there is none. The
+ * services of the operator endpoints take an `OperatorPrincipal`, so a caller
+ * that has no check cannot call them (`sds-nextjs-backend` §1 and §3).
+ *
+ * @throws AppError `PERM-4151` when `principal` is `null`.
+ */
+export function requireOperator(principal: OperatorPrincipal | null): OperatorPrincipal {
+  if (principal === null || principal.kind !== "operator") {
+    throw new AppError("PERM-4151", "Operator role required", { reason: "no operator principal" });
+  }
+  return principal;
+}
+
 export interface AuthenticateOptions {
   /** The clock. Tests fix it. Default: now. */
   readonly now?: Date;

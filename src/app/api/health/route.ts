@@ -5,13 +5,14 @@
  * (FND-04 rule 2). Their failure leaves `status` at `ok` and the answer at 200:
  * the app degrades and still serves.
  */
+import { requireOperator } from "@/lib/auth";
 import { defineMethodNotAllowed, defineRoute, jsonResponse } from "@/lib/http";
 import { fullHealth } from "@/modules/platform/services/health-service";
 
 const SPEC = { principal: "operator", allow: ["GET"] } as const;
 
-export const GET = defineRoute(SPEC, async () => {
-  const report = await fullHealth();
+export const GET = defineRoute(SPEC, async ({ principal }) => {
+  const report = await fullHealth(requireOperator(principal));
   return jsonResponse(report, report.status === "ok" ? 200 : 503);
 });
 

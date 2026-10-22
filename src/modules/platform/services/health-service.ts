@@ -9,10 +9,11 @@
  *   `dependencies`, and the capacity numbers. Their failure leaves `status` at
  *   `ok`: the app degrades and still serves.
  *
- * Authorisation (the operator) is the wrapper's check, before a service runs.
+ * The full report takes the operator that the route authenticated.
  */
 import "server-only";
 
+import { type OperatorPrincipal, requireOperator } from "@/lib/auth";
 import { getConfigState } from "@/lib/config";
 import type { ErrorCode } from "@/lib/errors";
 import {
@@ -103,7 +104,12 @@ export async function readiness(): Promise<ReadinessReport> {
   };
 }
 
-export async function fullHealth(): Promise<HealthReport> {
+/**
+ * The full report: capacity numbers and every dependency. It takes the operator
+ * who asks, so no caller without the check can read it.
+ */
+export async function fullHealth(principal: OperatorPrincipal): Promise<HealthReport> {
+  requireOperator(principal);
   const [db, cache, objectStore, smtp, capacity] = await Promise.all([
     checkDatabase(),
     checkCache(),

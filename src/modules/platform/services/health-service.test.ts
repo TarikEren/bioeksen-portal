@@ -41,6 +41,8 @@ vi.mock("@/lib/logging", () => ({
 
 const { fullHealth, liveness, readiness } = await import("./health-service");
 
+const operator = { kind: "operator", subject: "person-1" } as const;
+
 // Source: FND-04 rule 2 and AC1, AC2; standard-api-endpoints.md (Further dependencies);
 // sds-logging, What to log (dependency status transitions).
 describe("health service", () => {
@@ -83,14 +85,21 @@ describe("health service", () => {
     state.smtp = "fail";
 
     expect(await readiness()).toMatchObject({ status: "ok" });
-    expect(await fullHealth()).toMatchObject({
+    expect(await fullHealth(operator)).toMatchObject({
       status: "ok",
       checks: { dependencies: { "object-store": "fail", smtp: "fail" } },
     });
   });
 
+  it("refuses the full report to a caller that is not an operator", async () => {
+    const forged: unknown = { kind: "app", subject: "service-1" };
+
+    await expect(Reflect.apply(fullHealth, undefined, [forged])).rejects.toMatchObject({ code: "PERM-4151" });
+    await expect(Reflect.apply(fullHealth, undefined, [null])).rejects.toMatchObject({ code: "PERM-4151" });
+  });
+
   it("reports the connection counts and the capacity in the full report", async () => {
-    const report = await fullHealth();
+    const report = await fullHealth(operator);
 
     expect(report.checks.db).toEqual({ status: "ok", openConnections: 2, inUseConnections: 1, idleConnections: 1 });
     expect(report.checks.memory.totalMemory).toBe(16);

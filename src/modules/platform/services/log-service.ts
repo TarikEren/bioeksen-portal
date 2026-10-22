@@ -6,6 +6,7 @@
  */
 import "server-only";
 
+import { type OperatorPrincipal, requireOperator } from "@/lib/auth";
 import type { ErrorCode } from "@/lib/errors";
 import { type LogType, type Severity, findLogRecords, logger } from "@/lib/logging";
 
@@ -41,12 +42,19 @@ export interface LogPageView {
 /**
  * One page of the logs, newest first.
  *
+ * @param principal The operator who asks. The service reads every record, so it
+ * takes the caller that the route authenticated, and no other caller can ask.
  * @param params The query string of the request.
  * @param now The clock.
  * @throws AppError `VAL-4002` to `VAL-4006` for a bad query; `DB-5000` or
  * `DB-5500` when the store does not answer.
  */
-export async function listLogs(params: URLSearchParams, now: Date = new Date()): Promise<LogPageView> {
+export async function listLogs(
+  principal: OperatorPrincipal,
+  params: URLSearchParams,
+  now: Date = new Date(),
+): Promise<LogPageView> {
+  requireOperator(principal);
   const query: LogQuery = parseLogQuery(params, now);
 
   // A record written in this process a moment ago is visible to this read.

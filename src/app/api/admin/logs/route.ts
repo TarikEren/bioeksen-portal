@@ -4,13 +4,14 @@
  * It reads the local store `platform_log_record` (DEC-127) through a service,
  * with the query and the list body of `sds-api-design`.
  */
+import { requireOperator } from "@/lib/auth";
 import { defineMethodNotAllowed, defineRoute, okResponse } from "@/lib/http";
 import { listLogs } from "@/modules/platform/services/log-service";
 
 const SPEC = { principal: "operator", allow: ["GET"] } as const;
 
-export const GET = defineRoute(SPEC, async ({ request }) => {
-  const page = await listLogs(request.nextUrl.searchParams);
+export const GET = defineRoute(SPEC, async ({ request, principal }) => {
+  const page = await listLogs(requireOperator(principal), request.nextUrl.searchParams);
   return okResponse(page);
 });
 
