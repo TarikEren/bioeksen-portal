@@ -3,6 +3,7 @@
  * missing key, and a key that `tr.ts` does not have, fail the type check.
  */
 import { eifuEn } from "./eifu-en";
+import { lookupEn } from "./lookup-en";
 import type { Dictionary } from "./tr";
 
 export const en: Dictionary = {
@@ -52,6 +53,9 @@ export const en: Dictionary = {
   home: {
     title: "Bioeksen Portal",
     intro: "Open the instructions for use and the management area from here.",
+    lookupTitle: "Instructions for use",
+    lookupDescription: "Find the instructions for use that apply to a LOT with the catalog number and the LOT number of the product. You need no account.",
+    lookup: "Find the instructions for use",
     signInTitle: "Management area",
     signInDescription: "Bioeksen staff and authorized users sign in with their account.",
     signIn: "Sign in",
@@ -622,6 +626,7 @@ export const en: Dictionary = {
     },
   },
   eifu: eifuEn,
+  lookup: lookupEn,
   noArea: {
     title: "Your account has no area yet",
     body: "Your account is active, but it has no area that you can open yet. Ask your administrator to grant a role to your account.",

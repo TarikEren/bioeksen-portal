@@ -20,6 +20,7 @@
  * is a template: the component fills `{code}` with `fmt`.
  */
 import { eifuTr } from "./eifu-tr";
+import { lookupTr } from "./lookup-tr";
 
 export const tr = {
   common: {
@@ -68,6 +69,9 @@ export const tr = {
   home: {
     title: "Bioeksen Portal",
     intro: "Kullanım talimatlarına ve yönetim alanına buradan ulaşırsınız.",
+    lookupTitle: "Kullanım talimatı",
+    lookupDescription: "Ürünün katalog ve LOT numarasıyla, o LOT için geçerli kullanım talimatını bulun. Hesap gerekmez.",
+    lookup: "Kullanım talimatını bul",
     signInTitle: "Yönetim alanı",
     signInDescription: "Bioeksen çalışanları ve yetkili kullanıcılar hesaplarıyla oturum açar.",
     signIn: "Oturum aç",
@@ -638,6 +642,7 @@ export const tr = {
     },
   },
   eifu: eifuTr,
+  lookup: lookupTr,
   noArea: {
     title: "Hesabınıza henüz bir alan tanımlanmadı",
     body: "Hesabınız etkin, ancak henüz erişebileceğiniz bir alan yok. Yöneticinizden hesabınıza bir rol vermesini isteyin.",
