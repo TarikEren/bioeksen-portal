@@ -2,7 +2,7 @@
 
 | # | Date | Scope | Base | Verdict |
 |---|---|---|---|---|
-| 4 | 2026-10-22 | The phase review of B1 (DEC-136, `crisis_mode.md` §4 step 5): the commits `f903986..b415029` (the contract, the mock skeleton, the frontend, the backend), and R-049 and R-050 that they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them. R-061 to R-063 come from the walk of the exit flow on the demo (§5) | `b415029` | Request changes: R-053, R-054 and R-061 (Major) |
+| 4 | 2026-10-22 | The phase review of B1 (DEC-136, `crisis_mode.md` §4 step 5): the commits `f903986..b415029` (the contract, the mock skeleton, the frontend, the backend), and R-049 and R-050 that they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them. R-061 to R-063 come from the walk of the exit flow on the demo (§5) | `b415029` | Request changes: R-053, R-054 and R-061 (Major). The owner deferred the fixes of R-053 to R-058 (2026-10-22); no finding blocks B2 |
 
 The log of every review, and the status of every finding: [README](README.md).
 
@@ -25,8 +25,11 @@ R-053 and R-054 in the code.
 Checks at `b415029`: `pnpm run typecheck` and `pnpm run lint` pass; the unit
 and component tiers give 299 passed and 4 failed (only FND-09.AC2).
 
-**Verdict: Request changes.** R-053, R-054 and R-061 block B2
-(`crisis_mode.md` §4 step 6).
+**Verdict: Request changes.** R-053, R-054 and R-061 are Major. On
+2026-10-22 the owner deferred the fixes of R-053 to R-058 until the owner
+calls for them, and changed `crisis_mode.md` §4 step 6: a finding is fixed
+at once only when it blocks the next step of the build. No finding of this
+review blocks B2.
 
 ## Findings
 
@@ -34,14 +37,14 @@ Line numbers are as of `b415029`.
 
 ### R-053 — Concurrent sign-ins pass the limits of DEC-027
 
-- **Status:** **Open** · **Severity:** Major · **Found:** review 4 (phase reviewer; confirmed in the code by the main session)
+- **Status:** **Open** (deferred by the owner, 2026-10-22) · **Severity:** Major · **Found:** review 4 (phase reviewer; confirmed in the code by the main session)
 - **Where:** `src/modules/identity/services/session-service.ts:81-82` (`assertBelowLimit`, `assertNotLocked`), `:88` (`verifyPassword`), `:100-101` (`recordFailure`, `recordConsecutiveFailure`); `src/lib/rate-limit/index.ts`. The same pattern: `src/lib/auth/operator-request.ts:53-58`.
 - **Problem:** the limit reads the count, the password check takes about 80 ms, and only then the failure is recorded. 50 concurrent sign-ins for one email address all pass the checks while the count is 0, so 50 passwords are tried where DEC-027 allows 5 (ACC-20 rule 3, AC3 to AC5).
 - **Fix:** reserve the attempt in Redis before the password check, in one atomic step (`MULTI` or a script: add, then count); refuse over the limit; clear the reservation on a success. Do the same for the operator limit.
 
 ### R-054 — The session cookie has no Secure flag when PUBLIC_BASE_URL is http
 
-- **Status:** **Open** · **Severity:** Major · **Found:** review 4 (phase reviewer; confirmed in the code by the main session)
+- **Status:** **Open** (deferred by the owner, 2026-10-22) · **Severity:** Major · **Found:** review 4 (phase reviewer; confirmed in the code by the main session)
 - **Where:** `src/lib/auth/session-cookie.ts:31`, `:42` (`secure: isPublicBaseUrlSecure()`); `compose.demo.yaml` (`PUBLIC_BASE_URL` default `http://localhost:3000`).
 - **Problem:** ACC-20.AC1 and DEC-024 require `Secure`, and DEC-135 applies each rule of `production` to the demo. The demo answers a sign-in with `bp_session` without `Secure`.
 - **Fix:** always set `Secure` on `bp_session` (a browser accepts it from `http://localhost`).
@@ -55,21 +58,21 @@ Line numbers are as of `b415029`.
 
 ### R-056 — The server actions validate the input before they authenticate
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
+- **Status:** **Open** (deferred by the owner, 2026-10-22) · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
 - **Where:** `src/app/_actions/identity.ts:72-73`, `82-83`, `92-93`, `106-108`, `120-121`.
 - **Problem:** an anonymous call of `createUserAction({})` gets `VAL-4001` with the field details, not `AUTH-4100` (`sds-auth` › validation order). The route handlers use the correct order.
 - **Fix:** call `requireCurrentActor()` before `parseWith(...)` in each session action.
 
 ### R-057 — A granted server action writes no SECURITY record
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
+- **Status:** **Open** (deferred by the owner, 2026-10-22) · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
 - **Where:** `src/modules/identity/current-actor.ts:45-56`; the session actions of `src/app/_actions/identity.ts`. Compare `src/lib/http/route.ts:213-218`.
 - **Problem:** the B1 contract (*Carried from step 2 to step 4*) asks for a `SECURITY` record for each granted session request. The interface calls only the actions, so no grant from the interface is logged.
 - **Fix:** write the `INFO` `SECURITY` "session request granted" record in `requireCurrentActor`.
 
 ### R-058 — If the step after the commit fails, a password reset leaves the other sessions alive
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
+- **Status:** **Open** (deferred by the owner, 2026-10-22) · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
 - **Where:** `src/modules/identity/services/credential-service.ts:120-122` (`endSessionsOfUser` in `afterCommit`); `src/lib/transaction/index.ts:60-66`.
 - **Problem:** when Redis fails just after the commit, the password changes and each old session stays valid until it times out (ACC-11.AC2).
 - **Fix:** `getSessionUser` refuses a session whose `createdAt` is before `password_changed_at`.

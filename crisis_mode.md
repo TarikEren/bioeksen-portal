@@ -41,7 +41,7 @@ Then `feature/b2-catalog` starts from B1, and so on. Nothing merges into
 | 3 Frontend | Frontend agent | Each page of the stage, on the mock services, with HeroUI, the dictionaries and `src/app/globals.css` |
 | 4 Backend | Backend agent | The migrations, the repositories and the real services, with the same signatures. Each mock goes. The audit records, the mail and the files, as the items say |
 | 5 Phase review | One `code-reviewer` agent | A review of the commits of the stage only, against the items and the criteria of the stage, and against the findings that the commits claim to fix. No full review |
-| 6 Fix | The developer agents | Each Critical and Major finding is fixed before the next stage starts. Each Minor finding is recorded in `docs/review_findings/` and fixed later |
+| 6 Fix | The developer agents, when the owner calls for it | Each finding is recorded in `docs/review_findings/`. A finding that blocks the next step of the build is fixed at once. Each other finding, also a Critical or Major one, stays open until the owner calls for its fix (owner answer 2026-10-22) |
 | 7 Stage check | The main session | The gate of section 5 |
 
 ## 5. The gate of each stage
@@ -55,7 +55,8 @@ The stage is done when all of these are true. No new test is written.
 - No `MOCK:` comment of the stage remains in `src/`.
 - The demo starts from `compose.demo.yaml`. The main session does the exit
   flow of the stage in the browser, and keeps screenshots of it.
-- The phase review has no open Critical or Major finding.
+- Each finding of the phase review is recorded, and no open finding blocks
+  the next stage (section 4, step 6).
 
 ## 6. The test phase after B4
 
