@@ -15,6 +15,7 @@
  */
 import type { APIResponse } from "@playwright/test";
 
+import { expectAnswerEnvelope as expectEnvelope } from "../support/api-response";
 import { bearer, mintToken } from "../support/operator-token";
 import { freePort } from "../support/ports";
 import { spawnApp } from "../support/spawn-app";
@@ -23,22 +24,6 @@ import { configuredEnvironment, expect, test } from "./fixtures";
 
 const PROTECTED_PATHS = ["/api/health", "/api/admin/logs"] as const;
 const PROBE_PATHS = ["/api/health/live", "/api/health/ready"] as const;
-
-/** Asserts the error envelope of `sds-api-design` (`openapi.yaml`, `Error`) on an answer of a running app. */
-async function expectEnvelope(response: APIResponse, status: number, code: string): Promise<void> {
-  const text = await response.text();
-  expect(response.status(), `expected HTTP ${String(status)} ${code}, got HTTP ${String(response.status())} ${text.slice(0, 300)}`).toBe(
-    status,
-  );
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = text;
-  }
-  expect(body, "the error envelope").toMatchObject({ status: "fail", code, message: expect.any(String), details: null });
-  expect(Object.keys(typeof body === "object" && body !== null ? body : {}).sort()).toEqual(["code", "details", "message", "status"]);
-}
 
 /** The methods of an `Allow` header, in upper case. */
 function allowed(response: APIResponse): string[] {

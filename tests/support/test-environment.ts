@@ -116,6 +116,22 @@ export function productionEnvironment(input: AppEnvironmentInput): AppEnvironmen
   };
 }
 
+/** The names of the `ENTRA_*` settings in the environment (`sds-auth`, `credentials.md`, **Configuration**). */
+export function entraSettingNames(environment: AppEnvironment): string[] {
+  return Object.keys(environment).filter((name) => name.startsWith("ENTRA_"));
+}
+
+/**
+ * The settings of the demo (DEC-135): `APP_ENV` `demo`, every other setting
+ * of `productionEnvironment` (each other rule of `production` also applies),
+ * and no `ENTRA_*` setting. The test seams are off.
+ */
+export function demoEnvironment(input: Omit<AppEnvironmentInput, "jwksUri">): AppEnvironment {
+  // productionEnvironment needs a JWKS URI; the demo has none, so the value is removed with the other ENTRA_* settings.
+  const production = productionEnvironment({ ...input, jwksUri: "" });
+  return { ...without(production, ...entraSettingNames(production)), APP_ENV: "demo" };
+}
+
 /** Returns a copy of the environment without the named settings. */
 export function without(environment: AppEnvironment, ...names: readonly string[]): AppEnvironment {
   const copy: AppEnvironment = { ...environment };
