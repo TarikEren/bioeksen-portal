@@ -24,6 +24,30 @@
       "model": "CatalogProduct",
       "namespace": "public"
     },
+    "eifu_applicability": {
+      "model": "EifuApplicability",
+      "namespace": "public"
+    },
+    "eifu_document": {
+      "model": "EifuDocument",
+      "namespace": "public"
+    },
+    "eifu_document_file": {
+      "model": "EifuDocumentFile",
+      "namespace": "public"
+    },
+    "eifu_document_version": {
+      "model": "EifuDocumentVersion",
+      "namespace": "public"
+    },
+    "eifu_file_replacement": {
+      "model": "EifuFileReplacement",
+      "namespace": "public"
+    },
+    "eifu_lot_override": {
+      "model": "EifuLotOverride",
+      "namespace": "public"
+    },
     "identity_auth_token": {
       "model": "IdentityAuthToken",
       "namespace": "public"
@@ -321,6 +345,21 @@
                 },
                 "to": {
                   "model": "CatalogLotImport",
+                  "namespace": "public"
+                }
+              },
+              "overrides": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "lotId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuLotOverride",
                   "namespace": "public"
                 }
               }
@@ -756,6 +795,21 @@
               }
             },
             "relations": {
+              "applicabilities": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuApplicability",
+                  "namespace": "public"
+                }
+              },
               "catalogNumbers": {
                 "cardinality": "1:N",
                 "on": {
@@ -768,6 +822,21 @@
                 },
                 "to": {
                   "model": "CatalogCatalogNumber",
+                  "namespace": "public"
+                }
+              },
+              "documents": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocument",
                   "namespace": "public"
                 }
               },
@@ -819,6 +888,952 @@
               },
               "namespaceId": "public",
               "table": "catalog_product"
+            }
+          },
+          "EifuApplicability": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "documentVersionId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "effectiveFrom": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "effectiveTo": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "withdrawnAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              }
+            },
+            "relations": {
+              "documentVersion": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "documentVersionId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentVersion",
+                  "namespace": "public"
+                }
+              },
+              "product": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogProduct",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "documentVersionId": {
+                  "column": "document_version_id"
+                },
+                "effectiveFrom": {
+                  "column": "effective_from"
+                },
+                "effectiveTo": {
+                  "column": "effective_to"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "productId": {
+                  "column": "product_id"
+                },
+                "withdrawnAt": {
+                  "column": "withdrawn_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_applicability"
+            }
+          },
+          "EifuDocument": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "documentNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "documentType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "title": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              }
+            },
+            "relations": {
+              "product": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogProduct",
+                  "namespace": "public"
+                }
+              },
+              "versions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "documentId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentVersion",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "documentNumber": {
+                  "column": "document_number"
+                },
+                "documentType": {
+                  "column": "document_type"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "productId": {
+                  "column": "product_id"
+                },
+                "title": {
+                  "column": "title"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_document"
+            }
+          },
+          "EifuDocumentFile": {
+            "fields": {
+              "contentType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "documentVersionId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "fileHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "fileSizeBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "languageCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "originalFilename": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "storageKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "documentVersion": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "documentVersionId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentVersion",
+                  "namespace": "public"
+                }
+              },
+              "replacedBy": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "previousFileId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuFileReplacement",
+                  "namespace": "public"
+                }
+              },
+              "replacementOf": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "replacementFileId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuFileReplacement",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "contentType": {
+                  "column": "content_type"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "documentVersionId": {
+                  "column": "document_version_id"
+                },
+                "fileHash": {
+                  "column": "file_hash"
+                },
+                "fileSizeBytes": {
+                  "column": "file_size_bytes"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isActive": {
+                  "column": "is_active"
+                },
+                "languageCode": {
+                  "column": "language_code"
+                },
+                "originalFilename": {
+                  "column": "original_filename"
+                },
+                "storageKey": {
+                  "column": "storage_key"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_document_file"
+            }
+          },
+          "EifuDocumentVersion": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "documentId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "proposedEffectiveFrom": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "publishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "publishedByUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "revision": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "supersededAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "withdrawalReason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "withdrawnAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "withdrawnByUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "applicabilities": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "documentVersionId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuApplicability",
+                  "namespace": "public"
+                }
+              },
+              "document": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "documentId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocument",
+                  "namespace": "public"
+                }
+              },
+              "files": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "documentVersionId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentFile",
+                  "namespace": "public"
+                }
+              },
+              "overrides": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "documentVersionId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuLotOverride",
+                  "namespace": "public"
+                }
+              },
+              "replacements": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "documentVersionId"
+                  ]
+                },
+                "to": {
+                  "model": "EifuFileReplacement",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "documentId": {
+                  "column": "document_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "proposedEffectiveFrom": {
+                  "column": "proposed_effective_from"
+                },
+                "publishedAt": {
+                  "column": "published_at"
+                },
+                "publishedByUserId": {
+                  "column": "published_by_user_id"
+                },
+                "revision": {
+                  "column": "revision"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "supersededAt": {
+                  "column": "superseded_at"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "withdrawalReason": {
+                  "column": "withdrawal_reason"
+                },
+                "withdrawnAt": {
+                  "column": "withdrawn_at"
+                },
+                "withdrawnByUserId": {
+                  "column": "withdrawn_by_user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_document_version"
+            }
+          },
+          "EifuFileReplacement": {
+            "fields": {
+              "documentVersionId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "languageCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "previousFileHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "previousFileId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "reason": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "replacedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "replacedByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "replacementFileHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "replacementFileId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "documentVersion": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "documentVersionId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentVersion",
+                  "namespace": "public"
+                }
+              },
+              "previousFile": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "previousFileId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentFile",
+                  "namespace": "public"
+                }
+              },
+              "replacementFile": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "replacementFileId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentFile",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "documentVersionId": {
+                  "column": "document_version_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "languageCode": {
+                  "column": "language_code"
+                },
+                "previousFileHash": {
+                  "column": "previous_file_hash"
+                },
+                "previousFileId": {
+                  "column": "previous_file_id"
+                },
+                "reason": {
+                  "column": "reason"
+                },
+                "replacedAt": {
+                  "column": "replaced_at"
+                },
+                "replacedByUserId": {
+                  "column": "replaced_by_user_id"
+                },
+                "replacementFileHash": {
+                  "column": "replacement_file_hash"
+                },
+                "replacementFileId": {
+                  "column": "replacement_file_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_file_replacement"
+            }
+          },
+          "EifuLotOverride": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "createdByUserId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "documentVersionId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "endReason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "endedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "endedByUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "lotId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "reason": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "documentVersion": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "documentVersionId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "EifuDocumentVersion",
+                  "namespace": "public"
+                }
+              },
+              "lot": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "lotId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CatalogLot",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdByUserId": {
+                  "column": "created_by_user_id"
+                },
+                "documentVersionId": {
+                  "column": "document_version_id"
+                },
+                "endReason": {
+                  "column": "end_reason"
+                },
+                "endedAt": {
+                  "column": "ended_at"
+                },
+                "endedByUserId": {
+                  "column": "ended_by_user_id"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isActive": {
+                  "column": "is_active"
+                },
+                "lotId": {
+                  "column": "lot_id"
+                },
+                "reason": {
+                  "column": "reason"
+                }
+              },
+              "namespaceId": "public",
+              "table": "eifu_lot_override"
             }
           },
           "IdentityAuthToken": {
@@ -2422,6 +3437,843 @@
                 }
               ]
             },
+            "eifu_applicability": {
+              "checks": [
+                {
+                  "expression": "((effective_to IS NULL) OR (effective_to > effective_from))",
+                  "name": "applicability_period_is_ordered"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "document_version_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "effective_from": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": false
+                },
+                "effective_to": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "product_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "withdrawn_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "unique": [
+                      "document_version_id"
+                    ]
+                  },
+                  "name": "eifu_applicability_version_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "document_version_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_applicability"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_version"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "eifu_applicability_product_id_idx_22a2b7d2"
+                  },
+                  "name": "eifu_applicability_product_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "product_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_applicability"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_product"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "product_id",
+                    "effective_from"
+                  ],
+                  "name": "applicability_lookup_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "product_id"
+                  ],
+                  "name": "eifu_applicability_product_id_idx_22a2b7d2",
+                  "prefix": "eifu_applicability_product_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "document_version_id"
+                  ],
+                  "name": "applicability_one_period_per_version"
+                }
+              ]
+            },
+            "eifu_document": {
+              "checks": [
+                {
+                  "expression": "(char_length(document_number) <= 64)",
+                  "name": "eifu_document_number_length"
+                },
+                {
+                  "expression": "((jsonb_typeof(title) = 'object'::text) AND (jsonb_typeof((title -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((title -> 'en'::text)) = 'string'::text))",
+                  "name": "eifu_document_title_has_both_languages"
+                },
+                {
+                  "expression": "(document_type = 'IFU'::text)",
+                  "name": "eifu_document_type_is_known"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "document_number": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "document_type": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "product_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "title": {
+                  "codecId": "pg/jsonb@1",
+                  "dataType": "pg/jsonb",
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "eifu_document_product_idx"
+                  },
+                  "name": "eifu_document_product_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "product_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_product"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "product_id"
+                  ],
+                  "name": "eifu_document_product_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "document_number"
+                  ],
+                  "name": "document_number_unique"
+                }
+              ]
+            },
+            "eifu_document_file": {
+              "checks": [
+                {
+                  "expression": "(file_size_bytes > 0)",
+                  "name": "eifu_document_file_has_bytes"
+                },
+                {
+                  "expression": "(file_hash ~ '^[0-9a-f]{64}$'::text)",
+                  "name": "eifu_document_file_hash_is_sha256"
+                },
+                {
+                  "expression": "(char_length(language_code) <= 35)",
+                  "name": "eifu_document_file_language_code_length"
+                }
+              ],
+              "columns": {
+                "content_type": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "document_version_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "file_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "file_size_bytes": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "is_active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "language_code": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "original_filename": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "storage_key": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "eifu_document_file_version_idx"
+                  },
+                  "name": "eifu_document_file_version_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "document_version_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_file"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_version"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "document_version_id",
+                    "language_code"
+                  ],
+                  "name": "document_file_one_active_per_language",
+                  "unique": true,
+                  "where": "is_active"
+                },
+                {
+                  "columns": [
+                    "document_version_id"
+                  ],
+                  "name": "eifu_document_file_version_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "eifu_document_version": {
+              "checks": [
+                {
+                  "expression": "((status = 'DRAFT'::text) OR (published_at IS NOT NULL))",
+                  "name": "eifu_document_version_published_after_draft"
+                },
+                {
+                  "expression": "(char_length(revision) <= 16)",
+                  "name": "eifu_document_version_revision_length"
+                },
+                {
+                  "expression": "(status = ANY (ARRAY['DRAFT'::text, 'PUBLISHED'::text, 'SUPERSEDED'::text, 'WITHDRAWN'::text]))",
+                  "name": "eifu_document_version_status_is_known"
+                },
+                {
+                  "expression": "((status <> 'WITHDRAWN'::text) OR ((withdrawn_at IS NOT NULL) AND (withdrawal_reason IS NOT NULL) AND (btrim(withdrawal_reason) <> ''::text)))",
+                  "name": "eifu_document_version_withdrawal_is_complete"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "document_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "proposed_effective_from": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
+                "published_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "published_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "revision": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "superseded_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "withdrawal_reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "withdrawn_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "withdrawn_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "eifu_document_version_document_idx"
+                  },
+                  "name": "eifu_document_version_document_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "document_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_version"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "document_id"
+                  ],
+                  "name": "eifu_document_version_document_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "document_id",
+                    "revision"
+                  ],
+                  "name": "document_version_unique_revision"
+                }
+              ]
+            },
+            "eifu_file_replacement": {
+              "checks": [
+                {
+                  "expression": "(previous_file_hash <> replacement_file_hash)",
+                  "name": "eifu_file_replacement_hashes_differ"
+                },
+                {
+                  "expression": "(btrim(reason) <> ''::text)",
+                  "name": "file_replacement_reason_is_present"
+                }
+              ],
+              "columns": {
+                "document_version_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "language_code": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "previous_file_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "previous_file_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "replaced_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "replaced_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "replacement_file_hash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "replacement_file_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "eifu_file_replacement_version_idx"
+                  },
+                  "name": "eifu_file_replacement_version_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "document_version_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_file_replacement"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_version"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "eifu_file_replacement_previous_file_id_idx_a9524924"
+                  },
+                  "name": "eifu_file_replacement_previous_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "previous_file_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_file_replacement"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_file"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "eifu_file_replacement_replacement_file_id_idx_a5235946"
+                  },
+                  "name": "eifu_file_replacement_next_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "replacement_file_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_file_replacement"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_file"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "previous_file_id"
+                  ],
+                  "name": "eifu_file_replacement_previous_file_id_idx_a9524924",
+                  "prefix": "eifu_file_replacement_previous_file_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "replacement_file_id"
+                  ],
+                  "name": "eifu_file_replacement_replacement_file_id_idx_a5235946",
+                  "prefix": "eifu_file_replacement_replacement_file_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "document_version_id"
+                  ],
+                  "name": "eifu_file_replacement_version_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "eifu_lot_override": {
+              "checks": [
+                {
+                  "expression": "(is_active OR ((ended_at IS NOT NULL) AND (end_reason IS NOT NULL) AND (btrim(end_reason) <> ''::text)))",
+                  "name": "eifu_lot_override_end_is_complete"
+                },
+                {
+                  "expression": "(btrim(reason) <> ''::text)",
+                  "name": "lot_override_reason_is_present"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "created_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "document_version_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "end_reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "ended_at": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "ended_by_user_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "is_active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "lot_id": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "reason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "eifu_lot_override_lot_idx"
+                  },
+                  "name": "eifu_lot_override_lot_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "lot_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_lot_override"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "catalog_lot"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "eifu_lot_override_version_idx"
+                  },
+                  "name": "eifu_lot_override_version_fk",
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "document_version_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_lot_override"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "eifu_document_version"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "lot_id"
+                  ],
+                  "name": "eifu_lot_override_lot_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "document_version_id"
+                  ],
+                  "name": "eifu_lot_override_version_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "lot_id"
+                  ],
+                  "name": "lot_override_one_active_per_lot",
+                  "unique": true,
+                  "where": "is_active"
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "identity_auth_token": {
               "checks": [
                 {
@@ -3245,7 +5097,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "50c3e51e688ccd632a36f42612ab7efd04b595f604a949e8ecdc1fa3b0f85da5"
+    "storageHash": "611d61f0e7bd6becd3659f2734221f3eb0e11f628c9a533e5a893de8dcfde676"
   },
   "capabilities": {
     "postgres": {

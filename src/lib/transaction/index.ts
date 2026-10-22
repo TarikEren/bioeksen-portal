@@ -18,6 +18,8 @@ import { logger } from "@/lib/logging";
 import { type DbTransactionContext, type Executor, getDb, toDatabaseError } from "@/lib/db";
 
 export type { Executor } from "@/lib/db";
+/** The name of the constraint or the trigger rule that a failure names. A service uses it to tell one refusal from another. */
+export { violatedConstraint } from "@/lib/db";
 
 /** An effect that runs after the commit. It must not throw: the change is done already. */
 export type AfterCommitEffect = () => void | Promise<void>;

@@ -12,7 +12,7 @@ import { type SessionActor, requirePermission } from "@/lib/auth/session";
 import { now } from "@/lib/clock";
 import { AppError, CODE_MEANINGS, type FieldIssue } from "@/lib/errors";
 import { validationError } from "@/lib/http/validation";
-import { type Executor, readExecutor, runTransaction } from "@/lib/transaction";
+import { type Executor, readExecutor, runTransaction, violatedConstraint } from "@/lib/transaction";
 import type {
   CreateProductInput,
   LocalizedDescription,
@@ -54,6 +54,13 @@ function duplicateIdentity(): AppError {
 
 function lockedByLot(): AppError {
   return new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the stem or the status of a product with a LOT" });
+}
+
+/** The trigger `product_identity_is_settled` refuses a new stem or status while a document names the product (IFU-10 rule 5, DEC-096). */
+const SETTLED_BY_DOCUMENT_RULE = "product_identity_is_settled";
+
+function lockedByDocument(): AppError {
+  return new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason: "the stem or the status of a product that a document names" });
 }
 
 /** The product with the text id, locked for a change when `lock` is set. @throws AppError `RES-4200`. */
@@ -242,7 +249,9 @@ export async function updateProduct(actor: SessionActor, id: string, patch: Upda
     const identityChanged = internalCode !== product.internalCode || regulatoryStatus !== product.regulatoryStatus;
     if (identityChanged) {
       // CAT-10 rule 3: the stem and the status change only while the product has
-      // no LOT and no document. B3 adds the check of the documents here (CAT-10.AC4).
+      // no LOT and no document. The check of the documents is the trigger
+      // `product_identity_is_settled` (DEC-096): the catalog module does not
+      // import the eifu module, and the write below maps its refusal (CAT-10.AC4).
       const catalogNumbers = await listCatalogNumbersOfProducts(tx, [product.id]);
       if (
         (await countLotsOfCatalogNumbers(
@@ -265,7 +274,11 @@ export async function updateProduct(actor: SessionActor, id: string, patch: Upda
       return detailOf(tx, product);
     }
     const at = now();
-    await updateProductRow(tx, product.id, { internalCode, name, description, regulatoryStatus, kitCodeBase, now: at });
+    try {
+      await updateProductRow(tx, product.id, { internalCode, name, description, regulatoryStatus, kitCodeBase, now: at });
+    } catch (error) {
+      throw violatedConstraint(error) === SETTLED_BY_DOCUMENT_RULE ? lockedByDocument() : error;
+    }
     await recordAudit(tx, actor, {
       actionCode: "catalog.product.changed",
       entityType: "catalog_product",

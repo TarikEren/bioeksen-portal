@@ -174,7 +174,9 @@ export function toDatabaseError(error: unknown, operation: "read" | "write" | "d
         // `restrict_violation`: platform_refuse_delete() refuses the delete of a controlled record (DEC-010).
         return new AppError("RES-4302", "Operation not allowed in current state", { cause: error });
       }
-      if (code === "40001") {
+      if (code === "40001" || code === "23P01") {
+        // `exclusion_violation`: a concurrent write took the range that this write needs
+        // (`applicability_no_overlap_per_product`, IFU-30.AC7). The caller reads again and retries.
         return new AppError("RES-4301", "Conflicting concurrent update", { cause: error });
       }
       if (code.startsWith("40")) {
@@ -197,6 +199,24 @@ export function toDatabaseError(error: unknown, operation: "read" | "write" | "d
   return operation === "read"
     ? new AppError("DB-5000", "Query failed", { cause: error })
     : new AppError("DB-5001", "Write failed", { cause: error });
+}
+
+/**
+ * The name of the constraint, or of the trigger rule, that a failure of the
+ * driver names, or `null`. A trigger function names its rule with
+ * `RAISE ... USING CONSTRAINT`, so a service can tell one refusal from another
+ * without the text of the message.
+ */
+export function violatedConstraint(error: unknown): string | null {
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current instanceof Error; depth += 1) {
+    const constraint: unknown = Reflect.get(current, "constraint");
+    if (typeof constraint === "string" && constraint !== "") {
+      return constraint;
+    }
+    current = current.cause;
+  }
+  return null;
 }
 
 /**

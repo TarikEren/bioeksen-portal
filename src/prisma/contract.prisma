@@ -185,6 +185,8 @@ model CatalogProduct {
 
   catalogNumbers CatalogCatalogNumber[]
   lotImports     CatalogLotImport[]
+  documents      EifuDocument[]
+  applicabilities EifuApplicability[]
 
   @@unique([internalCode, regulatoryStatus], map: "product_unique_identity")
   @@check(expression: sql`((jsonb_typeof(name) = 'object'::text) AND (jsonb_typeof((name -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((name -> 'en'::text)) = 'string'::text))`, map: "catalog_product_name_has_both_languages")
@@ -238,6 +240,7 @@ model CatalogLot {
   catalogNumber CatalogCatalogNumber  @relation(fields: [catalogNumberId], references: [id], onDelete: Restrict, map: "catalog_lot_catalog_number_fk")
   lotImport     CatalogLotImport?     @relation(fields: [lotImportId], references: [id], onDelete: Restrict, map: "catalog_lot_lot_import_fk")
   importRows    CatalogLotImportRow[]
+  overrides     EifuLotOverride[]
 
   @@unique([catalogNumberId, lotNumber], map: "lot_unique_per_catalog_number")
   @@check(expression: sql`((expiry_date IS NULL) OR (expiry_date > manufacturing_date))`, map: "lot_expiry_after_manufacturing")
@@ -301,4 +304,171 @@ model CatalogLotImportRow {
   @@check(expression: sql`((reason IS NULL) OR (reason = ANY (ARRAY['LOT_ALREADY_EXISTS'::text, 'DUPLICATE_ROW'::text, 'DATE_DIFFERS_FROM_REGISTERED'::text, 'SUPPLIED_DATE_CONFLICT'::text, 'KIT_CODE_MISMATCH'::text, 'CONFLICTING_ROWS'::text, 'CATALOG_NUMBER_NOT_FOUND'::text, 'OTHER_PRODUCT'::text, 'LOT_MISSING'::text, 'LOT_FORMAT_INVALID'::text, 'LOT_DATE_INVALID'::text, 'SUPPLIED_DATE_INVALID'::text])))`, map: "catalog_lot_import_row_reason_is_known")
   @@index([lotId], map: "catalog_lot_import_row_lot_idx")
   @@map("catalog_lot_import_row")
+}
+
+// eifu_document: one IFU of one product (IFU-10). The document number comes from
+// Bioeksen's quality system and is unique (`document_number_unique`). `title`
+// holds both languages (DEC-011). The row is never deleted (DEC-010): the
+// triggers of the migration `eifu_documents` refuse DELETE and TRUNCATE. The
+// trigger `document_product_is_settled` refuses a new product after the first
+// publication (IFU-10 rule 2), and the trigger `product_identity_is_settled` on
+// `catalog_product` refuses a new stem or status while a document names the
+// product (IFU-10 rule 5, DEC-096). Neither trigger is part of the contract
+// (DEC-005).
+model EifuDocument {
+  id             BigInt               @id @default(autoincrement())
+  documentNumber String               @map("document_number")
+  documentType   String               @map("document_type")
+  title          Jsonb
+  productId      BigInt               @map("product_id")
+  createdAt      TimestamptzString(3) @map("created_at")
+  updatedAt      TimestamptzString(3) @map("updated_at")
+
+  product  CatalogProduct        @relation(fields: [productId], references: [id], onDelete: Restrict, map: "eifu_document_product_fk")
+  versions EifuDocumentVersion[]
+
+  @@unique([documentNumber], map: "document_number_unique")
+  @@check(expression: sql`(document_type = 'IFU'::text)`, map: "eifu_document_type_is_known")
+  @@check(expression: sql`(char_length(document_number) <= 64)`, map: "eifu_document_number_length")
+  @@check(expression: sql`((jsonb_typeof(title) = 'object'::text) AND (jsonb_typeof((title -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((title -> 'en'::text)) = 'string'::text))`, map: "eifu_document_title_has_both_languages")
+  @@index([productId], map: "eifu_document_product_idx")
+  @@map("eifu_document")
+}
+
+// eifu_document_version: one revision of a document (IFU-10). A version is DRAFT
+// until it is published (IFU-30). `*_by_user_id` columns hold user ids and have
+// no foreign key to identity_user (DEC-004). The row is never deleted (DEC-010).
+model EifuDocumentVersion {
+  id                    BigInt                @id @default(autoincrement())
+  documentId            BigInt                @map("document_id")
+  revision              String
+  status                String
+  proposedEffectiveFrom DateString?           @map("proposed_effective_from")
+  publishedAt           TimestamptzString(3)? @map("published_at")
+  publishedByUserId     BigInt?               @map("published_by_user_id")
+  supersededAt          TimestamptzString(3)? @map("superseded_at")
+  withdrawnAt           TimestamptzString(3)? @map("withdrawn_at")
+  withdrawnByUserId     BigInt?               @map("withdrawn_by_user_id")
+  withdrawalReason      String?               @map("withdrawal_reason")
+  createdAt             TimestamptzString(3)  @map("created_at")
+  updatedAt             TimestamptzString(3)  @map("updated_at")
+
+  document        EifuDocument          @relation(fields: [documentId], references: [id], onDelete: Restrict, map: "eifu_document_version_document_fk")
+  files           EifuDocumentFile[]
+  applicabilities EifuApplicability[]
+  replacements    EifuFileReplacement[]
+  overrides       EifuLotOverride[]
+
+  @@unique([documentId, revision], map: "document_version_unique_revision")
+  @@check(expression: sql`(status = ANY (ARRAY['DRAFT'::text, 'PUBLISHED'::text, 'SUPERSEDED'::text, 'WITHDRAWN'::text]))`, map: "eifu_document_version_status_is_known")
+  @@check(expression: sql`(char_length(revision) <= 16)`, map: "eifu_document_version_revision_length")
+  @@check(expression: sql`((status = 'DRAFT'::text) OR (published_at IS NOT NULL))`, map: "eifu_document_version_published_after_draft")
+  @@check(expression: sql`((status <> 'WITHDRAWN'::text) OR ((withdrawn_at IS NOT NULL) AND (withdrawal_reason IS NOT NULL) AND (btrim(withdrawal_reason) <> ''::text)))`, map: "eifu_document_version_withdrawal_is_complete")
+  @@index([documentId], map: "eifu_document_version_document_idx")
+  @@map("eifu_document_version")
+}
+
+// eifu_document_file: one PDF of a version for one language (IFU-20). A version
+// has at most one active file for each language
+// (`document_file_one_active_per_language`). The row and its stored object stay
+// when a file is deactivated or replaced (DEC-010, DEC-124). `storage_key`
+// never leaves the server.
+model EifuDocumentFile {
+  id                BigInt               @id @default(autoincrement())
+  documentVersionId BigInt               @map("document_version_id")
+  languageCode      String               @map("language_code")
+  storageKey        String               @map("storage_key")
+  fileHash          String               @map("file_hash")
+  fileSizeBytes     Int                  @map("file_size_bytes")
+  contentType       String               @map("content_type")
+  originalFilename  String?              @map("original_filename")
+  isActive          Boolean              @default(true) @map("is_active")
+  createdAt         TimestamptzString(3) @map("created_at")
+
+  documentVersion EifuDocumentVersion   @relation(fields: [documentVersionId], references: [id], onDelete: Restrict, map: "eifu_document_file_version_fk")
+  replacedBy      EifuFileReplacement[] @relation("ReplacementPrevious")
+  replacementOf   EifuFileReplacement[] @relation("ReplacementNext")
+
+  @@check(expression: sql`(char_length(language_code) <= 35)`, map: "eifu_document_file_language_code_length")
+  @@check(expression: sql`(file_hash ~ '^[0-9a-f]{64}$'::text)`, map: "eifu_document_file_hash_is_sha256")
+  @@check(expression: sql`(file_size_bytes > 0)`, map: "eifu_document_file_has_bytes")
+  @@index([documentVersionId, languageCode], where: sql`is_active`, unique: true, map: "document_file_one_active_per_language")
+  @@index([documentVersionId], map: "eifu_document_file_version_idx")
+  @@map("eifu_document_file")
+}
+
+// eifu_applicability: the period in which a published version applies to a
+// product (IFU-30, DEC-060, DEC-061). The period is half-open: `effective_from`
+// is inside it and `effective_to` is not. `withdrawn_at` marks the period of a
+// withdrawn version, and the period stays (DEC-010). The exclusion constraint
+// `applicability_no_overlap_per_product` and the trigger
+// `applicability_on_document_product` are raw operations of the migration
+// (DEC-005), because the contract cannot hold them.
+model EifuApplicability {
+  id                BigInt                @id @default(autoincrement())
+  documentVersionId BigInt                @map("document_version_id")
+  productId         BigInt                @map("product_id")
+  effectiveFrom     DateString            @map("effective_from")
+  effectiveTo       DateString?           @map("effective_to")
+  withdrawnAt       TimestamptzString(3)? @map("withdrawn_at")
+  createdAt         TimestamptzString(3)  @map("created_at")
+
+  documentVersion EifuDocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Restrict, map: "eifu_applicability_version_fk")
+  product         CatalogProduct      @relation(fields: [productId], references: [id], onDelete: Restrict, map: "eifu_applicability_product_fk")
+
+  @@unique([documentVersionId], map: "applicability_one_period_per_version")
+  @@check(expression: sql`((effective_to IS NULL) OR (effective_to > effective_from))`, map: "applicability_period_is_ordered")
+  @@index([productId, effectiveFrom], map: "applicability_lookup_idx")
+  @@map("eifu_applicability")
+}
+
+// eifu_file_replacement: the correction of a file of a published version
+// (IFU-32, DEC-065). It holds both hashes, the actor, the time and the reason.
+model EifuFileReplacement {
+  id                  BigInt               @id @default(autoincrement())
+  documentVersionId   BigInt               @map("document_version_id")
+  languageCode        String               @map("language_code")
+  previousFileId      BigInt               @map("previous_file_id")
+  replacementFileId   BigInt               @map("replacement_file_id")
+  previousFileHash    String               @map("previous_file_hash")
+  replacementFileHash String               @map("replacement_file_hash")
+  replacedByUserId    BigInt               @map("replaced_by_user_id")
+  replacedAt          TimestamptzString(3) @map("replaced_at")
+  reason              String
+
+  documentVersion EifuDocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Restrict, map: "eifu_file_replacement_version_fk")
+  previousFile    EifuDocumentFile    @relation("ReplacementPrevious", fields: [previousFileId], references: [id], onDelete: Restrict, map: "eifu_file_replacement_previous_fk")
+  replacementFile EifuDocumentFile    @relation("ReplacementNext", fields: [replacementFileId], references: [id], onDelete: Restrict, map: "eifu_file_replacement_next_fk")
+
+  @@check(expression: sql`(btrim(reason) <> ''::text)`, map: "file_replacement_reason_is_present")
+  @@check(expression: sql`(previous_file_hash <> replacement_file_hash)`, map: "eifu_file_replacement_hashes_differ")
+  @@index([documentVersionId], map: "eifu_file_replacement_version_idx")
+  @@map("eifu_file_replacement")
+}
+
+// eifu_lot_override: a controlled exception that sends one LOT to one version
+// (IFU-40, DEC-066). A LOT has at most one active override
+// (`lot_override_one_active_per_lot`). An override ends by deactivation with a
+// reason, and the row stays (DEC-010).
+model EifuLotOverride {
+  id                BigInt                @id @default(autoincrement())
+  lotId             BigInt                @map("lot_id")
+  documentVersionId BigInt                @map("document_version_id")
+  reason            String
+  createdByUserId   BigInt                @map("created_by_user_id")
+  createdAt         TimestamptzString(3)  @map("created_at")
+  isActive          Boolean               @default(true) @map("is_active")
+  endedByUserId     BigInt?               @map("ended_by_user_id")
+  endedAt           TimestamptzString(3)? @map("ended_at")
+  endReason         String?               @map("end_reason")
+
+  lot             CatalogLot          @relation(fields: [lotId], references: [id], onDelete: Restrict, map: "eifu_lot_override_lot_fk")
+  documentVersion EifuDocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Restrict, map: "eifu_lot_override_version_fk")
+
+  @@check(expression: sql`(btrim(reason) <> ''::text)`, map: "lot_override_reason_is_present")
+  @@check(expression: sql`(is_active OR ((ended_at IS NOT NULL) AND (end_reason IS NOT NULL) AND (btrim(end_reason) <> ''::text)))`, map: "eifu_lot_override_end_is_complete")
+  @@index([lotId], where: sql`is_active`, unique: true, map: "lot_override_one_active_per_lot")
+  @@index([lotId], map: "eifu_lot_override_lot_idx")
+  @@index([documentVersionId], map: "eifu_lot_override_version_idx")
+  @@map("eifu_lot_override")
 }

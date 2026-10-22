@@ -15,7 +15,7 @@ import { findRequestContext } from "@/lib/request-context";
 
 import { type JsonObject, insertAuditRecord } from "../repositories/audit-repository";
 
-/** The actions of release 1 that the items mark as audited (the nine of the catalog: B2 contract, **Data**), as `<module>.<entity>.<verb>`. */
+/** The actions of release 1 that the items mark as audited (the catalog: B2 contract, **Data**; the eleven of e-IFU: B3 contract, **Data**), as `<module>.<entity>.<verb>`. */
 export type AuditActionCode =
   | "identity.user.created"
   | "identity.user.invited"
@@ -30,7 +30,18 @@ export type AuditActionCode =
   | "catalog.catalog_number.deactivated"
   | "catalog.lot.registered"
   | "catalog.lot.manufacturing_date_corrected"
-  | "catalog.lot_import.committed";
+  | "catalog.lot_import.committed"
+  | "eifu.document.created"
+  | "eifu.document.changed"
+  | "eifu.document_version.created"
+  | "eifu.document_version.changed"
+  | "eifu.document_file.uploaded"
+  | "eifu.document_file.deactivated"
+  | "eifu.document_version.published"
+  | "eifu.document_version.withdrawn"
+  | "eifu.document_file.replaced"
+  | "eifu.lot_override.created"
+  | "eifu.lot_override.ended";
 
 export type AuditActor = { readonly type: "USER"; readonly userId: string } | { readonly type: "SYSTEM" };
 

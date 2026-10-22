@@ -1,0 +1,1830 @@
+[
+  {
+    "id": "table.eifu_applicability",
+    "label": "Create table \"eifu_applicability\"",
+    "summary": "Creates table \"eifu_applicability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_applicability\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_applicability\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_applicability\" (\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"document_version_id\" int8 NOT NULL,\n  \"effective_from\" date NOT NULL,\n  \"effective_to\" date,\n  \"id\" BIGSERIAL NOT NULL,\n  \"product_id\" int8 NOT NULL,\n  \"withdrawn_at\" timestamptz(3),\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"applicability_period_is_ordered\" CHECK (((effective_to IS NULL) OR (effective_to > effective_from)))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_applicability\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_document",
+    "label": "Create table \"eifu_document\"",
+    "summary": "Creates table \"eifu_document\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_document"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_document\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_document\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_document\" (\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"document_number\" text NOT NULL,\n  \"document_type\" text NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"product_id\" int8 NOT NULL,\n  \"title\" jsonb NOT NULL,\n  \"updated_at\" timestamptz(3) NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"eifu_document_number_length\" CHECK ((char_length(document_number) <= 64)),\n  CONSTRAINT \"eifu_document_title_has_both_languages\" CHECK (((jsonb_typeof(title) = 'object'::text) AND (jsonb_typeof((title -> 'tr'::text)) = 'string'::text) AND (jsonb_typeof((title -> 'en'::text)) = 'string'::text))),\n  CONSTRAINT \"eifu_document_type_is_known\" CHECK ((document_type = 'IFU'::text))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_document\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_document_file",
+    "label": "Create table \"eifu_document_file\"",
+    "summary": "Creates table \"eifu_document_file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_document_file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_document_file\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_file\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_document_file\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_document_file\" (\n  \"content_type\" text NOT NULL,\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"document_version_id\" int8 NOT NULL,\n  \"file_hash\" text NOT NULL,\n  \"file_size_bytes\" int4 NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"language_code\" text NOT NULL,\n  \"original_filename\" text,\n  \"storage_key\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"eifu_document_file_has_bytes\" CHECK ((file_size_bytes > 0)),\n  CONSTRAINT \"eifu_document_file_hash_is_sha256\" CHECK ((file_hash ~ '^[0-9a-f]{64}$'::text)),\n  CONSTRAINT \"eifu_document_file_language_code_length\" CHECK ((char_length(language_code) <= 35))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_document_file\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_file\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_document_version",
+    "label": "Create table \"eifu_document_version\"",
+    "summary": "Creates table \"eifu_document_version\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_document_version"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_document_version\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_document_version\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_document_version\" (\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"document_id\" int8 NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"proposed_effective_from\" date,\n  \"published_at\" timestamptz(3),\n  \"published_by_user_id\" int8,\n  \"revision\" text NOT NULL,\n  \"status\" text NOT NULL,\n  \"superseded_at\" timestamptz(3),\n  \"updated_at\" timestamptz(3) NOT NULL,\n  \"withdrawal_reason\" text,\n  \"withdrawn_at\" timestamptz(3),\n  \"withdrawn_by_user_id\" int8,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"eifu_document_version_published_after_draft\" CHECK (((status = 'DRAFT'::text) OR (published_at IS NOT NULL))),\n  CONSTRAINT \"eifu_document_version_revision_length\" CHECK ((char_length(revision) <= 16)),\n  CONSTRAINT \"eifu_document_version_status_is_known\" CHECK ((status = ANY (ARRAY['DRAFT'::text, 'PUBLISHED'::text, 'SUPERSEDED'::text, 'WITHDRAWN'::text]))),\n  CONSTRAINT \"eifu_document_version_withdrawal_is_complete\" CHECK (((status <> 'WITHDRAWN'::text) OR ((withdrawn_at IS NOT NULL) AND (withdrawal_reason IS NOT NULL) AND (btrim(withdrawal_reason) <> ''::text))))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_document_version\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_file_replacement",
+    "label": "Create table \"eifu_file_replacement\"",
+    "summary": "Creates table \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_file_replacement\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_file_replacement\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_file_replacement\" (\n  \"document_version_id\" int8 NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"language_code\" text NOT NULL,\n  \"previous_file_hash\" text NOT NULL,\n  \"previous_file_id\" int8 NOT NULL,\n  \"reason\" text NOT NULL,\n  \"replaced_at\" timestamptz(3) NOT NULL,\n  \"replaced_by_user_id\" int8 NOT NULL,\n  \"replacement_file_hash\" text NOT NULL,\n  \"replacement_file_id\" int8 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"eifu_file_replacement_hashes_differ\" CHECK ((previous_file_hash <> replacement_file_hash)),\n  CONSTRAINT \"file_replacement_reason_is_present\" CHECK ((btrim(reason) <> ''::text))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_file_replacement\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.eifu_lot_override",
+    "label": "Create table \"eifu_lot_override\"",
+    "summary": "Creates table \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"eifu_lot_override\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"eifu_lot_override\"",
+        "sql": "CREATE TABLE \"public\".\"eifu_lot_override\" (\n  \"created_at\" timestamptz(3) NOT NULL,\n  \"created_by_user_id\" int8 NOT NULL,\n  \"document_version_id\" int8 NOT NULL,\n  \"end_reason\" text,\n  \"ended_at\" timestamptz(3),\n  \"ended_by_user_id\" int8,\n  \"id\" BIGSERIAL NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"lot_id\" int8 NOT NULL,\n  \"reason\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"eifu_lot_override_end_is_complete\" CHECK ((is_active OR ((ended_at IS NOT NULL) AND (end_reason IS NOT NULL) AND (btrim(end_reason) <> ''::text)))),\n  CONSTRAINT \"lot_override_reason_is_present\" CHECK ((btrim(reason) <> ''::text))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"eifu_lot_override\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.eifu_applicability.applicability_one_period_per_version",
+    "label": "Add unique constraint on \"eifu_applicability\" (document_version_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "applicability_one_period_per_version",
+        "table": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"applicability_one_period_per_version\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "applicability_one_period_per_version",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"applicability_one_period_per_version\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_applicability\" ADD CONSTRAINT \"applicability_one_period_per_version\" UNIQUE (\"document_version_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"applicability_one_period_per_version\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "applicability_one_period_per_version",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.eifu_document.document_number_unique",
+    "label": "Add unique constraint on \"eifu_document\" (document_number)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "document_number_unique",
+        "table": "eifu_document"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"document_number_unique\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "document_number_unique",
+          "public",
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"document_number_unique\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_document\" ADD CONSTRAINT \"document_number_unique\" UNIQUE (\"document_number\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"document_number_unique\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "document_number_unique",
+          "public",
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.eifu_document_version.document_version_unique_revision",
+    "label": "Add unique constraint on \"eifu_document_version\" (document_id, revision)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "document_version_unique_revision",
+        "table": "eifu_document_version"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"document_version_unique_revision\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "document_version_unique_revision",
+          "public",
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"document_version_unique_revision\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_document_version\" ADD CONSTRAINT \"document_version_unique_revision\" UNIQUE (\"document_id\", \"revision\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"document_version_unique_revision\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "document_version_unique_revision",
+          "public",
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_applicability.applicability_lookup_idx",
+    "label": "Create index \"applicability_lookup_idx\" on \"eifu_applicability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "applicability_lookup_idx",
+        "table": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"applicability_lookup_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"applicability_lookup_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"applicability_lookup_idx\"",
+        "sql": "CREATE INDEX \"applicability_lookup_idx\" ON \"public\".\"eifu_applicability\" (\"product_id\", \"effective_from\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"applicability_lookup_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"applicability_lookup_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_applicability.eifu_applicability_product_id_idx_22a2b7d2",
+    "label": "Create index \"eifu_applicability_product_id_idx_22a2b7d2\" on \"eifu_applicability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_applicability_product_id_idx_22a2b7d2",
+        "table": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_applicability_product_id_idx_22a2b7d2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_applicability_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_applicability_product_id_idx_22a2b7d2\"",
+        "sql": "CREATE INDEX \"eifu_applicability_product_id_idx_22a2b7d2\" ON \"public\".\"eifu_applicability\" (\"product_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_applicability_product_id_idx_22a2b7d2\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_applicability_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_document.eifu_document_product_idx",
+    "label": "Create index \"eifu_document_product_idx\" on \"eifu_document\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_document_product_idx",
+        "table": "eifu_document"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_document_product_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_product_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_document_product_idx\"",
+        "sql": "CREATE INDEX \"eifu_document_product_idx\" ON \"public\".\"eifu_document\" (\"product_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_document_product_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_product_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_document_file.document_file_one_active_per_language",
+    "label": "Create index \"document_file_one_active_per_language\" on \"eifu_document_file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "document_file_one_active_per_language",
+        "table": "eifu_document_file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"document_file_one_active_per_language\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"document_file_one_active_per_language\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"document_file_one_active_per_language\"",
+        "sql": "CREATE UNIQUE INDEX \"document_file_one_active_per_language\" ON \"public\".\"eifu_document_file\" (\"document_version_id\", \"language_code\") WHERE (is_active)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"document_file_one_active_per_language\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"document_file_one_active_per_language\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_document_file.eifu_document_file_version_idx",
+    "label": "Create index \"eifu_document_file_version_idx\" on \"eifu_document_file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_document_file_version_idx",
+        "table": "eifu_document_file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_document_file_version_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_file_version_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_document_file_version_idx\"",
+        "sql": "CREATE INDEX \"eifu_document_file_version_idx\" ON \"public\".\"eifu_document_file\" (\"document_version_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_document_file_version_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_file_version_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_document_version.eifu_document_version_document_idx",
+    "label": "Create index \"eifu_document_version_document_idx\" on \"eifu_document_version\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_document_version_document_idx",
+        "table": "eifu_document_version"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_document_version_document_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_version_document_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_document_version_document_idx\"",
+        "sql": "CREATE INDEX \"eifu_document_version_document_idx\" ON \"public\".\"eifu_document_version\" (\"document_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_document_version_document_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_document_version_document_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_file_replacement.eifu_file_replacement_previous_file_id_idx_a9524924",
+    "label": "Create index \"eifu_file_replacement_previous_file_id_idx_a9524924\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_file_replacement_previous_file_id_idx_a9524924",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_file_replacement_previous_file_id_idx_a9524924\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_previous_file_id_idx_a9524924\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_file_replacement_previous_file_id_idx_a9524924\"",
+        "sql": "CREATE INDEX \"eifu_file_replacement_previous_file_id_idx_a9524924\" ON \"public\".\"eifu_file_replacement\" (\"previous_file_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_file_replacement_previous_file_id_idx_a9524924\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_previous_file_id_idx_a9524924\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_file_replacement.eifu_file_replacement_replacement_file_id_idx_a5235946",
+    "label": "Create index \"eifu_file_replacement_replacement_file_id_idx_a5235946\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_file_replacement_replacement_file_id_idx_a5235946",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_file_replacement_replacement_file_id_idx_a5235946\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_replacement_file_id_idx_a5235946\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_file_replacement_replacement_file_id_idx_a5235946\"",
+        "sql": "CREATE INDEX \"eifu_file_replacement_replacement_file_id_idx_a5235946\" ON \"public\".\"eifu_file_replacement\" (\"replacement_file_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_file_replacement_replacement_file_id_idx_a5235946\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_replacement_file_id_idx_a5235946\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_file_replacement.eifu_file_replacement_version_idx",
+    "label": "Create index \"eifu_file_replacement_version_idx\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_file_replacement_version_idx",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_file_replacement_version_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_version_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_file_replacement_version_idx\"",
+        "sql": "CREATE INDEX \"eifu_file_replacement_version_idx\" ON \"public\".\"eifu_file_replacement\" (\"document_version_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_file_replacement_version_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_file_replacement_version_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_lot_override.eifu_lot_override_lot_idx",
+    "label": "Create index \"eifu_lot_override_lot_idx\" on \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_lot_override_lot_idx",
+        "table": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_lot_override_lot_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override_lot_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_lot_override_lot_idx\"",
+        "sql": "CREATE INDEX \"eifu_lot_override_lot_idx\" ON \"public\".\"eifu_lot_override\" (\"lot_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_lot_override_lot_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override_lot_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_lot_override.eifu_lot_override_version_idx",
+    "label": "Create index \"eifu_lot_override_version_idx\" on \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "eifu_lot_override_version_idx",
+        "table": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"eifu_lot_override_version_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override_version_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"eifu_lot_override_version_idx\"",
+        "sql": "CREATE INDEX \"eifu_lot_override_version_idx\" ON \"public\".\"eifu_lot_override\" (\"document_version_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"eifu_lot_override_version_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"eifu_lot_override_version_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.eifu_lot_override.lot_override_one_active_per_lot",
+    "label": "Create index \"lot_override_one_active_per_lot\" on \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "lot_override_one_active_per_lot",
+        "table": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"lot_override_one_active_per_lot\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"lot_override_one_active_per_lot\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"lot_override_one_active_per_lot\"",
+        "sql": "CREATE UNIQUE INDEX \"lot_override_one_active_per_lot\" ON \"public\".\"eifu_lot_override\" (\"lot_id\") WHERE (is_active)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"lot_override_one_active_per_lot\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"lot_override_one_active_per_lot\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_applicability.eifu_applicability_version_fk",
+    "label": "Add foreign key \"eifu_applicability_version_fk\" on \"eifu_applicability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_applicability_version_fk",
+        "table": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_applicability_version_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_applicability_version_fk",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_applicability_version_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_applicability\"\nADD CONSTRAINT \"eifu_applicability_version_fk\"\nFOREIGN KEY (\"document_version_id\")\nREFERENCES \"public\".\"eifu_document_version\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_applicability_version_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_applicability_version_fk",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_applicability.eifu_applicability_product_fk",
+    "label": "Add foreign key \"eifu_applicability_product_fk\" on \"eifu_applicability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_applicability_product_fk",
+        "table": "eifu_applicability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_applicability_product_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_applicability_product_fk",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_applicability_product_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_applicability\"\nADD CONSTRAINT \"eifu_applicability_product_fk\"\nFOREIGN KEY (\"product_id\")\nREFERENCES \"public\".\"catalog_product\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_applicability_product_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_applicability_product_fk",
+          "public",
+          "\"public\".\"eifu_applicability\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_document.eifu_document_product_fk",
+    "label": "Add foreign key \"eifu_document_product_fk\" on \"eifu_document\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_document_product_fk",
+        "table": "eifu_document"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_document_product_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_product_fk",
+          "public",
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_document_product_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_document\"\nADD CONSTRAINT \"eifu_document_product_fk\"\nFOREIGN KEY (\"product_id\")\nREFERENCES \"public\".\"catalog_product\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_document_product_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_product_fk",
+          "public",
+          "\"public\".\"eifu_document\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_document_file.eifu_document_file_version_fk",
+    "label": "Add foreign key \"eifu_document_file_version_fk\" on \"eifu_document_file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_document_file_version_fk",
+        "table": "eifu_document_file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_document_file_version_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_file_version_fk",
+          "public",
+          "\"public\".\"eifu_document_file\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_document_file_version_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_document_file\"\nADD CONSTRAINT \"eifu_document_file_version_fk\"\nFOREIGN KEY (\"document_version_id\")\nREFERENCES \"public\".\"eifu_document_version\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_document_file_version_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_file_version_fk",
+          "public",
+          "\"public\".\"eifu_document_file\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_document_version.eifu_document_version_document_fk",
+    "label": "Add foreign key \"eifu_document_version_document_fk\" on \"eifu_document_version\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_document_version_document_fk",
+        "table": "eifu_document_version"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_document_version_document_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_version_document_fk",
+          "public",
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_document_version_document_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_document_version\"\nADD CONSTRAINT \"eifu_document_version_document_fk\"\nFOREIGN KEY (\"document_id\")\nREFERENCES \"public\".\"eifu_document\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_document_version_document_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_document_version_document_fk",
+          "public",
+          "\"public\".\"eifu_document_version\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_file_replacement.eifu_file_replacement_version_fk",
+    "label": "Add foreign key \"eifu_file_replacement_version_fk\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_file_replacement_version_fk",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_file_replacement_version_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_version_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_file_replacement_version_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_file_replacement\"\nADD CONSTRAINT \"eifu_file_replacement_version_fk\"\nFOREIGN KEY (\"document_version_id\")\nREFERENCES \"public\".\"eifu_document_version\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_file_replacement_version_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_version_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_file_replacement.eifu_file_replacement_previous_fk",
+    "label": "Add foreign key \"eifu_file_replacement_previous_fk\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_file_replacement_previous_fk",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_file_replacement_previous_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_previous_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_file_replacement_previous_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_file_replacement\"\nADD CONSTRAINT \"eifu_file_replacement_previous_fk\"\nFOREIGN KEY (\"previous_file_id\")\nREFERENCES \"public\".\"eifu_document_file\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_file_replacement_previous_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_previous_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_file_replacement.eifu_file_replacement_next_fk",
+    "label": "Add foreign key \"eifu_file_replacement_next_fk\" on \"eifu_file_replacement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_file_replacement_next_fk",
+        "table": "eifu_file_replacement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_file_replacement_next_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_next_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_file_replacement_next_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_file_replacement\"\nADD CONSTRAINT \"eifu_file_replacement_next_fk\"\nFOREIGN KEY (\"replacement_file_id\")\nREFERENCES \"public\".\"eifu_document_file\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_file_replacement_next_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_file_replacement_next_fk",
+          "public",
+          "\"public\".\"eifu_file_replacement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_lot_override.eifu_lot_override_lot_fk",
+    "label": "Add foreign key \"eifu_lot_override_lot_fk\" on \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_lot_override_lot_fk",
+        "table": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_lot_override_lot_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_lot_override_lot_fk",
+          "public",
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_lot_override_lot_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_lot_override\"\nADD CONSTRAINT \"eifu_lot_override_lot_fk\"\nFOREIGN KEY (\"lot_id\")\nREFERENCES \"public\".\"catalog_lot\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_lot_override_lot_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_lot_override_lot_fk",
+          "public",
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.eifu_lot_override.eifu_lot_override_version_fk",
+    "label": "Add foreign key \"eifu_lot_override_version_fk\" on \"eifu_lot_override\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "eifu_lot_override_version_fk",
+        "table": "eifu_lot_override"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"eifu_lot_override_version_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_lot_override_version_fk",
+          "public",
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"eifu_lot_override_version_fk\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_lot_override\"\nADD CONSTRAINT \"eifu_lot_override_version_fk\"\nFOREIGN KEY (\"document_version_id\")\nREFERENCES \"public\".\"eifu_document_version\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"eifu_lot_override_version_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "eifu_lot_override_version_fk",
+          "public",
+          "\"public\".\"eifu_lot_override\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "extension.btree_gist",
+    "label": "Create extension \"btree_gist\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure extension \"btree_gist\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'btree_gist')) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create extension \"btree_gist\"",
+        "sql": "CREATE EXTENSION IF NOT EXISTS \"btree_gist\"",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify extension \"btree_gist\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'btree_gist')) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "constraint.applicability_no_overlap_per_product",
+    "label": "Create constraint \"applicability_no_overlap_per_product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"applicability_no_overlap_per_product\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'applicability_no_overlap_per_product' AND conrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create constraint \"applicability_no_overlap_per_product\"",
+        "sql": "ALTER TABLE \"public\".\"eifu_applicability\" ADD CONSTRAINT \"applicability_no_overlap_per_product\" EXCLUDE USING gist (\"product_id\" WITH =, daterange(\"effective_from\", \"effective_to\", '[)') WITH &&) WHERE (\"withdrawn_at\" IS NULL)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"applicability_no_overlap_per_product\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'applicability_no_overlap_per_product' AND conrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "function.eifu_document_product_is_settled",
+    "label": "Create function \"eifu_document_product_is_settled\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure function \"eifu_document_product_is_settled\" is not there",
+        "sql": "SELECT NOT (to_regprocedure('public.eifu_document_product_is_settled()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create function \"eifu_document_product_is_settled\"",
+        "sql": "CREATE FUNCTION \"public\".\"eifu_document_product_is_settled\"() RETURNS trigger LANGUAGE plpgsql AS $function$\nBEGIN\n  IF EXISTS (SELECT 1 FROM \"public\".\"eifu_document_version\" WHERE \"document_id\" = OLD.\"id\" AND \"status\" <> 'DRAFT') THEN\n    RAISE EXCEPTION 'the product of the document % does not change after a publication', OLD.\"id\"\n      USING ERRCODE = 'restrict_violation', CONSTRAINT = 'document_product_is_settled';\n  END IF;\n  RETURN NEW;\nEND;\n$function$",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify function \"eifu_document_product_is_settled\" exists",
+        "sql": "SELECT (to_regprocedure('public.eifu_document_product_is_settled()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.document_product_is_settled",
+    "label": "Create trigger \"document_product_is_settled\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"document_product_is_settled\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'document_product_is_settled' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"document_product_is_settled\"",
+        "sql": "CREATE TRIGGER \"document_product_is_settled\" BEFORE UPDATE OF \"product_id\" ON \"public\".\"eifu_document\" FOR EACH ROW WHEN (OLD.\"product_id\" IS DISTINCT FROM NEW.\"product_id\") EXECUTE FUNCTION \"public\".\"eifu_document_product_is_settled\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"document_product_is_settled\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'document_product_is_settled' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "function.eifu_applicability_on_document_product",
+    "label": "Create function \"eifu_applicability_on_document_product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure function \"eifu_applicability_on_document_product\" is not there",
+        "sql": "SELECT NOT (to_regprocedure('public.eifu_applicability_on_document_product()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create function \"eifu_applicability_on_document_product\"",
+        "sql": "CREATE FUNCTION \"public\".\"eifu_applicability_on_document_product\"() RETURNS trigger LANGUAGE plpgsql AS $function$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM \"public\".\"eifu_document_version\" v\n    JOIN \"public\".\"eifu_document\" d ON d.\"id\" = v.\"document_id\"\n    WHERE v.\"id\" = NEW.\"document_version_id\" AND d.\"product_id\" = NEW.\"product_id\"\n  ) THEN\n    RAISE EXCEPTION 'the product of a period is not the product of its document'\n      USING ERRCODE = 'check_violation', CONSTRAINT = 'applicability_on_document_product';\n  END IF;\n  RETURN NEW;\nEND;\n$function$",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify function \"eifu_applicability_on_document_product\" exists",
+        "sql": "SELECT (to_regprocedure('public.eifu_applicability_on_document_product()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.applicability_on_document_product",
+    "label": "Create trigger \"applicability_on_document_product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"applicability_on_document_product\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'applicability_on_document_product' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"applicability_on_document_product\"",
+        "sql": "CREATE TRIGGER \"applicability_on_document_product\" BEFORE INSERT OR UPDATE OF \"document_version_id\", \"product_id\" ON \"public\".\"eifu_applicability\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"eifu_applicability_on_document_product\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"applicability_on_document_product\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'applicability_on_document_product' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "function.eifu_product_identity_is_settled",
+    "label": "Create function \"eifu_product_identity_is_settled\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure function \"eifu_product_identity_is_settled\" is not there",
+        "sql": "SELECT NOT (to_regprocedure('public.eifu_product_identity_is_settled()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create function \"eifu_product_identity_is_settled\"",
+        "sql": "CREATE FUNCTION \"public\".\"eifu_product_identity_is_settled\"() RETURNS trigger LANGUAGE plpgsql AS $function$\nBEGIN\n  IF EXISTS (SELECT 1 FROM \"public\".\"eifu_document\" WHERE \"product_id\" = OLD.\"id\") THEN\n    RAISE EXCEPTION 'the stem and the regulatory status of the product % do not change while a document names it', OLD.\"id\"\n      USING ERRCODE = 'restrict_violation', CONSTRAINT = 'product_identity_is_settled';\n  END IF;\n  RETURN NEW;\nEND;\n$function$",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify function \"eifu_product_identity_is_settled\" exists",
+        "sql": "SELECT (to_regprocedure('public.eifu_product_identity_is_settled()') IS NOT NULL) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.product_identity_is_settled",
+    "label": "Create trigger \"product_identity_is_settled\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"product_identity_is_settled\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'product_identity_is_settled' AND tgrelid = to_regclass('public.catalog_product'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"product_identity_is_settled\"",
+        "sql": "CREATE TRIGGER \"product_identity_is_settled\" BEFORE UPDATE OF \"internal_code\", \"regulatory_status\" ON \"public\".\"catalog_product\" FOR EACH ROW WHEN (OLD.\"internal_code\" IS DISTINCT FROM NEW.\"internal_code\" OR OLD.\"regulatory_status\" IS DISTINCT FROM NEW.\"regulatory_status\") EXECUTE FUNCTION \"public\".\"eifu_product_identity_is_settled\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"product_identity_is_settled\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'product_identity_is_settled' AND tgrelid = to_regclass('public.catalog_product'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_refuse_delete",
+    "label": "Create trigger \"eifu_document_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_refuse_delete' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_document_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_document\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_refuse_delete' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_refuse_truncate",
+    "label": "Create trigger \"eifu_document_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_document_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_document\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_version_refuse_delete",
+    "label": "Create trigger \"eifu_document_version_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_version_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_version_refuse_delete' AND tgrelid = to_regclass('public.eifu_document_version'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_version_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_document_version_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_document_version\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_version_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_version_refuse_delete' AND tgrelid = to_regclass('public.eifu_document_version'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_version_refuse_truncate",
+    "label": "Create trigger \"eifu_document_version_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_version_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_version_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document_version'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_version_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_document_version_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_document_version\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_version_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_version_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document_version'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_file_refuse_delete",
+    "label": "Create trigger \"eifu_document_file_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_file_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_file_refuse_delete' AND tgrelid = to_regclass('public.eifu_document_file'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_file_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_document_file_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_document_file\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_file_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_file_refuse_delete' AND tgrelid = to_regclass('public.eifu_document_file'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_document_file_refuse_truncate",
+    "label": "Create trigger \"eifu_document_file_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_document_file_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_file_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document_file'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_document_file_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_document_file_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_document_file\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_document_file_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_document_file_refuse_truncate' AND tgrelid = to_regclass('public.eifu_document_file'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_applicability_refuse_delete",
+    "label": "Create trigger \"eifu_applicability_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_applicability_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_applicability_refuse_delete' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_applicability_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_applicability_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_applicability\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_applicability_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_applicability_refuse_delete' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_applicability_refuse_truncate",
+    "label": "Create trigger \"eifu_applicability_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_applicability_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_applicability_refuse_truncate' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_applicability_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_applicability_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_applicability\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_applicability_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_applicability_refuse_truncate' AND tgrelid = to_regclass('public.eifu_applicability'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_file_replacement_refuse_delete",
+    "label": "Create trigger \"eifu_file_replacement_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_file_replacement_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_file_replacement_refuse_delete' AND tgrelid = to_regclass('public.eifu_file_replacement'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_file_replacement_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_file_replacement_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_file_replacement\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_file_replacement_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_file_replacement_refuse_delete' AND tgrelid = to_regclass('public.eifu_file_replacement'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_file_replacement_refuse_truncate",
+    "label": "Create trigger \"eifu_file_replacement_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_file_replacement_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_file_replacement_refuse_truncate' AND tgrelid = to_regclass('public.eifu_file_replacement'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_file_replacement_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_file_replacement_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_file_replacement\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_file_replacement_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_file_replacement_refuse_truncate' AND tgrelid = to_regclass('public.eifu_file_replacement'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_lot_override_refuse_delete",
+    "label": "Create trigger \"eifu_lot_override_refuse_delete\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_lot_override_refuse_delete\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_lot_override_refuse_delete' AND tgrelid = to_regclass('public.eifu_lot_override'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_lot_override_refuse_delete\"",
+        "sql": "CREATE TRIGGER \"eifu_lot_override_refuse_delete\" BEFORE DELETE ON \"public\".\"eifu_lot_override\" FOR EACH ROW EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_lot_override_refuse_delete\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_lot_override_refuse_delete' AND tgrelid = to_regclass('public.eifu_lot_override'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  },
+  {
+    "id": "trigger.eifu_lot_override_refuse_truncate",
+    "label": "Create trigger \"eifu_lot_override_refuse_truncate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "ensure trigger \"eifu_lot_override_refuse_truncate\" is not there",
+        "sql": "SELECT NOT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_lot_override_refuse_truncate' AND tgrelid = to_regclass('public.eifu_lot_override'))) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "create trigger \"eifu_lot_override_refuse_truncate\"",
+        "sql": "CREATE TRIGGER \"eifu_lot_override_refuse_truncate\" BEFORE TRUNCATE ON \"public\".\"eifu_lot_override\" FOR EACH STATEMENT EXECUTE FUNCTION \"public\".\"platform_refuse_delete\"()",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify trigger \"eifu_lot_override_refuse_truncate\" exists",
+        "sql": "SELECT (EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'eifu_lot_override_refuse_truncate' AND tgrelid = to_regclass('public.eifu_lot_override'))) AS \"result\"",
+        "params": []
+      }
+    ]
+  }
+]
