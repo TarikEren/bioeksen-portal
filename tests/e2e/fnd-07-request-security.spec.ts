@@ -1,6 +1,9 @@
 /**
  * FND-07 Request security: AC1, AC2, AC4.
  *
+ * AC1 covers every HTML answer: a page, the not-found page, and the answer
+ * to a prefetch of the browser (review 2, Q-9 and R-029).
+ *
  * AC4 is here and not in the integration tier of the stage plan: the
  * Next.js origin check of server actions runs in the server, before the
  * action, so only a request to a running app reaches it.
@@ -26,6 +29,37 @@ function nonceOf(scriptSrc: readonly string[]): string | undefined {
   return scriptSrc.find((value) => /^'nonce-[^']+'$/.test(value));
 }
 
+/**
+ * Asserts the Content-Security-Policy of FND-07.AC1 on two HTML answers of the
+ * same request: a script-src nonce that differs between them, no
+ * 'unsafe-inline' and no 'unsafe-eval', and frame-ancestors 'none'.
+ */
+function expectPolicy(first: APIResponse, second: APIResponse): void {
+  expect(first.headers()["content-type"] ?? "", "precondition: the answer is HTML").toContain("text/html");
+
+  const policies = [first, second].map((response) => response.headers()["content-security-policy"]);
+  expect(policies[0], "the first answer carries Content-Security-Policy").toBeDefined();
+  expect(policies[1], "the second answer carries Content-Security-Policy").toBeDefined();
+  const [firstPolicy, secondPolicy] = policies.map((policy) => directives(policy ?? ""));
+  const firstScripts = firstPolicy?.get("script-src") ?? [];
+  const secondScripts = secondPolicy?.get("script-src") ?? [];
+
+  expect(nonceOf(firstScripts), `script-src has a nonce: ${firstScripts.join(" ")}`).toBeDefined();
+  expect(nonceOf(secondScripts), `script-src has a nonce: ${secondScripts.join(" ")}`).toBeDefined();
+  expect(nonceOf(secondScripts), "the nonce differs from the nonce of the previous answer").not.toBe(
+    nonceOf(firstScripts),
+  );
+  expect(firstScripts).not.toContain("'unsafe-inline'");
+  expect(firstScripts).not.toContain("'unsafe-eval'");
+  expect(firstPolicy?.get("frame-ancestors")).toEqual(["'none'"]);
+}
+
+/** The headers of a prefetch of the browser: `Purpose` (review 2, R-029) and `Sec-Purpose` (Chromium). */
+const PREFETCH_HEADERS: ReadonlyArray<readonly [string, Record<string, string>]> = [
+  ["Purpose: prefetch", { purpose: "prefetch" }],
+  ["Sec-Purpose: prefetch", { "sec-purpose": "prefetch" }],
+];
+
 /** The pages that answer with HTML: the entry page, and a page that does not exist. */
 const HTML_PAGES: ReadonlyArray<readonly [string, string]> = [
   ["the entry page", "/"],
@@ -41,23 +75,21 @@ test.describe("FND-07 headers", () => {
     }) => {
       const first = await request.get(`${configuredApp.baseUrl}${pagePath}`);
       const second = await request.get(`${configuredApp.baseUrl}${pagePath}`);
-      expect(first.headers()["content-type"] ?? "", "precondition: the answer is HTML").toContain("text/html");
 
-      const policies = [first, second].map((response) => response.headers()["content-security-policy"]);
-      expect(policies[0], "the first answer carries Content-Security-Policy").toBeDefined();
-      expect(policies[1], "the second answer carries Content-Security-Policy").toBeDefined();
-      const [firstPolicy, secondPolicy] = policies.map((policy) => directives(policy ?? ""));
-      const firstScripts = firstPolicy?.get("script-src") ?? [];
-      const secondScripts = secondPolicy?.get("script-src") ?? [];
+      expectPolicy(first, second);
+    });
+  }
 
-      expect(nonceOf(firstScripts), `script-src has a nonce: ${firstScripts.join(" ")}`).toBeDefined();
-      expect(nonceOf(secondScripts), `script-src has a nonce: ${secondScripts.join(" ")}`).toBeDefined();
-      expect(nonceOf(secondScripts), "the nonce differs from the nonce of the previous answer").not.toBe(
-        nonceOf(firstScripts),
-      );
-      expect(firstScripts).not.toContain("'unsafe-inline'");
-      expect(firstScripts).not.toContain("'unsafe-eval'");
-      expect(firstPolicy?.get("frame-ancestors")).toEqual(["'none'"]);
+  for (const [label, headers] of PREFETCH_HEADERS) {
+    /** The HTML answer to a prefetch of the browser also carries the Content-Security-Policy. */
+    test(`FND-07.AC1: the HTML answer to a prefetch of the browser (${label}) carries the Content-Security-Policy`, async ({
+      request,
+      configuredApp,
+    }) => {
+      const first = await request.get(`${configuredApp.baseUrl}/`, { headers });
+      const second = await request.get(`${configuredApp.baseUrl}/`, { headers });
+
+      expectPolicy(first, second);
     });
   }
 
