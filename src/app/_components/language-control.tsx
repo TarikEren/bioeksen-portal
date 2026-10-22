@@ -10,12 +10,18 @@
 import { getRequestText } from "../_lib/request";
 import { LanguageSwitch } from "./language-switch";
 
-export async function LanguageControl() {
+interface LanguageControlProps {
+  /** The region the control sits in. "sidebar" is for `.sidebar-theme`. */
+  readonly tone?: "page" | "sidebar";
+}
+
+export async function LanguageControl({ tone = "page" }: LanguageControlProps) {
   const { language, text } = await getRequestText();
 
   return (
     <LanguageSwitch
       current={language}
+      tone={tone}
       labels={{
         switch: text.common.language.switch,
         tr: text.common.language.tr,

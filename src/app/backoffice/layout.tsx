@@ -68,7 +68,7 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
             <Typography.Paragraph size="sm">{text.backoffice.brandArea}</Typography.Paragraph>
           </div>
         </AppLink>
-        <LanguageControl />
+        <LanguageControl tone="sidebar" />
         <BackofficeNav ariaLabel={text.backoffice.nav.label} groups={groups} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

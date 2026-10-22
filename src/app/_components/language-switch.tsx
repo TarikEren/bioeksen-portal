@@ -22,7 +22,12 @@
  * label props, so `aria-busy` on the group never reached the DOM (R-016). Each
  * language name is in a `span` with the `lang` of that language, so that a
  * screen reader speaks "English" with English rules on a Turkish page (R-018,
- * WCAG 3.1.2, DEC-018).
+ * WCAG 3.1.2, DEC-018). The `tone` prop sets the look: "page" is the default of
+ * HeroUI. "sidebar" is for the dark `.sidebar-theme` region: the item that is not
+ * selected is quiet (the ghost variant: no fill, white text), and the selected
+ * item is strong (the fill and the text that `globals.css` sets for that region),
+ * with a check mark, so that the state does not rest on color alone (R-061,
+ * DEC-019).
  */
 import { Alert, ToggleButton, ToggleButtonGroup, type Key } from "@heroui/react";
 import { useRouter } from "next/navigation";
@@ -36,6 +41,8 @@ import { fmt, textForCode } from "@/lib/i18n/messages";
 interface LanguageSwitchProps {
   /** The active language. */
   readonly current: Language;
+  /** The look of the control. "sidebar" is for the region `.sidebar-theme`. */
+  readonly tone?: "page" | "sidebar";
   readonly labels: {
     /** The accessible name of the control. */
     readonly switch: string;
@@ -55,7 +62,27 @@ interface LanguageSwitchProps {
 /** What the person sees after a failed change: an envelope with a code, or a call with no envelope. */
 type Failure = { readonly kind: "envelope"; readonly code: ErrorCode } | { readonly kind: "call" };
 
-export function LanguageSwitch({ current, labels }: LanguageSwitchProps) {
+/**
+ * The selected item in the sidebar: `--theme-light` with `--theme-darker` (6.81:1),
+ * and `--theme-lighter` with `--theme-darker` on hover and press (8.33:1). The
+ * classes use the palette, because the derived HeroUI tokens keep the colors of
+ * the page inside `.sidebar-theme`. The item that is not selected is the ghost
+ * variant: white on `--theme-darker` (10.39:1), and white on `--theme-dark` on
+ * hover (7.18:1). `globals.css` stays as it is (DEC-015, FND-09 rule 1).
+ */
+const SIDEBAR_SELECTED =
+  "data-[selected=true]:bg-theme-light data-[selected=true]:text-theme-darker data-[selected=true]:data-[hovered=true]:bg-theme-lighter data-[selected=true]:data-[pressed=true]:bg-theme-lighter";
+
+/** The check mark of the selected item in the sidebar. It is decoration: `aria-checked` names the state. */
+function CheckMark() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M3 8.5l3.5 3.5L13 4.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function LanguageSwitch({ current, labels, tone = "page" }: LanguageSwitchProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [failure, setFailure] = useState<Failure | null>(null);
@@ -94,9 +121,19 @@ export function LanguageSwitch({ current, labels }: LanguageSwitchProps) {
         onSelectionChange={choose}
       >
         {LANGUAGES.map((language, index) => (
-          <ToggleButton key={language} id={language}>
-            {index > 0 ? <ToggleButtonGroup.Separator /> : null}
-            <span lang={language}>{labels[language]}</span>
+          <ToggleButton
+            key={language}
+            id={language}
+            variant={tone === "sidebar" ? "ghost" : "default"}
+            className={tone === "sidebar" ? SIDEBAR_SELECTED : undefined}
+          >
+            {({ isSelected }) => (
+              <>
+                {index > 0 ? <ToggleButtonGroup.Separator /> : null}
+                {tone === "sidebar" && isSelected ? <CheckMark /> : null}
+                <span lang={language}>{labels[language]}</span>
+              </>
+            )}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>

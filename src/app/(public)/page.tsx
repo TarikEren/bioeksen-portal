@@ -7,12 +7,13 @@
  * sign-in page (stage B1). The public lookup comes with stage B4, and its card
  * comes with it: an entry arrives with its screen. The server component reads the
  * dictionary of the active language. The page is dynamic because it reads the
- * language cookie (see the root layout). The link to the sign-in page is a GET
- * form around a submit `Button`: `Button` has no `href`, and a server component
- * cannot pass it a handler (`sds-nextjs-frontend` §5).
+ * language cookie (see the root layout). The link to the sign-in page is an
+ * `AppButtonLink`: `Button` has no `href`, and a link is the right element for a
+ * navigation (`sds-nextjs-frontend` §5, R-059).
  */
-import { Button, Card, Typography } from "@heroui/react";
+import { Card, Typography } from "@heroui/react";
 
+import { AppButtonLink } from "@/app/_components/app-button-link";
 import { PublicHeader } from "@/app/_components/public-header";
 import { getRequestText } from "@/app/_lib/request";
 
@@ -34,11 +35,7 @@ export default async function PublicHomePage() {
           <Card.Description>{text.home.signInDescription}</Card.Description>
         </Card.Header>
         <Card.Footer>
-          <form action="/sign-in" method="get">
-            <Button type="submit" variant="primary">
-              {text.home.signIn}
-            </Button>
-          </form>
+          <AppButtonLink href="/sign-in">{text.home.signIn}</AppButtonLink>
         </Card.Footer>
       </Card>
     </main>

@@ -3,17 +3,20 @@
  *
  * A server component that calls the service `listUsers` directly. A holder of
  * `organization.users.view` sees the list. "New user" shows with
- * `organization.users.manage`, as a GET form around a submit `Button`, because
- * `Button` has no `href`. The page number is in the URL (`?page=`), so a link
+ * `organization.users.manage`, as an `AppButtonLink`, because `Button` has no
+ * `href` and a link is the right element for a navigation (R-059). The table
+ * has no minimum width, so that its six columns fit at 1024 px beside the sidebar
+ * and the cells wrap (R-063). The page number is in the URL (`?page=`), so a link
  * opens the same view; a value that does not parse is a missing page
  * (`notFound`). The table goes through a client wrapper that takes data. The
  * status of a user is an icon and a text, never a color alone (DEC-019). A date
  * goes through the project formatter (FND-08 rule 4).
  */
-import { Button, Card, Chip, Typography } from "@heroui/react";
+import { Card, Chip, Typography } from "@heroui/react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { AppButtonLink } from "@/app/_components/app-button-link";
 import { AppLink } from "@/app/_components/app-link";
 import { DataTable, type DataTableColumn, type DataTableRow } from "@/app/_components/data-table";
 import { PageBreadcrumbs } from "@/app/_components/page-breadcrumbs";
@@ -62,7 +65,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/backoffice
 
   const columns: DataTableColumn[] = [
     { key: "name", label: text.users.columns.name, isRowHeader: true },
-    { key: "email", label: text.users.columns.email },
+    { key: "email", label: text.users.columns.email, cellClassName: "break-words" },
     { key: "roles", label: text.users.columns.roles },
     { key: "language", label: text.users.columns.language },
     { key: "status", label: text.users.columns.status },
@@ -109,11 +112,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/backoffice
             </Typography.Paragraph>
           </div>
           {canManage ? (
-            <form action="/backoffice/users/new" method="get">
-              <Button type="submit" variant="primary">
-                {text.users.newUser}
-              </Button>
-            </form>
+            <AppButtonLink href="/backoffice/users/new">{text.users.newUser}</AppButtonLink>
           ) : null}
         </div>
       </div>
@@ -127,7 +126,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/backoffice
           </Card.Content>
         </Card>
       ) : (
-        <DataTable ariaLabel={text.users.table} columns={columns} rows={rows} className="min-w-[720px]" />
+        <DataTable ariaLabel={text.users.table} columns={columns} rows={rows} />
       )}
 
       {hasPrevious || hasNext ? (
