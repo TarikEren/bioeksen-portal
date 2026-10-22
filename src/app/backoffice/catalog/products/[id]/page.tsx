@@ -18,7 +18,9 @@
  * a LOT number (CAT-30 rule 3). A catalog number, a LOT number and a date are in
  * IBM Plex Mono (FND-09.AC3), and a date goes through the project formatter
  * (DEC-133). The conflict marker and the states are an icon and a text (DEC-019).
- * The documents section comes in stage B3.
+ * Stage B3 adds the section *Documents* with the documents of the product and the
+ * version in force today (`eifu.document.view`), and links each LOT number to its
+ * LOT page, where the override is set (IFU-40, DEC-094; `eifu.document.view`).
  */
 import { Card, Chip, Typography } from "@heroui/react";
 import type { Metadata } from "next";
@@ -38,6 +40,7 @@ import { EntityId, MAX_LIMIT } from "@/lib/schemas/identity";
 import { expectedKitCode } from "@/modules/catalog/domain/kit-code";
 import { listLots } from "@/modules/catalog/services/lot-service";
 import { getProduct, listProducts } from "@/modules/catalog/services/product-service";
+import { listDocuments } from "@/modules/eifu/services/document-service";
 
 import { ForbiddenNotice } from "../../../_components/forbidden-notice";
 import { PaginationNav } from "@/app/backoffice/_components/pagination-nav";
@@ -46,6 +49,7 @@ import { CatalogNumbersSection } from "./_components/catalog-numbers-section";
 import { CorrectDateButton } from "./_components/correct-date-button";
 import { LotDateCell } from "./_components/lot-date-cell";
 import { ProductActions } from "./_components/product-actions";
+import { ProductDocumentsSection } from "./_components/product-documents-section";
 import { RegisterLotForm } from "./_components/register-lot-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -108,6 +112,8 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
   const canViewLots = permissions.has("catalog.lot.view");
   const canManageLots = permissions.has("catalog.lot.manage");
   const canCorrect = permissions.has("catalog.lot.correct");
+  const canViewDocuments = permissions.has("eifu.document.view");
+  const canManageDocuments = permissions.has("eifu.document.manage");
 
   const lots = canViewLots
     ? await listLots(session.actor, product.id, lotQuery).catch((error: unknown) => {
@@ -116,6 +122,9 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
         }
         throw error;
       })
+    : null;
+  const documents = canViewDocuments
+    ? (await listDocuments(session.actor, { page: 1, limit: MAX_LIMIT, productId: product.id, q: null })).documents
     : null;
   const moveTargets = canManageNumbers
     ? (await listProducts(session.actor, { page: 1, limit: MAX_LIMIT, q: null, active: true })).products
@@ -145,7 +154,8 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
   const lotRows: DataTableRow[] = (lots?.lots ?? []).map((lot) => ({
     id: lot.id,
     cells: {
-      lotNumber: lot.lotNumber,
+      // The LOT page needs `eifu.document.view`, so only a holder of it gets the link (IFU-40).
+      lotNumber: canViewDocuments ? <AppLink href={`/backoffice/catalog/lots/${lot.id}`}>{lot.lotNumber}</AppLink> : lot.lotNumber,
       catalogNumber: lot.catalogNumber,
       manufacturingDate: (
         <LotDateCell
@@ -315,6 +325,16 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
           failure={numberFailure}
         />
       </section>
+
+      {documents === null ? null : (
+        <ProductDocumentsSection
+          productId={product.id}
+          documents={documents}
+          canManage={canManageDocuments}
+          language={language}
+          text={text}
+        />
+      )}
 
       {lots === null ? null : (
         <section aria-labelledby="lots-title" className="flex flex-col gap-3">

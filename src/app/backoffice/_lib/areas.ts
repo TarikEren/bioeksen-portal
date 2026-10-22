@@ -3,8 +3,8 @@
  * rule 2, ACC-30 rule 3).
  *
  * The start page lists the areas that the permissions of the user open, and the
- * navigation lists the areas that have a page. In stages B1 and B2 `users` and `catalog` have a
- * page. The other areas have no page yet, so their `href` is `null` and the
+ * navigation lists the areas that have a page. In stages B1 to B3 `users`, `catalog` and
+ * `documents` have a page. The other areas have no page yet, so their `href` is `null` and the
  * start page says that the area opens in a later stage. A later stage gives the
  * area its `href`. This is display only: the services check the permission with
  * the data, and hiding a link is not authorization (`sds-nextjs-frontend` §2).
@@ -27,7 +27,7 @@ export interface AreaDefinition {
 export const AREAS = [
   { key: "users", permission: "organization.users.view", href: "/backoffice/users" },
   { key: "catalog", permission: "catalog.product.view", href: "/backoffice/catalog/products" },
-  { key: "documents", permission: "eifu.document.view", href: null },
+  { key: "documents", permission: "eifu.document.view", href: "/backoffice/documents" },
   { key: "reports", permission: "eifu.access_record.view_aggregated", href: null },
 ] as const satisfies readonly AreaDefinition[];
 

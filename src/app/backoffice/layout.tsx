@@ -10,7 +10,8 @@
  * language switch, and the navigation in groups. A thin top bar names the group
  * of the open page and holds the user menu with the sign-out. The Users entry
  * shows only with `organization.users.view`. The group e-IFU holds Product catalog
- * (`catalog.product.view`) and LOT imports (`catalog.lot.view`) of stage B2. An
+ * (`catalog.product.view`) and LOT imports (`catalog.lot.view`) of stage B2, and
+ * Documents and LOT overrides (`eifu.document.view`) of stage B3. An
  * entry arrives with its screen. Hiding an entry is not
  * authorization: each page and each service checks the permission again
  * (`sds-nextjs-frontend` §2). A layout does not run again on each navigation
@@ -55,6 +56,11 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
   }
   if (session.actor.permissions.has("catalog.lot.view")) {
     eifuItems.push({ href: "/backoffice/catalog/lot-imports", label: text.backoffice.nav.lotImports });
+  }
+  // Stage B3 adds the documents and the LOT overrides, which need `eifu.document.view` (IFU-10, IFU-40).
+  if (session.actor.permissions.has("eifu.document.view")) {
+    eifuItems.push({ href: "/backoffice/documents", label: text.backoffice.nav.documents });
+    eifuItems.push({ href: "/backoffice/lot-overrides", label: text.backoffice.nav.lotOverrides });
   }
   const groups: NavGroupView[] = [
     ...(identityItems.length > 0 ? [{ label: text.backoffice.nav.groups.identity, items: identityItems }] : []),
