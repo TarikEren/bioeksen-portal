@@ -63,16 +63,19 @@ function typePhrase(expected: string): string {
 /** The faults of one issue. A zod `unrecognized_keys` issue holds one fault for each key. */
 function faultsOfIssue(input: unknown, issue: z.core.$ZodIssue): FieldFault[] {
   const field = fieldName(issue.path);
+  if (issue.code === "unrecognized_keys") {
+    return issue.keys.map((key) => ({
+      code: "VAL-4007",
+      entry: { field: fieldName([...issue.path, key]), issue: "is not a field of this endpoint" },
+    }));
+  }
+  // Whatever the type of the field, an absent field is a missing field (step 14).
+  if (isMissing(input, issue.path)) {
+    return [{ code: "VAL-4001", entry: { field, issue: "is required" } }];
+  }
   switch (issue.code) {
-    case "unrecognized_keys":
-      return issue.keys.map((key) => ({
-        code: "VAL-4007",
-        entry: { field: fieldName([...issue.path, key]), issue: "is not a field of this endpoint" },
-      }));
     case "invalid_type":
-      return isMissing(input, issue.path)
-        ? [{ code: "VAL-4001", entry: { field, issue: "is required" } }]
-        : [{ code: "VAL-4006", entry: { field, issue: typePhrase(issue.expected) } }];
+      return [{ code: "VAL-4006", entry: { field, issue: typePhrase(issue.expected) } }];
     case "invalid_value":
       return [{ code: "VAL-4002", entry: { field, issue: "is not one of the allowed values" } }];
     case "too_small":

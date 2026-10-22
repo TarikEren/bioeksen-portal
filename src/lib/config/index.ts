@@ -135,3 +135,12 @@ export function getLogLevel(): Severity {
 export function isDevelopmentEnvironment(): boolean {
   return environment()["APP_ENV"] === "development";
 }
+
+/**
+ * Whether the public address of the app is HTTPS (`PUBLIC_BASE_URL`). A cookie
+ * carries `Secure` only then, so a developer on `http://localhost` still gets
+ * it. The answer does not depend on the other settings.
+ */
+export function isPublicBaseUrlSecure(): boolean {
+  return environment()["PUBLIC_BASE_URL"]?.startsWith("https://") === true;
+}

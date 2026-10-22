@@ -1,3 +1,4 @@
+export { runAction } from "./action";
 export { assertDeclaredLength, assertJsonMediaType, parseJsonBytes, readBoundedBody } from "./body";
 export { failureResponse, jsonResponse, okResponse } from "./respond";
 export { DEFAULT_BODY_LIMIT_BYTES, defineJsonRoute, defineMethodNotAllowed, defineRoute } from "./route";

@@ -34,6 +34,17 @@ describe("bodyValidationError", () => {
     expect(error.details).toEqual([{ field: "value", issue: "must be of the type string" }]);
   });
 
+  it("gives VAL-4001 for an enumerated field that is absent, not VAL-4002", () => {
+    const required = z.strictObject({ mode: z.enum(["a", "b"]) });
+    const input = {};
+    const result = required.safeParse(input);
+    if (result.success) {
+      throw new Error("the schema accepted the input");
+    }
+
+    expect(bodyValidationError(input, result.error).code).toBe("VAL-4001");
+  });
+
   it("gives VAL-4002 for a value outside its enumeration", () => {
     expect(errorOf({ value: "x", mode: "c" }).code).toBe("VAL-4002");
   });

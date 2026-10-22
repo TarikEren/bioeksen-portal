@@ -5,8 +5,6 @@
  * priority. Otherwise, the language that the person chose last applies, and the
  * cookie `bp_lang` keeps it for 365 days.
  */
-import { NotImplemented } from "@/lib/errors";
-
 export const LANGUAGES = ["tr", "en"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
@@ -30,10 +28,13 @@ export interface LanguageChoice {
  * Returns the active language: the preference of the user, else a valid
  * cookie, else `DEFAULT_LANGUAGE`. A cookie with an unknown value is ignored
  * (FND-08.AC2 to AC5).
- *
- * Skeleton of stage B0: the body throws `NotImplemented`.
  */
 export function resolveLanguage(choice: LanguageChoice): Language {
-  void choice;
-  throw new NotImplemented("resolveLanguage");
+  if (choice.userPreferred !== null && isLanguage(choice.userPreferred)) {
+    return choice.userPreferred;
+  }
+  if (isLanguage(choice.cookie)) {
+    return choice.cookie;
+  }
+  return DEFAULT_LANGUAGE;
 }
