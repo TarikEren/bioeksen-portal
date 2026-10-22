@@ -49,6 +49,8 @@ export class JwksCache {
   private fetchedAt = 0;
   private attempts: number[] = [];
   private inFlight: Promise<boolean> | undefined;
+  /** Whether the last fetch failed. While the budget is spent, it tells the cause of an unknown kid. */
+  private lastFetchFailed = false;
 
   constructor(options: JwksCacheOptions) {
     this.options = options;
@@ -75,6 +77,11 @@ export class JwksCache {
     if (!this.hasBudget(now)) {
       if (known !== undefined) {
         return known;
+      }
+      // The provider is down if the last fetch failed: that is step 6, the same
+      // answer as the requests before the budget was spent.
+      if (this.lastFetchFailed) {
+        throw new AppError("AUTH-5500", "Identity provider unavailable", { reason: "fetch budget spent after a failed fetch" });
       }
       throw new AppError("AUTH-4101", "Credential invalid", { reason: "unknown kid, fetch budget spent" });
     }
@@ -104,6 +111,12 @@ export class JwksCache {
 
   /** @returns `true` when the key set was fetched and read. */
   private async fetchKeys(now: number): Promise<boolean> {
+    const fetched = await this.fetchKeySet(now);
+    this.lastFetchFailed = !fetched;
+    return fetched;
+  }
+
+  private async fetchKeySet(now: number): Promise<boolean> {
     this.attempts.push(now);
     try {
       const response = await fetch(this.options.uri, {

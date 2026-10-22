@@ -121,9 +121,10 @@ const eslintConfig = defineConfig([
   },
   {
     // FND-03 rule 1: only the configuration module reads `process.env`. The
-    // scripts under `src/scripts/` are tooling of the repository, not the app.
+    // scripts under `src/scripts/` are tooling of the repository, not the app. A test sets
+    // the environment that the module reads.
     files: ["src/**/*.{ts,tsx,mts}"],
-    ignores: ["src/lib/config/**", "src/scripts/**", "src/instrumentation.ts"],
+    ignores: ["src/lib/config/**", "src/scripts/**", "src/instrumentation.ts", "src/**/*.test.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",

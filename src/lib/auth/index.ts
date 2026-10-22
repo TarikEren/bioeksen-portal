@@ -99,17 +99,30 @@ export async function authenticateOperator(
 
   const token = readBearerToken(authorizationHeader);
 
-  let unverifiedExpiry: number | undefined;
+  let unverified: JWTPayload;
   try {
     decodeProtectedHeader(token);
-    unverifiedExpiry = decodeJwt(token).exp;
+    unverified = decodeJwt(token);
   } catch {
     throw unauthorized("AUTH-4103", "the token does not parse");
   }
 
   // Expiry first: an expired token yields AUTH-4102 whatever its signature.
-  if (unverifiedExpiry !== undefined && unverifiedExpiry < now.getTime() / 1000 - skewSeconds) {
+  if (unverified.exp !== undefined && unverified.exp < now.getTime() / 1000 - skewSeconds) {
     throw unauthorized("AUTH-4102", "the token is expired");
+  }
+
+  // A token for another issuer, app or tenant is refused (step 5) before the keys
+  // are needed. If the provider is down, the answer is still AUTH-4101 and not
+  // AUTH-5500 (step 6). The check cannot grant anything: the claims are checked
+  // again, with the signature, below.
+  const audiences = Array.isArray(unverified.aud) ? unverified.aud : [unverified.aud];
+  if (
+    unverified.iss !== config.ENTRA_ISSUER ||
+    !audiences.includes(config.ENTRA_AUDIENCE) ||
+    unverified["tid"] !== config.ENTRA_TENANT_ID
+  ) {
+    throw unauthorized("AUTH-4101", "the issuer, audience or tenant is not the configured one");
   }
 
   const keys = getKeyCache();
