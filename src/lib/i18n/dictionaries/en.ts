@@ -2,6 +2,7 @@
  * The English dictionary (FND-08 rule 1). It is typed against `tr.ts`: a
  * missing key, and a key that `tr.ts` does not have, fail the type check.
  */
+import { eifuEn } from "./eifu-en";
 import type { Dictionary } from "./tr";
 
 export const en: Dictionary = {
@@ -116,6 +117,8 @@ export const en: Dictionary = {
       users: "Users",
       productCatalog: "Product catalog",
       lotImports: "LOT imports",
+      documents: "Documents",
+      lotOverrides: "LOT overrides",
       groups: {
         identity: "Identity and access",
         eifu: "e-IFU",
@@ -618,6 +621,7 @@ export const en: Dictionary = {
       },
     },
   },
+  eifu: eifuEn,
   noArea: {
     title: "Your account has no area yet",
     body: "Your account is active, but it has no area that you can open yet. Ask your administrator to grant a role to your account.",

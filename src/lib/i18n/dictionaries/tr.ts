@@ -19,6 +19,8 @@
  * `common.passwordRules` by the password rule (ACC-10.AC5). `common.errorCode`
  * is a template: the component fills `{code}` with `fmt`.
  */
+import { eifuTr } from "./eifu-tr";
+
 export const tr = {
   common: {
     language: {
@@ -131,6 +133,8 @@ export const tr = {
       users: "Kullanıcılar",
       productCatalog: "Ürün kataloğu",
       lotImports: "LOT içe aktarmaları",
+      documents: "Belgeler",
+      lotOverrides: "LOT geçersiz kılmaları",
       groups: {
         identity: "Kimlik ve erişim",
         eifu: "e-IFU",
@@ -633,6 +637,7 @@ export const tr = {
       },
     },
   },
+  eifu: eifuTr,
   noArea: {
     title: "Hesabınıza henüz bir alan tanımlanmadı",
     body: "Hesabınız etkin, ancak henüz erişebileceğiniz bir alan yok. Yöneticinizden hesabınıza bir rol vermesini isteyin.",
