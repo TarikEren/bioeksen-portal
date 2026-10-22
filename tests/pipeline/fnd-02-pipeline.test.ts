@@ -203,14 +203,28 @@ describe("FND-02 the checks fail on a broken change", () => {
     const script = localChecker();
     expect(script, "the sds-planning checker is on this machine (SDS_PLANNING_CHECKER)").toBeDefined();
 
-    const folders = checkerTestPaths(checker?.expanded ?? "");
+    const command = checker?.expanded ?? "";
+    const through = /--through\s+(\S+)/.exec(command)?.[1];
+    const checkerArguments = [
+      script ?? "",
+      "--specs",
+      "docs/specs",
+      "--tests",
+      ...checkerTestPaths(command),
+      ...(through === undefined ? [] : ["--through", through]),
+    ];
+
+    // Control: the same command passes on the unchanged copy, so the failure below comes from the citation.
+    const control = await copy.run(pythonCommand(), checkerArguments);
+    expect(control.code, `precondition: the checker passes on the unchanged copy\n${tail(control)}`).toBe(0);
+
     // Built at run time, so this file itself cites nothing that does not exist.
     const missingCriterion = ["FND-01", `AC${String(90 + new Date().getUTCDate())}`].join(".");
     copy.write(
       "tests/unit/qa-fixture-citation.test.ts",
       `import { it } from "vitest";\n\nit("${missingCriterion}: a criterion that does not exist", () => {});\n`,
     );
-    const result = await copy.run(pythonCommand(), [script ?? "", "--specs", "docs/specs", "--tests", ...folders]);
+    const result = await copy.run(pythonCommand(), checkerArguments);
     copy.delete("tests/unit/qa-fixture-citation.test.ts");
 
     expect(result.code, tail(result)).toBe(1);
