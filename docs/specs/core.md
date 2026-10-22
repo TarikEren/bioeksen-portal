@@ -35,7 +35,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-010 | The system never deletes a controlled record. The controlled records are a user, a role assignment, a product, a catalog number, a LOT, and a LOT import and its rows. The other controlled records are a document, a document version, a document file, a file replacement, an applicability period, an override and an access record. A state or an `isActive` flag ends a record instead. | Decided | PO | — | FND-06, ACC-10, ACC-31, CAT-10, CAT-20, CAT-40, CAT-60, IFU-10, IFU-20, IFU-30, IFU-32, IFU-40, IFU-80, ACD-50 | eng/data-model-fields.md §Deletion policy; eng/audit-traceability.md |
 | DEC-011 | Record content that people read in two languages (a product name, a document title) is one JSONB column. It has one entry for each locale: `{ "tr": …, "en": … }`. Both entries are required. A check constraint enforces this. Interface text never uses this form. The dictionaries give the interface text. | Default | ENG | — | FND-08, CAT-10, IFU-10, ACD-20 | adr/0009; audit A-03 |
 | DEC-012 | The database stores timestamps as `timestamptz`, in UTC. Business dates (a manufacturing date, an effective date, an expiry date) are `date` columns with no time. The interface shows timestamps and counts days in the time zone `Europe/Istanbul`. | Default | ENG | — | FND-08, CAT-40, IFU-30, IFU-83 | eng/localization.md §Data representation |
-| DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. It shows a file size in decimal units (1 kB is 1000 bytes), with one decimal, and a decimal comma in Turkish. | Default | ENG | — | FND-08 | B0 test review, 2026-10-22; review 1 |
+| DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. It shows a file size in decimal units with the symbols `B`, `kB`, `MB` and `GB` (1 kB is 1000 bytes), with at most one decimal, and a decimal comma in Turkish (`1,5 kB`, `2 MB`). | Default | ENG | — | FND-08 | B0 test review, 2026-10-22; reviews 1 and 2 |
 | DEC-134 | The dependency check of FND-07 fails on an advisory of severity high or critical in any dependency, also a development tool. When a patched version exists, a pnpm override forces it. An advisory with no patched version is ignored only by its GHSA id, and only while this row names it with a review date. Ignored now: GHSA-vfj7-8cjw-p6xm (`braces` 3.0.3 and earlier, through `eslint-config-next`), review on 2027-01-22. | Decided | PO | — | FND-07 | Owner answer 2026-10-22 |
 | DEC-039 | In JSON, a business date is `YYYY-MM-DD`, with no time and no offset. This departs from `sds-api-design` (`standard-api-endpoints.md`, **Types and units**). That skill gives each date an offset. The departure ends when SDS answers. | Pending | SDS | questions.md 2 | CAT-40, IFU-30, IFU-60, IFU-83 | — |
 
@@ -213,7 +213,7 @@ setting.
 | `PUBLIC_BASE_URL` | yes | — |
 | `TRUSTED_PROXIES` (the proxy addresses, DEC-038) | in production | — |
 | `EIFU_LEGAL_NOTICE_VERSION` | yes | — |
-| `EIFU_IDENTITY_KEYS` (`id:base64key`, newest first; IFU-90) | in production | — |
+| `EIFU_IDENTITY_KEYS` (`id:base64key`, newest first; each key decodes to 32 bytes, the key of AES-256-GCM (DEC-081); each id once; IFU-90) | in production | — |
 | `EIFU_IDENTITY_LOOKUP_PEPPER` (at least 32 characters; IFU-90) | in production | — |
 | `EIFU_ACCESS_RECORD_RETENTION_DAYS` | no | as DEC-080 says |
 | The values of `sds-auth` (`credentials.md`, **Configuration**): `ENTRA_TENANT_ID`, `ENTRA_ISSUER`, `ENTRA_JWKS_URI`, `ENTRA_JWKS_MAX_AGE_SECONDS`, `ENTRA_AUDIENCE`, `ENTRA_CLIENT_ID`, the client credential, `ENTRA_OPERATOR_SCOPE`, `AUTH_CLOCK_SKEW_SECONDS` | as `sds-auth` says | as `sds-auth` says |
@@ -373,8 +373,8 @@ across the answer and its log records.
    (DEC-134).
 
 **Acceptance.**
-- **AC1.** Each HTML answer carries a `Content-Security-Policy`. Its
-  `script-src` has a nonce that differs from the nonce of the previous answer.
+- **AC1.** Each HTML answer carries a `Content-Security-Policy`, also the
+  answer to a prefetch of the browser. Its `script-src` has a nonce that differs from the nonce of the previous answer.
   The `script-src` has no `'unsafe-inline'` and no `'unsafe-eval'`. Its
   `frame-ancestors` is `'none'`.
 - **AC2.** Each answer carries `Strict-Transport-Security` with `max-age` of at

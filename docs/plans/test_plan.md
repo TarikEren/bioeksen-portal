@@ -47,7 +47,7 @@ answers the `sds-api-design` envelope.
 |---|---|---|
 | `platform_log_record` | `id` BIGSERIAL primary key; `software_id` text; `timestamp` timestamptz(3); `severity` text; `type` text; `code` text, optional; `message` text; `shipped_at` timestamptz, optional | `src/prisma/migrations/app/<ts>_platform_log_record` (skeleton: the table and its columns only) |
 | `platform_log_record` | checks `log_record_severity_is_known` (DEBUG, INFO, WARNING, ERROR, FATAL), `log_record_type_is_known` (APP, SECURITY, AUDIT, ACCESS, JOB), `log_record_message_length` (at most 8192); indexes on (`timestamp`, `id`), (`code`), (`type`, `severity`); PostgreSQL reads the first one backward for the newest first (Prisma 8 keeps no sort direction in an index) | `<ts>_platform_log_record_constraints` (build) |
-| — | `rawSql`: the function `platform_refuse_delete()`, for the DELETE and TRUNCATE triggers of the controlled tables of later stages (FND-06 rule 5) | the same build migration |
+| — | `rawSql`: the function `platform_refuse_delete()`, for the DELETE and TRUNCATE triggers of the controlled tables of later stages (FND-06 rule 5). It raises SQLSTATE `23001` (`restrict_violation`), which the app maps to `RES-4302` | the same build migration |
 
 ### UI
 
@@ -114,7 +114,7 @@ fail for the missing behavior.
 | Task | Closes | Tier for each criterion |
 |---|---|---|
 | T1 Toolchain, layout and import rules | FND-01.AC1 to AC4 | AC1 pipeline (the commands on a clean copy); AC2 to AC4 pipeline (ESLint on fixture source text with a file path under `src/`) |
-| T2 Pipeline proposal and commit check | FND-02.AC1 to AC4 | AC1 to AC3 pipeline (fixtures); AC4 e2e smoke test against the test environment, run at the stage exit |
+| T2 Pipeline proposal and commit check | FND-02.AC1 to AC4 | AC1 to AC3 pipeline (fixtures); AC4 smoke tier (`tests/smoke/`, its own Playwright configuration with no global setup and no web server, script `test:smoke`, base URL from `TEST_ENVIRONMENT_URL`). The pull request pipeline does not run the smoke tier. The main session runs it at the stage exit, after IT deploys the release tag |
 | T3 Configuration and start hook | FND-03.AC1 to AC4 | e2e (spawned app with a broken environment) |
 | T4 Standard endpoints and operator tokens | FND-04.AC1 to AC4 | AC1 e2e (spawned app with a database that does not answer); AC2 to AC4 integration |
 | T5 Errors, logger, request id, route wrapper | FND-05.AC1, AC2, AC3, AC5 | integration |
@@ -137,6 +137,10 @@ empty database, and `db verify` passes.
   `tests/support/results.ts` (the results-only runner).
 - `tests/README.md`: the tiers, the folders, the helpers, how a test cites its
   criterion.
+- The `sds-planning` checker reads the test folders only:
+  `--tests tests/unit tests/integration tests/pipeline tests/e2e tests/smoke`.
+  It never reads `tests/README.md` or `tests/support/`, so an id in a comment
+  or a table does not count as a test.
 
 ## Open point for the exit
 
