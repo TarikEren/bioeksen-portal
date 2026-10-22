@@ -40,7 +40,7 @@ async function expectRejection(response: Response, status: number, code: string)
 
 describe("FND-04 standard endpoints, dependencies", () => {
   /** With PostgreSQL and Redis up and the object store and mail relay down, readiness answers 200. */
-  it("FND-04.AC2: readiness answers 200 when only the object store and the mail relay are down", async () => {
+  it("FND-04.AC2: readiness does not depend on the object store and the mail relay", async () => {
     const response = await call(getHealthReady, "/api/health/ready");
     const body = await readBody(response);
 
@@ -49,7 +49,7 @@ describe("FND-04 standard endpoints, dependencies", () => {
   });
 
   /** With only the object store and mail relay down, the full report answers 200 ok, with object-store and smtp fail. */
-  it("FND-04.AC2: the full report answers 200 ok and gives object-store and smtp as fail", async () => {
+  it("FND-04.AC2: the full report stays ok and reports the object store and the mail relay as failed", async () => {
     const response = await call(getHealth, "/api/health", { headers: await withToken("operator") });
     const body = await readBody(response);
 
@@ -64,45 +64,56 @@ describe("FND-04 standard endpoints, dependencies", () => {
 describe("FND-04 standard endpoints, operator credential", () => {
   for (const [path, handler] of PROTECTED) {
     /** A request without an Authorization header gets 401 AUTH-4100. */
-    it(`FND-04.AC3: ${path} without an Authorization header answers 401 AUTH-4100`, async () => {
+    it(`FND-04.AC3: ${path} requires a credential`, async () => {
       await expectRejection(await call(handler, path), 401, "AUTH-4100");
     });
 
     // Contract cases of the validation order (sds-auth, SKILL.md and credentials.md), adopted by FND-04 rule 1.
 
     /** An Authorization header without the Bearer scheme counts as no credential: 401 AUTH-4100. */
-    it(`FND-04.AC3: ${path} with a scheme that is not Bearer answers 401 AUTH-4100`, async () => {
+    it(`FND-04.AC3: ${path}, sds-auth validation order, step 2: a scheme other than Bearer is no credential`, async () => {
       const response = await call(handler, path, { headers: { authorization: "Basic cWE6cWE=" } });
       await expectRejection(response, 401, "AUTH-4100");
     });
 
     /** A bearer value that is not a JWT gets 401 AUTH-4103. */
-    it(`FND-04.AC3: ${path} with a token that does not parse answers 401 AUTH-4103`, async () => {
+    it(`FND-04.AC3: ${path}, sds-auth validation order, step 3: a credential that does not parse`, async () => {
       const response = await call(handler, path, { headers: { authorization: "Bearer not-a-jwt" } });
       await expectRejection(response, 401, "AUTH-4103");
     });
 
     /** A token whose exp passed beyond the skew allowance gets 401 AUTH-4102. */
-    it(`FND-04.AC3: ${path} with an expired token answers 401 AUTH-4102`, async () => {
+    it(`FND-04.AC3: ${path}, sds-auth validation order, step 4: an expired credential`, async () => {
       await expectRejection(await call(handler, path, { headers: await withToken("expired") }), 401, "AUTH-4102");
     });
 
     /** Expiry is checked before the signature: an expired forged token gets 401 AUTH-4102. */
-    it(`FND-04.AC3: ${path} with an expired token that is also forged answers 401 AUTH-4102`, async () => {
+    it(`FND-04.AC3: ${path}, sds-auth validation order: expiry is checked before the signature`, async () => {
       const response = await call(handler, path, { headers: await withToken("expired-and-forged") });
       await expectRejection(response, 401, "AUTH-4102");
     });
 
-    for (const kind of ["wrong-signature", "wrong-audience", "wrong-issuer", "wrong-tenant"] as const) {
+    const NOT_ACCEPTED: ReadonlyArray<readonly [TokenKind, string]> = [
+      ["wrong-signature", "the signature must verify"],
+      ["wrong-audience", "the audience must be this app"],
+      ["wrong-issuer", "the issuer must be the configured issuer"],
+      ["wrong-tenant", "the tenant must be the configured tenant"],
+    ];
+    for (const [kind, rule] of NOT_ACCEPTED) {
       /** An unexpired token with a bad signature or a claim that does not match gets 401 AUTH-4101. */
-      it(`FND-04.AC3: ${path} with a token of the kind "${kind}" answers 401 AUTH-4101`, async () => {
+      it(`FND-04.AC3: ${path}, sds-auth validation order, step 5: ${rule}`, async () => {
         await expectRejection(await call(handler, path, { headers: await withToken(kind) }), 401, "AUTH-4101");
       });
     }
 
-    for (const kind of ["app", "person-without-role", "role-without-scope"] as const) {
+    const NOT_OPERATOR: ReadonlyArray<readonly [TokenKind, string]> = [
+      ["app", "an app credential is not an operator"],
+      ["person-without-role", "a person without the operator role is not an operator"],
+      ["role-without-scope", "a person without the operator scope is not an operator"],
+    ];
+    for (const [kind, rule] of NOT_OPERATOR) {
       /** An authenticated caller who is not an operator gets 403 PERM-4151. */
-      it(`FND-04.AC3: ${path} with a token of the kind "${kind}" answers 403 PERM-4151`, async () => {
+      it(`FND-04.AC3: ${path}, sds-auth validation order, step 7: ${rule}`, async () => {
         await expectRejection(await call(handler, path, { headers: await withToken(kind) }), 403, "PERM-4151");
       });
     }

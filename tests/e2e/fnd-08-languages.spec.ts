@@ -46,7 +46,7 @@ test.describe("FND-08 language of the page", () => {
   });
 
   /** The choice of English is kept in the cookie bp_lang for 365 days. */
-  test("FND-08.AC4: the choice is kept in the cookie bp_lang for 365 days", async ({ page, configuredApp }) => {
+  test("FND-08.AC4: the language cookie keeps the choice", async ({ page, configuredApp }) => {
     await page.goto(`${configuredApp.baseUrl}/`);
     const chosenAt = Date.now() / 1000;
     await chooseLanguage(page, "tr", "en");
@@ -61,7 +61,7 @@ test.describe("FND-08 language of the page", () => {
   });
 
   /** A returning person whose cookie bp_lang says English gets the page in English. */
-  test("FND-08.AC4: a returning person with bp_lang=en gets English", async ({ browser, configuredApp }) => {
+  test("FND-08.AC4: a returning person gets the language of the language cookie", async ({ browser, configuredApp }) => {
     const context = await browser.newContext();
     await context.addCookies([{ name: "bp_lang", value: "en", url: configuredApp.baseUrl }]);
     const page = await context.newPage();

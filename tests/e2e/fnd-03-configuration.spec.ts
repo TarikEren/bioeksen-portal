@@ -77,7 +77,7 @@ test.describe("FND-03 configuration at start", () => {
   });
 
   /** Without DATABASE_URL, readiness answers 503 before any other request, and a FATAL CFG-5000 record names DATABASE_URL. */
-  test("FND-03.AC1: without DATABASE_URL the app is not ready and logs FATAL CFG-5000 naming DATABASE_URL", async ({
+  test("FND-03.AC1: a missing DATABASE_URL is refused at start, before any request", async ({
     request,
   }) => {
     const app = await start(async (port) => without(await configuredEnvironment(port), "DATABASE_URL"));
@@ -91,7 +91,7 @@ test.describe("FND-03 configuration at start", () => {
   });
 
   /** In production, a pepper of fewer than 32 characters: not ready, FATAL CFG-5001 names the setting, never its value. */
-  test("FND-03.AC2: in production a pepper of 31 characters makes the app not ready and logs FATAL CFG-5001 without the value", async ({
+  test("FND-03.AC2: in production, a pepper below the minimum length is refused at start, without its value", async ({
     request,
   }) => {
     const shortPepper = "qa-pepper-31-characters-abcdefg";
@@ -112,7 +112,7 @@ test.describe("FND-03 configuration at start", () => {
   });
 
   /** In production, a pepper of exactly 32 characters is accepted: no CFG record names the setting. */
-  test("FND-03.AC2: in production a pepper of 32 characters is accepted", async ({ request }) => {
+  test("FND-03.AC2: in production, a pepper of the minimum length is accepted", async ({ request }) => {
     const pepper = "qa-pepper-32-characters-abcdefgh";
     expect(pepper).toHaveLength(32);
     const app = await start(async (port) => ({ ...(await production(port)), EIFU_IDENTITY_LOOKUP_PEPPER: pepper }));
@@ -129,7 +129,7 @@ test.describe("FND-03 configuration at start", () => {
   });
 
   /** With the test seams on in production: not ready, a FATAL CFG-5001 record, and no test seam answers. */
-  test("FND-03.AC3: with TEST_SEAMS_ENABLED true in production the app is not ready, a FATAL record carries CFG-5001, and no test seam works", async ({
+  test("FND-03.AC3: in production, the test seams setting is refused at start, and no test seam works", async ({
     request,
   }) => {
     const app = await start(async (port) => ({ ...(await production(port)), TEST_SEAMS_ENABLED: "true" }));
@@ -146,7 +146,7 @@ test.describe("FND-03 configuration at start", () => {
   });
 
   /** Without ENTRA_ISSUER, the app is not ready, and a FATAL CFG-5000 record names the setting. */
-  test("FND-03.AC4: without ENTRA_ISSUER the app is not ready and logs FATAL CFG-5000", async ({ request }) => {
+  test("FND-03.AC4: a missing ENTRA_ISSUER is refused at start", async ({ request }) => {
     const app = await start(async (port) => without(await configuredEnvironment(port), "ENTRA_ISSUER"));
     try {
       await expectNotReady(request, app);

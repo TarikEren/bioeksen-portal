@@ -27,12 +27,15 @@ function nonceOf(scriptSrc: readonly string[]): string | undefined {
 }
 
 /** The pages that answer with HTML: the entry page, and a page that does not exist. */
-const HTML_PATHS = ["/", "/qa-no-such-page"];
+const HTML_PAGES: ReadonlyArray<readonly [string, string]> = [
+  ["the entry page", "/"],
+  ["the not-found page", "/qa-no-such-page"],
+];
 
 test.describe("FND-07 headers", () => {
-  for (const pagePath of HTML_PATHS) {
+  for (const [pageLabel, pagePath] of HTML_PAGES) {
     /** Each HTML answer has a CSP: a new script-src nonce, no unsafe-inline or unsafe-eval, frame-ancestors 'none'. */
-    test(`FND-07.AC1: the HTML answer of ${pagePath} carries the Content-Security-Policy`, async ({
+    test(`FND-07.AC1: the HTML answer of ${pageLabel} carries the Content-Security-Policy`, async ({
       request,
       configuredApp,
     }) => {
@@ -59,7 +62,7 @@ test.describe("FND-07 headers", () => {
   }
 
   /** Every answer carries Strict-Transport-Security with max-age of at least 31536000. */
-  test("FND-07.AC2: every answer carries Strict-Transport-Security with max-age of at least 31536000", async ({
+  test("FND-07.AC2: every answer carries Strict-Transport-Security", async ({
     request,
     configuredApp,
   }) => {

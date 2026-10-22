@@ -28,8 +28,11 @@ Each claim is tested at the lowest tier that can prove it.
 ## How a test cites its criterion
 
 - The title starts with the id of the criterion it proves, then names the
-  rule, for example `FND-04.AC4: GET /api/health/live answers with
-  Cache-Control: no-store`. It never holds the steps.
+  rule, for example `FND-03.AC4: a missing ENTRA_ISSUER is refused at start`.
+  It never holds the inputs, the expected values or the steps: the criterion
+  holds the detail. A contract case names its source after the id, for
+  example `FND-04.AC3: GET /api/health, sds-auth validation order, step 3: a
+  credential that does not parse`.
 - A `/** … */` brief above the test states the behaviour of the criterion in
   at most 20 words.
 - A contract case of `sds-testing` (`references/contract-tests.md`) cites the

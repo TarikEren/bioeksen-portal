@@ -157,7 +157,7 @@ describe("FND-05 request bodies", () => {
   });
 
   /** A body with a field the endpoint does not define gets 400 VAL-4007, and details names the field. */
-  it("FND-05.AC3: a body with an unknown field answers 400 VAL-4007 and names the field", async () => {
+  it("FND-05.AC3: a body field that the endpoint does not define is refused and named", async () => {
     const response = await call(postEcho, "/api/test/echo", {
       method: "POST",
       headers: JSON_HEADERS,
@@ -183,7 +183,7 @@ describe("FND-05 request bodies", () => {
 
   // Contract case of the route wrapper (code-prefixes.md step 13): a body that does not parse.
   /** A body that is not JSON gets 400 VAL-4000. */
-  it("FND-05.AC3: a body that does not parse answers 400 VAL-4000", async () => {
+  it("FND-05.AC3: sds-logging selection procedure, step 13: a body that does not parse", async () => {
     const response = await call(postEcho, "/api/test/echo", {
       method: "POST",
       headers: JSON_HEADERS,
@@ -193,7 +193,7 @@ describe("FND-05 request bodies", () => {
   });
 
   /** A body of exactly 1 MiB is inside the limit: the seam echoes it. */
-  it("FND-05.AC5: a body of exactly 1 MiB is accepted", async () => {
+  it("FND-05.AC5: a body at the limit is accepted", async () => {
     const valueLength = BODY_LIMIT_BYTES - ECHO_FRAME_BYTES;
     const body = echoBody(valueLength);
     expect(Buffer.byteLength(body, "utf8")).toBe(BODY_LIMIT_BYTES);
@@ -208,7 +208,7 @@ describe("FND-05 request bodies", () => {
   });
 
   /** A body one byte over 1 MiB gets 413 VAL-4550. */
-  it("FND-05.AC5: a body one byte over 1 MiB answers 413 VAL-4550", async () => {
+  it("FND-05.AC5: a body over the limit is refused", async () => {
     const body = echoBody(BODY_LIMIT_BYTES - ECHO_FRAME_BYTES + 1);
     expect(Buffer.byteLength(body, "utf8")).toBe(BODY_LIMIT_BYTES + 1);
 
@@ -218,7 +218,7 @@ describe("FND-05 request bodies", () => {
 
   // Contract case "Understated length" (sds-api-design, standard-api-endpoints.md): the limit counts the bytes that arrive.
   /** A streamed body over 1 MiB, with no Content-Length, gets 413 VAL-4550. */
-  it("FND-05.AC5: a streamed body over 1 MiB without Content-Length answers 413 VAL-4550", async () => {
+  it("FND-05.AC5: the limit counts the bytes that arrive, not Content-Length", async () => {
     const chunk = new TextEncoder().encode("a".repeat(64 * 1024));
     const chunks = Math.ceil((BODY_LIMIT_BYTES + 1) / chunk.byteLength) + 1;
     let sent = 0;

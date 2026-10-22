@@ -37,7 +37,7 @@ afterAll(() => {
 
 describe("FND-04 standard endpoints, identity provider unreachable", () => {
   /** A token whose key the app cannot fetch, because the issuer is unreachable, gets 503 AUTH-5500. */
-  it("FND-04.AC3: an operator endpoint answers 503 AUTH-5500 when the signing keys cannot be fetched", async () => {
+  it("FND-04.AC3: sds-auth validation order, step 6: the identity provider is unreachable", async () => {
     const authorization = bearer(await mintToken(issuer, "operator"));
     for (const [path, handler] of handlers) {
       await expectEnvelope(await call(handler, path, { headers: { authorization } }), 503, "AUTH-5500");
