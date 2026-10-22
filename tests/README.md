@@ -117,6 +117,7 @@ database of `DATABASE_URL`. A suite the guard refuses is not run.
 | FND-04.AC2, FND-04.AC3, FND-04.AC4 | integration | `integration/fnd-04-standard-endpoints.test.ts`, `integration/fnd-04-identity-provider.test.ts` |
 | FND-05.AC1, FND-05.AC2, FND-05.AC3, FND-05.AC5 | integration | `integration/fnd-05-errors-and-correlation.test.ts` |
 | FND-06.AC1, FND-06.AC2 | pipeline | `pipeline/fnd-06-data-layer.test.ts` |
+| DEC-005 (no criterion: the raw object `platform_refuse_delete()` of FND-06 rule 5; review 1, R-014) | integration | `integration/dec-005-raw-objects.test.ts` |
 | FND-07.AC1, FND-07.AC2, FND-07.AC4 | e2e | `e2e/fnd-07-request-security.spec.ts` |
 | FND-07.AC5 | pipeline | `pipeline/fnd-07-dependency-check.test.ts` |
 | FND-08.AC1 | pipeline | `pipeline/fnd-08-dictionaries.test.ts` |
