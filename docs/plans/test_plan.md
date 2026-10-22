@@ -1,187 +1,157 @@
-# Stage B1: Identity and platform services (crisis mode)
+# Stage B2: Product catalog (crisis mode)
 
-This is the contract of stage B1, step 1 of the loop of `crisis_mode.md`
-(DEC-136). It names what the agents build. It writes no test. The plan of B0
-is in git: `git show c3de89c:docs/plans/test_plan.md`.
+This is the contract of stage B2, step 1 of the loop of `crisis_mode.md`
+(DEC-136). It names what the agents build. It writes no test. The contract of
+B1 is in git: `git show feature/b1-identity:docs/plans/test_plan.md`.
 
-**Status.** The owner approved this contract on 2026-10-22.
+**Status.** Draft. The owner has not approved it.
 
-**Items.** FND-04 (AC5), FND-07 (AC3), FND-08 (AC5), PLT-40, PLT-20, ACC-10
-(with ACC-11), ACC-20, ACC-30 (AC1, AC3, AC4; with ACC-31), ACC-40, PLT-10,
-PLT-30, ACC-50 (AC1, AC2).
+**Items.** FND-09 (AC3), CAT-10, CAT-20, CAT-30, CAT-40 (with CAT-41), CAT-50,
+CAT-60 (with CAT-61).
 
-**Exit flow** (README › *Build order*). On the demo: bootstrap creates the
-first Platform Administrator and sends the invitation. The administrator sets
-a password from the mail in Mailpit, signs in, creates a second user, and
-grants the IFU Manager role. Each grant has its `platform_audit_record` row.
+**Exit flow** (README › *Build order*). On the demo: an IFU Manager enters a
+product with two catalog numbers, imports LOTs with a row report, and
+corrects a LOT whose dates disagree. Each change has its
+`platform_audit_record` row.
 
-**Rules in force that are Pending.** DEC-013, DEC-021 (SDS), DEC-135 (IT).
+**Rules in force that are Pending.** DEC-013 (SDS), DEC-039 (SDS), DEC-040
+(PM), DEC-044, DEC-046, DEC-047 (QA), DEC-048 (PM), DEC-050 (QA), DEC-135 (IT).
+The build follows the rule in each row until the owner answers.
+
+**The UI reference.** The mockup `BioeksenPortal/frontend`,
+`src/features/catalog/` (product list, product page, new product, new catalog
+number, LOT panel, date correction drawer, LOT import form). The specs win on
+a conflict.
 
 ## API
 
-All paths are under `/api/v1/identity/`. Bodies and lists follow
-`sds-api-design` (camelCase, ids as strings, `status: "ok"`, 201 with
-`Location`, the list body). Each answer carries `X-Request-Id` and
-`Cache-Control: no-store`. "Session" means the cookie `bp_session`. A route
-that changes state and reads the session checks `Origin` (FND-07.AC3:
-401 `AUTH-4101`). Each session route answers 401 `AUTH-4100` without a
-session, and 403 `PERM-4150` without the permission (ACC-30).
+All paths are under `/api/v1/catalog/`. Bodies and lists follow
+`sds-api-design` and B1 (camelCase, ids as strings, 201 with `Location`, the
+list body, `PATCH` as a JSON Merge Patch). Each route needs a session (401
+`AUTH-4100`), checks `Origin` on a change (401 `AUTH-4101`), and needs the
+permission of its row (403 `PERM-4150`). Business dates are `YYYY-MM-DD`
+(DEC-039).
 
-| Method and path | Caller | Body or query | Success | Failures |
+| Method and path | Permission | Body or query | Success | Failures |
 |---|---|---|---|---|
-| `POST sign-in` | anyone | `{ email, password }` | 200 `{ user: Me }`, sets `bp_session` (ACC-20.AC1) | 401 `AUTH-4101`, one body for the three cases (AC2); 429 `RATE-4400` with `Retry-After` (AC3–AC5, DEC-027) |
-| `POST sign-out` | session | — | 200, ends the session, clears the cookie | 401 `AUTH-4100` |
-| `GET me` | session | — | 200 `{ user: Me }` | 401 `AUTH-4100` |
-| `GET users` | `organization.users.view` | `page`, `limit`, `q` | 200 list of `UserSummary` | — |
-| `POST users` | `organization.users.manage` | `CreateUserInput` | 201 `{ user: UserDetail }`; one invitation mail after commit (ACC-10.AC1) | 409 `RES-4300` (AC2) |
-| `GET users/{id}` | `organization.users.view` | — | 200 `{ user: UserDetail }` with its active roles | 404 `RES-4200` |
-| `POST users/{id}/invitation` | `organization.users.manage` | — | 200; the earlier link ends (AC6) | 404; 409 `RES-4302` when the user already has a password |
-| `POST users/{id}/deactivation` | `organization.users.manage` | — | 200; each session of the user ends (AC7) | 403 `PERM-4150` for oneself (AC8); 409 `RES-4302` when inactive |
-| `POST invitations/accept` | anyone | `{ token, password }` | 200 (AC3) | 401 `AUTH-4101` used or ended; 401 `AUTH-4102` older than 14 days (AC4); 400 `VAL-4006` with each broken rule in `details` (AC5) |
-| `POST password-resets` | anyone | `{ email }` | 202, the same body always; a mail only to an active user (ACC-11.AC1) | 400 `VAL-4001` |
-| `POST password-resets/complete` | anyone | `{ token, password }` | 200; every other session ends (ACC-11.AC2) | 401 `AUTH-4102` (AC3); 401 `AUTH-4101` (AC4); 400 `VAL-4006`, also for the current password (AC5) |
-| `GET roles` | `iam.role.manage` | — | 200 `{ roles: RoleView[] }` | — |
-| `POST users/{id}/role-assignments` | `iam.role.manage` | `{ roleCode }` | 201; one audit row (ACC-31.AC1) | 403 `PERM-4150` for oneself (AC2) or without `iam.role.manage` (AC5); 409 `RES-4300` held already (AC3); 409 `RES-4302` inactive user |
-| `POST users/{id}/role-assignments/{roleCode}/revocation` | `iam.role.manage` | — | 200; `isActive` false; one audit row (ACC-31.AC4) | 404 `RES-4200` no active assignment |
+| `GET products` | `catalog.product.view` | `page`, `limit`, `q` (stem, name in either language, or catalog number), `active` | 200 list of `ProductSummary` | — |
+| `POST products` | `catalog.product.manage` | `CreateProductInput`: `internalCode`, `name {tr, en}`, `description {tr, en}?`, `regulatoryStatus`, `kitCodeBase?` | 201 `{ product: ProductDetail }`; one audit row (CAT-10.AC1) | 409 `RES-4300` same stem and status (AC2); 400 `VAL-4001`, `details` names the missing entry (AC3) |
+| `GET products/{id}` | `catalog.product.view` | — | 200 `{ product: ProductDetail }` with its catalog numbers | 404 `RES-4200` |
+| `PATCH products/{id}` | `catalog.product.manage` | `name`, `description`, `internalCode`, `regulatoryStatus`, `kitCodeBase` | 200; one audit row | 409 `RES-4302` stem or status while the product has a LOT (AC4; the document check comes in B3); 409 `RES-4300` |
+| `POST products/{id}/deactivation` | `catalog.product.manage` | — | 200; the row stays; one audit row (AC5) | 409 `RES-4302` when inactive |
+| `POST products/{id}/catalog-numbers` | `catalog.catalog_number.manage` | `catalogNumber`, `packSize?`, `format?` | 201 `{ catalogNumber: CatalogNumberView }`; cleanup once (CAT-20.AC3); one audit row (AC1) | 409 `RES-4300` anywhere in the catalog (AC2) |
+| `PATCH catalog-numbers/{id}` | `catalog.catalog_number.manage` | `packSize`, `format`, `productId` (a move) | 200; one audit row | 409 `RES-4302` a move while it has a LOT (AC4) |
+| `POST catalog-numbers/{id}/deactivation` | `catalog.catalog_number.manage` | — | 200; the row stays (AC5) | 409 `RES-4302` when inactive |
+| `GET products/{id}/lots` | `catalog.lot.view` | `page`, `limit`, `catalogNumberId?`, `conflict?` | 200 list of `LotView` (dates, source, conflict marker) | 404 `RES-4200` |
+| `POST catalog-numbers/{id}/lots` | `catalog.lot.manage` | `lotNumber`, `suppliedManufacturingDate?`, `expiryDate?`, `confirmKitCodeMismatch?` | 201 `{ lot: LotView }`; one audit row with both dates where they differ (CAT-40) | 409 `RES-4300` (AC2); 400 `VAL-4006` on `lotNumber` (format, date, kit code: three issues) or `expiryDate` (CAT-30.AC2, AC3; CAT-40.AC6, AC7) |
+| `POST lots/{id}/manufacturing-date-correction` | `catalog.lot.correct` | `manufacturingDate`, `reason` | 200; source `MANUAL_CORRECTION`, no conflict; one audit row with the date before, after, the encoded date and the reason (CAT-41.AC1) | 400 `VAL-4001` no reason (AC2); 403 `PERM-4150` (AC3) |
+| `POST lot-imports/preview` | `catalog.lot.manage` | the import input (below) | 200 `{ plan }`: each row with its outcome and reason, grouped by product, the counts, and a warning when an earlier import had the same hash (CAT-60 rule 9) | 400 `VAL-4001` no input; 400 `VAL-4006` with a `details` entry for each fault (AC10, AC19, AC20); 413 `VAL-4550` (AC11) |
+| `POST lot-imports` | `catalog.lot.manage` | the import input | 201 with `Location`, `{ import: LotImportView }`; one audit row with the counts (AC2) | as the preview; a stop records the import as `FAILED` (AC14) |
+| `GET lot-imports` | `catalog.lot.view` | `page`, `limit` | 200 list of `LotImportView` (the screen *LOT imports*) | — |
+| `GET lot-imports/{id}` | `catalog.lot.view` | — | 200 `{ import: LotImportView }` with its counts | 404 `RES-4200` |
+| `GET lot-imports/{id}/rows` | `catalog.lot.view` | `page`, `limit`, `outcome?` | 200 list of `LotImportRowView` | 404 `RES-4200` |
+| `GET lot-imports/template` | `catalog.lot.manage` | — | 200, an XLSX in the active language (CAT-61.AC1) | — |
 
-The operator endpoints of B0 gain the rate limit of FND-04 rule 4 and AC5.
-`setLanguage` (B0) also stores nothing for a user; FND-08.AC5 comes from the
-user's `preferredLanguage`.
-
-**Test seams** (the backend step adds them for the test phase; seams only):
-`POST /api/test/session { userId }` (a test sign-in), `POST /api/test/clock
-{ now }`, `GET /api/test/mail?to=` and `POST /api/test/mail/mode { mode }`
-(`ok`, `refuse`, `down`, `timeout`), `POST /api/test/files` (PLT-10).
+**The import input.** `multipart/form-data` with the fields `text` (pasted
+text) or `file`, `productId?` (an import for one product, CAT-60 rule 5) and
+`catalogNumber?` (one-column input without a header, rule 4). The body limit
+is 5 MiB (DEC-051), counted as it arrives, before the media type (B0 order).
 
 ## Data
 
-One migration `identity_and_audit` (`prisma migration plan`, never
-`db update`). The DELETE and TRUNCATE triggers call `platform_refuse_delete()`
-(B0) as `rawSql` in the same migration.
+One migration `catalog` (`prisma migration plan`, never `db update`). The
+DELETE and TRUNCATE triggers call `platform_refuse_delete()` as `rawSql` in the
+same migration, on each table (DEC-010).
 
-| Table | Columns and constraints |
+| Table | Columns and constraints (the spec names them) |
 |---|---|
-| `identity_user` | `id` BIGSERIAL; `email`; `email_normalized` (lower case), unique `identity_user_email_unique`; `first_name`; `last_name`; `preferred_language` check `tr`/`en`; `is_active` (default true); `password_hash` (null until set); `password_changed_at`; `created_at`, `updated_at` timestamptz(3). Refuses DELETE and TRUNCATE (DEC-010) |
-| `identity_auth_token` | `id`; `user_id` → `identity_user`; `purpose` check `INVITATION`/`PASSWORD_RESET`; `token_hash` (SHA-256), unique; `expires_at`; `used_at`; `ended_at`; `created_by_user_id` (null for bootstrap); `created_at`; partial unique (`user_id`, `purpose`) where `used_at` and `ended_at` are null |
-| `identity_permission` | `id`; `code` unique |
-| `identity_role` | `id`; `code` unique; `name` JSONB `{tr, en}` with its check (DEC-011) |
-| `identity_role_permission` | `role_id`, `permission_id`; unique pair |
-| `identity_role_assignment` | `id`; `user_id`; `role_id`; `is_active`; `granted_by_user_id` (null for bootstrap); `granted_at`; `revoked_by_user_id`; `revoked_at`; partial unique (`user_id`, `role_id`) where `is_active`. Refuses DELETE and TRUNCATE |
-| `platform_audit_record` | `id`; `occurred_at`; `actor_type` check `USER`/`SYSTEM`; `actor_user_id`; `action_code` (`<module>.<entity>.<verb>`); `entity_type`; `entity_id`; `state_before`, `state_after` JSONB; `reason`; `request_id`. Refuses UPDATE, DELETE and TRUNCATE |
+| `catalog_product` | `id`; `internal_code` (≤ 64); `name` JSONB `{tr, en}` with its check (DEC-011); `description` JSONB, optional, same check; `regulatory_status` check `IVD`/`RUO`, no default; `kit_code_base` (≤ 32), optional; `is_active`; `created_at`, `updated_at`. `product_unique_identity` `UNIQUE (internal_code, regulatory_status)` |
+| `catalog_catalog_number` | `id`; `product_id` → `catalog_product` restrict; `catalog_number` (≤ 64); `pack_size` (≤ 32), optional; `format` check `VCAP`/`LYOPHILIZED`/`LIQUID`, optional; `is_active`; timestamps. `catalog_number_unique` `UNIQUE (catalog_number)` |
+| `catalog_lot` | `id`; `catalog_number_id` → restrict; `lot_number` (≤ 64); `manufacturing_date` date; `manufacturing_date_source` check `PARSED_FROM_LOT`/`SUPPLIED`/`MANUAL_CORRECTION`; `supplied_manufacturing_date` date, optional; `expiry_date` date, optional; `has_date_conflict`; `lot_import_id`, optional; timestamps. `lot_unique_per_catalog_number`; `lot_expiry_after_manufacturing`; index `lot_number_idx` |
+| `catalog_lot_import` | `id`; `source_filename`, optional; `source_hash`; `product_id`, optional; `uploaded_by_user_id`; `status` check `PROCESSING`/`COMPLETED`/`FAILED`; `row_count`, `created_count`, `existing_count`, `conflict_count`, `invalid_count`; `failure_code` (only when `FAILED`); `created_at`, `completed_at`. `lot_import_counts_add_up` |
+| `catalog_lot_import_row` | `id`; `lot_import_id`; `row_number` (from 1); `outcome`; `reason`; `raw_cells` JSONB; `lot_id`, optional. `lot_import_row_unique` |
 
-Audited actions: `identity.user.created`, `identity.user.invited`,
-`identity.user.deactivated`, `identity.role_assignment.granted`,
-`identity.role_assignment.revoked`. The audit row and its `AUDIT` log record
-are in the transaction of the change (DEC-014, PLT-40). A creation writes
-`identity.user.created` only; a re-invitation writes `identity.user.invited`
-(ACC-10 rule 6, owner answer 2026-10-22).
+`uploaded_by_user_id` holds the user id with no foreign key to
+`identity_user` (DEC-004: a module reads another module only through its
+service).
 
-Role codes (ACC-30 rule 4, owner answer 2026-10-22): `IFU_MANAGER` and
-`PLATFORM_ADMINISTRATOR`.
+Audited actions (PLT-40): `catalog.product.created`, `catalog.product.changed`,
+`catalog.product.deactivated`, `catalog.catalog_number.created`,
+`catalog.catalog_number.changed`, `catalog.catalog_number.deactivated`,
+`catalog.lot.registered`, `catalog.lot.manufacturing_date_corrected`,
+`catalog.lot_import.committed`. A move of a catalog number is a `changed`
+row with the product before and after.
 
-**Redis.** Sessions: key from the SHA-256 of the session id, with `userId`,
-`createdAt`, `lastSeenAt`; a set of sessions for each user; 60 minutes idle
-and 12 hours in total (DEC-025). Rate limits: failed sign-ins by source
-(10 in a minute) and by email address (5 in a row, then 15 minutes), failed
-operator authentications by source (10 in a minute). The clock is `now()`
-(`src/lib`), so the test seam can move it.
+**The import status of a stop** (CAT-60 rule 8): the commit transaction rolls
+back, then a second transaction records the import as `FAILED` with the code.
 
 ## Services and types
 
-Types and zod schemas: `src/lib/schemas/identity.ts` (`SignInInput`,
-`CreateUserInput`, `SetPasswordInput`, `UserListQuery`, `Me`, `UserSummary`,
-`UserDetail`, `RoleView`, `RoleAssignmentView`, `PermissionCode`). The
-registry of ACC-30 (permissions and the two roles) is one constant:
-`src/modules/identity/domain/registry.ts`.
+Types and zod schemas: `src/lib/schemas/catalog.ts` (`CreateProductInput`,
+`UpdateProductInput`, `ProductSummary`, `ProductDetail`, `CatalogNumberInput`,
+`CatalogNumberView`, `RegisterLotInput`, `LotView`, `CorrectionInput`,
+`ImportPlan`, `LotImportView`, `LotImportRowView`, `RegulatoryStatus`,
+`Format`, `Outcome`, `Reason`).
 
-| Service file | Functions |
+| File | Functions |
 |---|---|
-| `src/modules/identity/services/session-service.ts` | `signIn(input, meta)`, `signOut(sessionId)`, `getSessionUser(sessionId)` |
-| `src/modules/identity/services/user-service.ts` | `listUsers(actor, query)`, `createUser(actor, input)`, `getUser(actor, id)`, `reinviteUser(actor, id)`, `deactivateUser(actor, id)` |
-| `src/modules/identity/services/credential-service.ts` | `acceptInvitation(input)`, `requestPasswordReset(email)`, `completePasswordReset(input)` |
-| `src/modules/identity/services/role-service.ts` | `listRoles(actor)`, `grantRole(actor, userId, roleCode)`, `revokeRole(actor, userId, roleCode)` |
-| `src/modules/platform/services/audit-service.ts` | `appendAudit(tx, entry)` |
-| `src/modules/platform/services/mail-service.ts` | `queueMail(tx, message)` sent after commit; the invitation and reset templates in both languages |
-| `src/modules/platform/services/file-service.ts` | `storeDocumentFile(ids, bytes)`, `signedDownloadUrl(key)` (PLT-10; no page uses them in B1) |
-| `src/worker/main.ts`, `src/worker/bootstrap.ts` | the hourly pass with an advisory lock (PLT-30; no job yet); `pnpm run bootstrap` (ACC-40) |
+| `src/modules/catalog/domain/lot-number.ts` | `cleanTransport(value)` (CAT-30 rule 1), `readEncodedDate(lotNumber)` (DEC-044). No other code takes a substring of a LOT number (rule 3) |
+| `src/modules/catalog/domain/kit-code.ts` | `expectedKitCode(base, format)`, `kitCodeMatches(lotNumber, base, format)` (DEC-048, DEC-049) |
+| `src/modules/catalog/domain/supplied-date.ts` | `readSuppliedDate(cell)` (DEC-053) |
+| `src/modules/catalog/domain/import-reader.ts` | the input to rows: CSV, TSV, text, XLSX (first sheet); UTF-8 or Windows-1254 (DEC-052); the header labels in either language, without letter case and accents; the no-header cases (rule 4) |
+| `src/modules/catalog/domain/import-planner.ts` | one outcome and one reason for each row (rule 6), from the rows and the registered LOTs |
+| `src/modules/catalog/services/product-service.ts` | `listProducts`, `createProduct`, `getProduct`, `updateProduct`, `deactivateProduct` |
+| `src/modules/catalog/services/catalog-number-service.ts` | `addCatalogNumber`, `updateCatalogNumber`, `deactivateCatalogNumber` |
+| `src/modules/catalog/services/lot-service.ts` | `listLots`, `registerLot`, `correctManufacturingDate` |
+| `src/modules/catalog/services/lot-import-service.ts` | `previewImport`, `commitImport`, `listImports`, `getImport`, `listImportRows`, `importTemplate(actor, language)` |
 
-`actor` is the session principal: the user id and the set of permission
-codes. Each service checks its permission (`sds-nextjs-backend` §1).
+Each service takes the session `actor` and checks its permission. The vectors
+of CAT-30 rule 5 are one data file, `tests/fixtures/cat-30-vectors.json`,
+which the test phase reads.
 
-**Mock data** (step 2): `src/lib/mock/identity.ts`: three users (a Platform
-Administrator, an IFU Manager, an inactive user), the two roles, and a mock
-session store. Each mock sign-in accepts the password
-`mock-password-1234`. Each mock function carries `// MOCK: <item>`.
+**Mock data** (step 2): `src/lib/mock/catalog.ts`: three products
+(`BS-GHPV-L` `IVD` with the kit code base `GHPV` and the catalog numbers
+`BS-GHPV-L-100` and `BS-GHPV-L-25`, both `VCAP`; `BS-STI-L` `IVD`; `BS-STI-L`
+`RUO`), five LOTs (one with a date conflict), and one import with its rows.
+Each mock function carries `// MOCK: <item>`.
 
 ## UI
 
-The text comes from the dictionaries, in the groups `signIn`, `invitation`,
-`passwordReset`, `backoffice`, `users`, `roles`, `noArea`, and
-`common.signOut`. The failure text follows DEC-122 (by code).
+The text comes from the dictionaries, in the group `catalog`. A catalog
+number, a LOT number and a manufacturing date are in IBM Plex Mono; their
+labels are in IBM Plex Sans (FND-09.AC3, DEC-016). A conflict shows with an
+icon and a text, never by color alone (DEC-019).
 
 | Page | Path | Content |
 |---|---|---|
-| Sign-in | `/sign-in` | Email, password, submit, the link to the reset request. After sign-in: `/backoffice` when the user holds a permission (ACC-50.AC1), else `/no-area` (AC2) |
-| Set a password | `/invitation` (token in the fragment `#token=`) | Password, submit, the broken rules (ACC-10.AC5) |
-| Request a reset | `/password-reset` | Email, submit, the same message always |
-| Set a new password | `/password-reset/complete` (token in the fragment) | Password, submit |
-| Backoffice shell | `/backoffice/**` | Navigation (Users with `organization.users.view`), the user menu with sign-out, the language switch. Without a session, the proxy and the layout send the person to `/sign-in` (ACC-30.AC1) |
-| Start page | `/backoffice` | The name of the user and the areas that the permissions open |
-| Users | `/backoffice/users` | The list; "new user" with `organization.users.manage` |
-| New user | `/backoffice/users/new` | Email, first name, last name, preferred language |
-| User | `/backoffice/users/[id]` | The details; re-invite and deactivate (`organization.users.manage`); the roles with grant and revoke (`iam.role.manage`) |
-| No area | `/no-area` | "The account has no area yet", and sign-out (ACC-50.AC2) |
-| Entry page | `/` | Adds a link to the sign-in |
+| Products | `/backoffice/catalog/products` | The list with the search (stem, name, catalog number) and the status; "new product" with `catalog.product.manage` |
+| New product | `/backoffice/catalog/products/new` | Stem, name tr/en, description tr/en, regulatory status (no default), kit code base |
+| Product | `/backoffice/catalog/products/[id]` | The details, change and deactivate; the catalog numbers with add, change, move and deactivate; the LOTs with the dates, the source and the conflict marker, the single-LOT form with the confirmation of a kit-code mismatch (DEC-050), and the date correction with a reason (CAT-41). The documents section comes in B3 |
+| LOT imports | `/backoffice/catalog/lot-imports` | The list of imports with the status and the counts; "new import" with `catalog.lot.manage`; the template download |
+| New import | `/backoffice/catalog/lot-imports/new` | The paste field, the file field, the choice of one product, the preview grouped by product with the outcome of each row and the hash warning, the commit |
+| Import report | `/backoffice/catalog/lot-imports/[id]` | The counts and the rows, with the outcome, the reason and the raw cells |
 
-The language of a signed-in user is the user's `preferredLanguage`
-(FND-08.AC5, DEC-017).
+The sidebar gains the group *e-IFU* with *Product catalog*
+(`catalog.product.view`) and *LOT imports* (`catalog.lot.view`). The card
+*Product catalog* of the start page becomes a link.
 
 ## Tasks
 
 | Step | Who | Done when |
 |---|---|---|
-| 2 Mock skeleton | Backend agent | The schemas, the registry, every service of the table on mocks, the routes of the API on the services, the session principal in the route wrapper, the proxy redirect for `/backoffice` |
-| 3 Frontend | Frontend agent | Each page of the UI table works on the mocks, in Turkish and English |
-| 4 Backend | Backend agent | The migration, the repositories and the real services, in the B1 order (audit and mail first). Sessions and rate limits in Redis, FND-04.AC5, FND-07.AC3, FND-08.AC5. Mail by SMTP (Mailpit in the demo, with STARTTLS: see *The demo relay*), files in MinIO, the worker, bootstrap. `compose.demo.yaml` runs bootstrap after the migrations, and runs the worker. Each `MOCK:` goes. New packages: `nodemailer`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` |
-| 5 Phase review | `code-reviewer` | The commits of B1, against the items above |
-| 6 Fix | Developers | Critical and Major findings fixed |
+| 2 Mock skeleton | Backend agent | The schemas, every service of the table on mocks, the routes and the server actions, the multipart route wrapper |
+| 3 Frontend | Frontend agent | Each page of the UI table works on the mocks, in Turkish and English, after the mockup |
+| 4 Backend | Backend agent | The migration, the repositories, the real services, the domain functions, the XLSX reading and the template, the vectors file. Each `MOCK:` goes |
+| 5 Phase review | `code-reviewer` | The commits of B2, against the items above |
+| 6 Fix | Developers | Only a finding that blocks B3, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**Carried from step 2 to step 4** (step 2 is `34f0fbe`). The Origin check
-(FND-07.AC3), the rate limits and 429 `RATE-4400`, and the test seams. A
-`SECURITY` log record for each granted session request, as the operator path
-writes one. The bundled list of DEC-137 replaces the mock list of
-`common-passwords.ts`. A re-invitation of an inactive user gives 409
-`RES-4302` (DEC-013).
-
-**Choices the specs left open.** The owner accepted them on 2026-10-22, and
-they are Default decisions now: DEC-129 (`scrypt` hashes), DEC-137 (the
-bundled common-password list, entries of 15 characters or more) and DEC-138
-(the token in the URL fragment).
-
-**The demo relay** (owner answer 2026-10-22). DEC-135 applies each rule of
-`production` to the demo, so PLT-20.AC3 applies there too: the app sends
-nothing to a relay that offers no STARTTLS. In `compose.demo.yaml`, a one-shot
-service makes a self-signed certificate for the host `mailpit` in a shared
-volume. Mailpit offers STARTTLS with this certificate. The app, the worker and
-bootstrap trust it through `NODE_EXTRA_CA_CERTS`. No setting of the app
-changes, and no check of TLS is switched off.
-
-## Stage check (2026-10-22)
-
-The gate of `crisis_mode.md` §5 at `38e11e3`:
-
-- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
-  ran in the image of the demo).
-- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
-  tests (RC-1).
-- No `MOCK:` comment remains in `src/`.
-- The demo starts from `compose.demo.yaml`. The exit flow passed in the
-  browser: bootstrap, the invitation in Mailpit over STARTTLS, the password,
-  the sign-in, a second user, the IFU Manager role, and one
-  `platform_audit_record` row for each creation and grant. Screenshots:
-  `docs/plans/b1-exit/`.
-- Review 4 is recorded. The owner deferred R-053 to R-058; no open finding
-  blocks B2.
-
-**Result:** B1 passes the gate.
+**Choices the specs leave open** (record them as Default decisions if the
+owner accepts them):
+- The import input is `multipart/form-data` (a file needs it); the server
+  actions take the same `FormData`, with a body limit of 5 MiB.
+- XLSX is read and written with `exceljs`. Windows-1254 is decoded with the
+  `TextDecoder` of Node.
+- The list of imports (`GET lot-imports`) is added for the screen *LOT
+  imports*; CAT-60 rule 2 names only one import and its rows.
+- The template download needs `catalog.lot.manage`.
