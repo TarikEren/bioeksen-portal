@@ -1,8 +1,10 @@
 /**
  * FND-07 Request security: AC1, AC2, AC4.
  *
- * AC1 covers every HTML answer: a page, the not-found page, and the answer
- * to a prefetch of the browser (review 2, Q-9 and R-029).
+ * AC1 covers every HTML answer: a page, the not-found page, the answer to a
+ * prefetch of the browser (review 2, Q-9 and R-029), and the production build
+ * started with `NODE_ENV=development`, which is still not the development
+ * server (FND-07 rule 1; review 2, R-028).
  *
  * AC4 is here and not in the integration tier of the stage plan: the
  * Next.js origin check of server actions runs in the server, before the
@@ -11,7 +13,9 @@
 import type { APIResponse } from "@playwright/test";
 
 import { chooseLanguage } from "../support/language";
-import { expect, test } from "./fixtures";
+import { freePort } from "../support/ports";
+import { spawnApp } from "../support/spawn-app";
+import { configuredEnvironment, expect, test } from "./fixtures";
 
 /** The directives of a Content-Security-Policy header, by name. */
 function directives(header: string): Map<string, string[]> {
@@ -92,6 +96,28 @@ test.describe("FND-07 headers", () => {
       expectPolicy(first, second);
     });
   }
+
+  // FND-07 rule 1: only the development server (next dev) adds 'unsafe-eval'; a production build never adds it.
+  /** The production build started with NODE_ENV=development is not the development server: its CSP has no 'unsafe-eval'. */
+  test("FND-07.AC1: a production build started with NODE_ENV=development carries the production policy", async ({
+    request,
+    tokenIssuer,
+  }) => {
+    const port = await freePort();
+    const app = await spawnApp({
+      port,
+      env: await configuredEnvironment(port, tokenIssuer.jwksUri),
+      nodeEnv: "development",
+    });
+    try {
+      const first = await request.get(`${app.baseUrl}/`);
+      const second = await request.get(`${app.baseUrl}/`);
+
+      expectPolicy(first, second);
+    } finally {
+      await app.stop();
+    }
+  });
 
   /** Every answer carries Strict-Transport-Security with max-age of at least 31536000. */
   test("FND-07.AC2: every answer carries Strict-Transport-Security", async ({
