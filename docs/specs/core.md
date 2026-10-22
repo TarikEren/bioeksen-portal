@@ -35,7 +35,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-010 | The system never deletes a controlled record. The controlled records are a user, a role assignment, a product, a catalog number, a LOT, and a LOT import and its rows. The other controlled records are a document, a document version, a document file, a file replacement, an applicability period, an override and an access record. A state or an `isActive` flag ends a record instead. | Decided | PO | — | FND-06, ACC-10, ACC-31, CAT-10, CAT-20, CAT-40, CAT-60, IFU-10, IFU-20, IFU-30, IFU-32, IFU-40, IFU-80, ACD-50 | eng/data-model-fields.md §Deletion policy; eng/audit-traceability.md |
 | DEC-011 | Record content that people read in two languages (a product name, a document title) is one JSONB column. It has one entry for each locale: `{ "tr": …, "en": … }`. Both entries are required. A check constraint enforces this. Interface text never uses this form. The dictionaries give the interface text. | Default | ENG | — | FND-08, CAT-10, IFU-10, ACD-20 | adr/0009; audit A-03 |
 | DEC-012 | The database stores timestamps as `timestamptz`, in UTC. Business dates (a manufacturing date, an effective date, an expiry date) are `date` columns with no time. The interface shows timestamps and counts days in the time zone `Europe/Istanbul`. | Default | ENG | — | FND-08, CAT-40, IFU-30, IFU-83 | eng/localization.md §Data representation |
-| DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. | Default | ENG | — | FND-08 | B0 test review, 2026-10-22 |
+| DEC-133 | The interface shows a timestamp as `DD.MM.YYYY HH:mm` in Turkish and as `D MMM YYYY, HH:mm` in English (`10 Mar 2026, 00:30`), on the 24-hour clock, in the time zone of DEC-012. It shows a business date in the same form without the time. It shows a file size in decimal units (1 kB is 1000 bytes), with one decimal, and a decimal comma in Turkish. | Default | ENG | — | FND-08 | B0 test review, 2026-10-22; review 1 |
 | DEC-039 | In JSON, a business date is `YYYY-MM-DD`, with no time and no offset. This departs from `sds-api-design` (`standard-api-endpoints.md`, **Types and units**). That skill gives each date an offset. The departure ends when SDS answers. | Pending | SDS | questions.md 2 | CAT-40, IFU-30, IFU-60, IFU-83 | — |
 
 ### Errors and audit
@@ -43,7 +43,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | ID | Decision | Status | Owner | Ask | Affects | Trace |
 |---|---|---|---|---|---|---|
 | DEC-013 | An API failure carries only a code of the `bioeksen-sds` registry (`sds-logging`). A domain refusal is `RES-4302` when the state of the addressed record does not allow the action. A domain refusal is `VAL-4006` when a field holds a value outside the values that the rule allows. This case also covers a record that exists and does not qualify. The system writes the rule in `message`, and in the tail of the log record as `reason=<rule>`. The second case reads step 19 of `code-prefixes.md` widely, until SDS answers. | Pending | SDS | questions.md 2 | FND-05, CAT-60, IFU-30, IFU-50, IFU-70 | adr/0014 §3; eng/error-codes.md; audit D-7 |
-| DEC-122 | The interface shows the localized text for the code and the field of a failure, with the code beside it. It never shows the answer's `message`. | Default | ENG | — | FND-08, IFU-70 | sds-nextjs-frontend §6 |
+| DEC-122 | The interface shows the localized text for the code and the field of a failure, with the code beside it. It never shows the answer's `message`. If a call gets no answer in the form of `sds-api-design` (the network fails, or the server action is unknown), the interface shows the localized text of a failed call, with no code. | Default | ENG | — | FND-08, IFU-70 | sds-nextjs-frontend §6; review 1 Q-4 |
 | DEC-014 | For each controlled change, the app writes one row of `platform_audit_record` and one `AUDIT` log record, in the transaction of the change. The row names the actor, the action code, the entity type and id, the state before and after, and the request id. Where the action needs a reason, the row also names the reason. | Default | ENG | — | PLT-40, ACC-31, CAT-41, IFU-30, IFU-40, IFU-82 | eng/audit-traceability.md; sds-database §5; owner answer 2026-10-22 (no `@bioeksen/sdk`) |
 | DEC-127 | The app writes its log records through an in-app logger (`src/lib/logging`), not through `@bioeksen/sdk`. The logger writes records in the form of `sds-logging` (`log-record.md`) to stdout and to the local store `platform_log_record`. It sends nothing to the log aggregator. This departs from `sds-logging` (**Bindings**, **Transport**) and from `sds-nextjs-backend` §3. The departure ends when `@bioeksen/sdk` is available to this app. | Decided | PO | questions.md 24 | FND-04, FND-05, PLT-40, PLT-70 | Owner answer 2026-10-22 |
 
@@ -81,7 +81,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-029 | An authorization check names a permission code, never a role. A role is a named bundle of permissions. In release 1, each grant of a role applies to the whole platform. The Academy adds grants that apply to one organization (DEC-102). | Default | ENG | — | ACC-30, ACD-10 | eng/permission-matrix.md |
 | DEC-030 | Only a holder of `iam.role.manage` grants or revokes a role. Nobody grants a role to themselves. The system audits each grant and each revocation. | Decided | PO | — | ACC-31 | eng/permission-matrix.md §Role assignment scope (decided 2026-08-23) |
 | DEC-031 | Each permission has one test that allows and one test that refuses. | Default | ENG | — | ACC-30 | eng/testing.md §Authorization |
-| DEC-038 | The source address of a request is the rightmost `X-Forwarded-For` entry that a proxy in `TRUSTED_PROXIES` did not add. This follows the rule of `sds-auth` for rate limits. The source address is never the leftmost entry. | Default | ENG | — | FND-04, ACC-20, IFU-50, IFU-80, FND-03 | eng/eifu-resolution-specification.md §Access recording; sds-auth §Rate limiting |
+| DEC-038 | The source address of a request is the rightmost `X-Forwarded-For` entry that a proxy in `TRUSTED_PROXIES` did not add. This follows the rule of `sds-auth` for rate limits. If a proxy in `TRUSTED_PROXIES` added each entry, the source address is the leftmost entry. In all other cases, the source address is never the leftmost entry. | Default | ENG | — | FND-04, ACC-20, IFU-50, IFU-80, FND-03 | eng/eifu-resolution-specification.md §Access recording; sds-auth §Rate limiting; review 1 Q-1 |
 
 ### Platform services
 
@@ -108,7 +108,9 @@ All code is under `src/` (DEC-131).
   hold each module of DEC-004. A service never imports the repositories of
   another module.
 - `src/lib/` holds the shared code: the configuration module, the database
-  client, the error class and the logger (DEC-127). It also holds the
+  client, the error class and the logger (DEC-127). The logger writes to
+  and reads from `platform_log_record` itself, because `src/lib/` never
+  imports a module. It also holds the
   dictionaries (`src/lib/i18n/dictionaries/`), the formatters and the zod
   schemas. `src/lib/` never imports `src/modules/`.
 - `src/prisma/` holds the contract and the migrations (DEC-005).
@@ -195,7 +197,9 @@ setting.
 
 **Rules.**
 1. One module reads `process.env`, once, at start. It checks `process.env`
-   with a zod schema (`sds-config`). No other file reads `process.env`.
+   with a zod schema (`sds-config`). No other file of the app reads
+   `process.env`. Two exceptions: the scripts in `src/scripts/`, which are
+   separate processes, and `NEXT_RUNTIME` in `src/instrumentation.ts`.
 2. The settings are:
 
 | Setting | Required | Default |
@@ -217,7 +221,8 @@ setting.
 | `BOOTSTRAP_ADMIN_EMAIL` (only the command of ACC-40 reads it) | no | — |
 
 3. If a required setting is not set, the code is `CFG-5000`. If the app
-   cannot use a value, the code is `CFG-5001`. In both cases, the app does not
+   cannot use a value, the code is `CFG-5001`. An empty value is a value that
+   the app cannot use, also for an optional setting. In both cases, the app does not
    report ready. It writes a `FATAL` record that names the setting and never
    its value (`sds-config`; `sds-testing`, `contract-tests.md`,
    **Configuration**).
@@ -225,7 +230,8 @@ setting.
    work only when these two conditions are true (`sds-testing`,
    **Test seams**):
    - `TEST_SEAMS_ENABLED` is `true`;
-   - `APP_ENV` is not `production`.
+   - `APP_ENV` is `development` or `test`. A missing or unknown `APP_ENV`
+     keeps the seams closed.
 
 **Acceptance.**
 - **AC1.** If `DATABASE_URL` is not set when the app starts,
@@ -352,7 +358,8 @@ across the answer and its log records.
    neither `'unsafe-inline'` nor `'unsafe-eval'`. Its `style-src` holds
    `'self'` and `'unsafe-inline'`, for the style attributes that React
    renders. Its `frame-ancestors` is `'none'`. For this reason, the Next.js
-   configuration follows DEC-130.
+   configuration follows DEC-130. Only the development server (`next dev`)
+   adds `'unsafe-eval'`, which it needs. A production build never adds it.
 2. Each answer carries `Strict-Transport-Security` with `max-age=31536000`,
    `X-Content-Type-Options: nosniff` and
    `Referrer-Policy: strict-origin-when-cross-origin`.

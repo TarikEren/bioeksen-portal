@@ -34,7 +34,7 @@ Every answer carries `X-Request-Id`. The four standard endpoints carry
 | `GET /api/health/ready` | — | 200, `status` `ok`, checks `db` and `cache` | 503, `status` `fail` or `not-ready`, no `code` |
 | `GET /api/health` | `Authorization: Bearer <operator token>` | 200, the full report; `checks.dependencies` holds `object-store` and `smtp`; 200 `ok` also when only these two fail (FND-04.AC2) | 401 `AUTH-4100`, `AUTH-4103`, `AUTH-4102`, `AUTH-4101`; 503 `AUTH-5500`; 403 `PERM-4151` |
 | `GET /api/admin/logs` | operator token; the query of `sds-api-design` | 200, the list body of `sds-api-design`, from `platform_log_record` | as `GET /api/health`; 400 `VAL-4003`, `VAL-4004`, `VAL-4005` |
-| Another method on the four paths | — | — | 405 `RES-4500` |
+| Another method on the four paths | — | — | 405 `RES-4500` with `Allow`, after the credential check (`code-prefixes.md` step 10) |
 | `POST /api/test/echo` (test seam) | JSON body `{ "value": string }`, body limit 1 MiB | 200 `{ "status": "ok", "value": … }` | 400 `VAL-4000`, `VAL-4001`, `VAL-4007`; 413 `VAL-4550`; 404 when the seams are off |
 
 Server action (FND-08): `setLanguage(language: "tr" | "en")` in
@@ -46,7 +46,7 @@ answers the `sds-api-design` envelope.
 | Table | Columns and constraints | Migration |
 |---|---|---|
 | `platform_log_record` | `id` BIGSERIAL primary key; `software_id` text; `timestamp` timestamptz(3); `severity` text; `type` text; `code` text, optional; `message` text; `shipped_at` timestamptz, optional | `src/prisma/migrations/app/<ts>_platform_log_record` (skeleton: the table and its columns only) |
-| `platform_log_record` | checks `log_record_severity_is_known` (DEBUG, INFO, WARNING, ERROR, FATAL), `log_record_type_is_known` (APP, SECURITY, AUDIT, ACCESS, JOB), `log_record_message_length` (at most 8192); indexes on (`timestamp` DESC, `id`), (`code`), (`type`, `severity`) | `<ts>_platform_log_record_constraints` (build) |
+| `platform_log_record` | checks `log_record_severity_is_known` (DEBUG, INFO, WARNING, ERROR, FATAL), `log_record_type_is_known` (APP, SECURITY, AUDIT, ACCESS, JOB), `log_record_message_length` (at most 8192); indexes on (`timestamp`, `id`), (`code`), (`type`, `severity`); PostgreSQL reads the first one backward for the newest first (Prisma 8 keeps no sort direction in an index) | `<ts>_platform_log_record_constraints` (build) |
 | — | `rawSql`: the function `platform_refuse_delete()`, for the DELETE and TRUNCATE triggers of the controlled tables of later stages (FND-06 rule 5) | the same build migration |
 
 ### UI
