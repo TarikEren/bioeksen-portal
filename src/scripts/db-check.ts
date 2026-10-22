@@ -19,6 +19,9 @@
  * in `TEST_DATABASE_HOSTS` (default: the loopback address), and the database is
  * not the one of `DATABASE_URL`. A connection string is never printed.
  *
+ * The check does not change the working tree. If the emit changes a generated
+ * file, the script writes the old text back and fails.
+ *
  * Exit codes: 0 the three checks passed; 1 a check failed; 2 the check could not
  * run (no database, or the guard refused it).
  *
@@ -26,9 +29,10 @@
  * `process.env` itself.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import pg from "pg";
 
@@ -39,13 +43,13 @@ const requireFromRoot = createRequire(path.join(root, "package.json"));
 const SUFFIX = "_integration";
 const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
 
-interface DatabaseTarget {
+export interface DatabaseTarget {
   readonly url: string;
   readonly name: string;
   readonly host: string;
 }
 
-class CheckFailure extends Error {
+export class CheckFailure extends Error {
   readonly exitCode: 1 | 2;
 
   constructor(message: string, exitCode: 1 | 2) {
@@ -54,15 +58,12 @@ class CheckFailure extends Error {
   }
 }
 
-/**
- * The disposable database, after the guard of FND-06 rule 4. `TEST_DATABASE_URL`
- * names it. When that variable is not set, `DATABASE_URL` is the database, and
- * the same guard applies to it: only a name that ends in `_integration` passes,
- * so the development database never does.
- */
-function resolveTarget(): DatabaseTarget {
-  const explicit = process.env["TEST_DATABASE_URL"];
-  const raw = explicit !== undefined && explicit !== "" ? explicit : process.env["DATABASE_URL"];
+export type Environment = Readonly<Record<string, string | undefined>>;
+
+/** The disposable database, after the guard of FND-06 rule 4. Only `TEST_DATABASE_URL` names it. */
+export function resolveTarget(env: Environment): DatabaseTarget {
+  const explicit = env["TEST_DATABASE_URL"];
+  const raw = explicit !== undefined && explicit !== "" ? explicit : env["DATABASE_URL"];
   if (raw === undefined || raw === "") {
     throw new CheckFailure(
       "db:check could not run: neither TEST_DATABASE_URL nor DATABASE_URL is set (a database whose name ends in _integration).",
@@ -79,14 +80,14 @@ function resolveTarget(): DatabaseTarget {
   if (!name.endsWith(SUFFIX) || !/^[a-z0-9_]+$/.test(name)) {
     throw new CheckFailure(`db:check refused the database: its name must be lowercase letters, digits and underscores, and end in ${SUFFIX}.`, 2);
   }
-  const allowedHosts = (process.env["TEST_DATABASE_HOSTS"] ?? LOOPBACK_HOSTS.join(","))
+  const allowedHosts = (env["TEST_DATABASE_HOSTS"] ?? LOOPBACK_HOSTS.join(","))
     .split(",")
     .map((host) => host.trim())
     .filter((host) => host !== "");
   if (!allowedHosts.includes(parsed.hostname)) {
     throw new CheckFailure("db:check refused the database: its host is not in TEST_DATABASE_HOSTS.", 2);
   }
-  const development = process.env["DATABASE_URL"];
+  const development = env["DATABASE_URL"];
   if (explicit !== undefined && explicit !== "" && development !== undefined && development !== "") {
     try {
       const other = new URL(development);
@@ -101,6 +102,20 @@ function resolveTarget(): DatabaseTarget {
     }
   }
   return { url: raw, name, host: parsed.hostname };
+}
+
+/** Writes back the text that a generated file had before the emit, for each file that changed. @returns the changed files. */
+export function restoreChanged(rootDirectory: string, files: readonly string[], before: readonly string[]): string[] {
+  const changed: string[] = [];
+  files.forEach((file, index) => {
+    const previous = before[index];
+    const location = path.join(rootDirectory, file);
+    if (previous !== undefined && readFileSync(location, "utf8") !== previous) {
+      writeFileSync(location, previous);
+      changed.push(file);
+    }
+  });
+  return changed;
 }
 
 /** Removes the connection string and the password from the text of a child process. */
@@ -164,20 +179,20 @@ async function recreateDatabase(target: DatabaseTarget): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const target = resolveTarget();
+  const target = resolveTarget(process.env);
   console.log(`db:check on the disposable database ${target.name}`);
 
   // 1. The generated files do not change when the contract is emitted again.
   const before = readGenerated();
   const emitted = prisma(["contract", "emit"]);
+  // A check does not change the tree: the old text goes back, so a second run fails too.
+  const changed = restoreChanged(root, generatedFiles, before);
   if (!emitted.ok) {
     throw new CheckFailure(`db:check failed: prisma contract emit failed.\n${summarize(emitted.output)}`, 1);
   }
-  const after = readGenerated();
-  const changed = generatedFiles.filter((_, index) => before[index] !== after[index]);
   if (changed.length > 0) {
     throw new CheckFailure(
-      `db:check failed: the contract and the generated files disagree. Emitting the contract changed ${changed.join(", ")}.\nRun pnpm run contract:emit and commit the generated files with the contract.`,
+      `db:check failed: the contract and the generated files disagree. Emitting the contract changes ${changed.join(", ")}.\nRun pnpm run contract:emit and commit the generated files with the contract.`,
       1,
     );
   }
@@ -211,11 +226,14 @@ async function main(): Promise<void> {
   console.log("ok: the migrations apply to an empty database and the schema satisfies the contract");
 }
 
-main().catch((error: unknown) => {
-  if (error instanceof CheckFailure) {
-    console.error(error.message);
-    process.exit(error.exitCode);
-  }
-  console.error("db:check could not run: an unexpected error stopped it.");
-  process.exit(2);
-});
+// Run only as a script. A test imports the functions above.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error: unknown) => {
+    if (error instanceof CheckFailure) {
+      console.error(error.message);
+      process.exit(error.exitCode);
+    }
+    console.error("db:check could not run: an unexpected error stopped it.");
+    process.exit(2);
+  });
+}
