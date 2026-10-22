@@ -28,7 +28,7 @@ import { listRoles } from "@/modules/identity/services/role-service";
 import { getUser } from "@/modules/identity/services/user-service";
 
 import { ForbiddenNotice } from "../../_components/forbidden-notice";
-import { StatusIcon } from "../_components/status-icon";
+import { StatusIcon } from "@/app/_components/status-icon";
 import { RoleManager } from "./_components/role-manager";
 import { UserActions } from "./_components/user-actions";
 

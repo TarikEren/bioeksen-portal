@@ -13,7 +13,7 @@
 
 export const INTERFACE_TIME_ZONE = "Europe/Istanbul";
 
-const ENGLISH_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+export const ENGLISH_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
 const parts = new Intl.DateTimeFormat("en-US", {
   timeZone: INTERFACE_TIME_ZONE,

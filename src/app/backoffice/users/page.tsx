@@ -28,7 +28,7 @@ import { type UserListQuery, parseUserListQuery } from "@/lib/schemas/identity";
 import { listUsers } from "@/modules/identity/services/user-service";
 
 import { ForbiddenNotice } from "../_components/forbidden-notice";
-import { StatusIcon } from "./_components/status-icon";
+import { StatusIcon } from "@/app/_components/status-icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { text } = await getRequestText();

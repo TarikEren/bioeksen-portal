@@ -9,8 +9,9 @@
  * the global stylesheet: the brand block that links to the start page, the
  * language switch, and the navigation in groups. A thin top bar names the group
  * of the open page and holds the user menu with the sign-out. The Users entry
- * shows only with `organization.users.view`, and an entry arrives with its screen
- * (the sidebar of stage B1 holds no other entry). Hiding an entry is not
+ * shows only with `organization.users.view`. The group e-IFU holds Product catalog
+ * (`catalog.product.view`) and LOT imports (`catalog.lot.view`) of stage B2. An
+ * entry arrives with its screen. Hiding an entry is not
  * authorization: each page and each service checks the permission again
  * (`sds-nextjs-frontend` §2). A layout does not run again on each navigation
  * inside it, so each page also calls `requireSession`. The first link is the skip
@@ -47,8 +48,18 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
   if (session.actor.permissions.has("organization.users.view")) {
     identityItems.push({ href: "/backoffice/users", label: text.backoffice.nav.users });
   }
-  const groups: NavGroupView[] =
-    identityItems.length > 0 ? [{ label: text.backoffice.nav.groups.identity, items: identityItems }] : [];
+  // The group e-IFU holds the catalog screens of stage B2: each entry needs the view permission of its screen.
+  const eifuItems: NavItemView[] = [];
+  if (session.actor.permissions.has("catalog.product.view")) {
+    eifuItems.push({ href: "/backoffice/catalog/products", label: text.backoffice.nav.productCatalog });
+  }
+  if (session.actor.permissions.has("catalog.lot.view")) {
+    eifuItems.push({ href: "/backoffice/catalog/lot-imports", label: text.backoffice.nav.lotImports });
+  }
+  const groups: NavGroupView[] = [
+    ...(identityItems.length > 0 ? [{ label: text.backoffice.nav.groups.identity, items: identityItems }] : []),
+    ...(eifuItems.length > 0 ? [{ label: text.backoffice.nav.groups.eifu, items: eifuItems }] : []),
+  ];
 
   const fullName = `${session.user.firstName} ${session.user.lastName}`;
 

@@ -60,6 +60,11 @@ function isFieldIssues(details: ErrorDetails): details is readonly FieldIssue[] 
   return Array.isArray(details);
 }
 
+/** The entries of `details` of a failure that names fields, or none. */
+export function fieldIssuesOf(failure: FailureView | null): readonly FieldIssue[] {
+  return failure !== null && failure.status === "fail" && isFieldIssues(failure.details) ? failure.details : [];
+}
+
 /**
  * The texts of the field errors of a failure, by field name, for the
  * `validationErrors` of HeroUI's `Form`. A failure with no field entries gives
