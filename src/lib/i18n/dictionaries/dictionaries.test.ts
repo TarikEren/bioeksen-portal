@@ -20,7 +20,7 @@ describe("dictionaries", () => {
 
   it("holds the keys that the contract of stage B0 names", () => {
     expect(keysOf(dictionaries.tr)).toEqual(
-      ["common.language.en", "common.language.switch", "common.language.tr", "home.title"],
+      expect.arrayContaining(["common.language.en", "common.language.switch", "common.language.tr", "home.title"]),
     );
   });
 

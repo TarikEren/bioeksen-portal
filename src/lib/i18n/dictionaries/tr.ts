@@ -5,8 +5,8 @@
  * `en.ts` fails `pnpm run typecheck` (FND-08.AC1). The text of a failure
  * follows DEC-122 and is added with the pages that show it.
  *
- * Stage B0 holds the keys of the contract only. The copy is a placeholder until
- * the frontend work of the stage.
+ * Stage B0 holds the keys of the contract and the text of a failed language
+ * change (`common.language.failure`, `common.errorCode`, DEC-122).
  */
 export const tr = {
   common: {
@@ -14,7 +14,9 @@ export const tr = {
       tr: "Türkçe",
       en: "English",
       switch: "Dil",
+      failure: "Dil değiştirilemedi.",
     },
+    errorCode: "Hata kodu",
   },
   home: {
     title: "Bioeksen Portal",

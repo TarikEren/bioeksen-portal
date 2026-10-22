@@ -10,7 +10,9 @@ export const en: Dictionary = {
       tr: "Türkçe",
       en: "English",
       switch: "Language",
+      failure: "The language could not be changed.",
     },
+    errorCode: "Error code",
   },
   home: {
     title: "Bioeksen Portal",

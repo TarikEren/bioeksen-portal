@@ -1,0 +1,18 @@
+/*
+ * The font tokens of the interface (DEC-016, FND-09 rule 2).
+ *
+ * `src/app/globals.css` sets no font token (DEC-015: it is the only source of
+ * color and shape, and the owner keeps it unchanged). Tailwind and HeroUI read
+ * `--font-sans` and `--font-mono` (the utilities `font-sans` and `font-mono`,
+ * and the base font of the page). This file sets the two tokens to the faces
+ * that `layout.tsx` loads from the `@fontsource` packages, so that the app
+ * serves them from its own origin. Unlayered rules win over the layers of
+ * Tailwind, so these values replace the defaults of Tailwind.
+ *
+ * IBM Plex Sans is the face of all text. IBM Plex Mono is only for business
+ * identifiers, through `font-mono`.
+ */
+:root {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
