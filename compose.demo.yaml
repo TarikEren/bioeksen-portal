@@ -1,0 +1,202 @@
+# The demo of Bioeksen Portal (DEC-135, FND-02 rule 5).
+#
+# Until IT gives the Entra values and the test and production servers, the app
+# runs as a demo on one machine: the app image, PostgreSQL 16, Redis 7, MinIO
+# and Mailpit. The app runs with APP_ENV demo, without an identity provider:
+# GET /api/health and GET /api/admin/logs answer 503 AUTH-5500, and
+# GET /api/health/ready answers 200. The demo is not for real users.
+#
+# This file holds no secret. Every secret comes from `.env` (see `.env.example`,
+# whose values are placeholders: change each one that says `change-me`).
+# Every port listens on the loopback address only. Compose files are for the
+# demo and for development; production runs the images that IT deploys
+# (sds-ci, DEC-128).
+#
+#   cp .env.example .env
+#   docker compose -f compose.demo.yaml up --build -d
+#   curl http://localhost:3000/api/health/ready
+#   docker compose -f compose.demo.yaml down -v      # also removes the data
+#
+# The order of the start: PostgreSQL, then `migrate` (once, `prisma db migrate`),
+# then the app. `bucket` makes the bucket of MinIO once. The app does not run
+# migrations itself, and its image holds none.
+name: bioeksen-portal-demo
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bioeksen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # The demo has its own database. It is never the development database.
+      POSTGRES_DB: bioeksen_portal_demo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    # MinIO no longer publishes its image on Docker Hub or quay.io. This is the
+    # Chainguard build (the same as `compose.dev.yaml`), and it has no fixed tag
+    # in the free registry.
+    image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+    ports:
+      # The browser reaches MinIO here for the signed URLs (DEC-132).
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+
+  bucket:
+    # One shot: makes the bucket when it does not exist. The image of MinIO holds
+    # its client, `mc`. The alias comes from MC_HOST_local, so the credentials are
+    # never in a command line. MinIO needs a moment to start: the loop tries
+    # again, and stops after 60 tries.
+    image: cgr.dev/chainguard/minio:latest
+    restart: "no"
+    depends_on:
+      - minio
+    environment:
+      MC_HOST_local: http://${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}:${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}@minio:9000
+      S3_BUCKET: ${S3_BUCKET:-bioeksen-portal}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        tries=0
+        until mc mb --ignore-existing "local/$${S3_BUCKET}"; do
+          tries=$$((tries + 1))
+          if [ "$${tries}" -ge 60 ]; then
+            echo "the bucket was not made" >&2
+            exit 1
+          fi
+          sleep 1
+        done
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    # One shot: applies the migrations of the commit that built it, then ends.
+    # `prisma db migrate`, never `db update`. The app waits for it.
+    build:
+      context: .
+      target: migrate
+    image: bioeksen-portal-demo-migrate:local
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bioeksen}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/bioeksen_portal_demo
+
+  app:
+    build:
+      context: .
+      target: runtime
+    image: bioeksen-portal-demo:local
+    restart: unless-stopped
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      bucket:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    # The image holds no file that the server writes, so the root can be read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      APP_ENV: demo
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${APP_PORT:-3000}}
+      # No proxy stands before the demo. The loopback address trusts none of the
+      # callers that reach the container.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bioeksen}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/bioeksen_portal_demo
+      REDIS_URL: redis://redis:6379
+
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:${MINIO_PORT:-9000}}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-bioeksen-portal}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_USER: ${SMTP_USER:-demo}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?set SMTP_PASSWORD in .env}
+      MAIL_FROM: ${MAIL_FROM:-portal@example.invalid}
+
+      EIFU_LEGAL_NOTICE_VERSION: ${EIFU_LEGAL_NOTICE_VERSION:?set EIFU_LEGAL_NOTICE_VERSION in .env}
+      EIFU_IDENTITY_KEYS: ${EIFU_IDENTITY_KEYS:?set EIFU_IDENTITY_KEYS in .env}
+      EIFU_IDENTITY_LOOKUP_PEPPER: ${EIFU_IDENTITY_LOOKUP_PEPPER:?set EIFU_IDENTITY_LOOKUP_PEPPER in .env}
+
+      # The identity provider (DEC-135). These pass through from `.env` only when
+      # they are set there; a name with no value is not set in the container. Set
+      # all of them or none. TEST_SEAMS_ENABLED is not passed: the seams stay closed.
+      ENTRA_TENANT_ID:
+      ENTRA_ISSUER:
+      ENTRA_JWKS_URI:
+      ENTRA_JWKS_MAX_AGE_SECONDS:
+      ENTRA_AUDIENCE:
+      ENTRA_CLIENT_ID:
+      ENTRA_OPERATOR_SCOPE:
+      ENTRA_CLIENT_CERTIFICATE_PATH:
+      ENTRA_CLIENT_SECRET:
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
