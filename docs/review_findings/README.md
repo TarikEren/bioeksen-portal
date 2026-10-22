@@ -28,6 +28,7 @@ coverage, the questions, the test gaps and the strengths.
 | [4](review_4.md) | 2026-10-22 | Phase review of B1 (crisis mode, DEC-136): the commits `f903986..b415029` and R-049, R-050. One `code-reviewer` agent; the main session checked the claims before it recorded them, and added R-061 to R-063 from the walk of the exit flow on the demo | `b415029` | Request changes: R-053, R-054 and R-061 (Major). The owner deferred R-053 to R-058 (2026-10-22); no finding blocks B2. `38e11e3` fixed R-059, R-061, R-062 |
 | [5](review_5.md) | 2026-10-22 | Phase review of B2 (crisis mode, DEC-136): the commits `1902f5d..4afd75f`. One `code-reviewer` agent; the main session checked the Major claims, and added R-079 to R-083 from the walk of the exit flow on the demo | `4afd75f` | Approve with follow-ups: R-064 and R-065 (Major); no finding blocks B3 |
 | [6](review_6.md) | 2026-10-22 | Phase review of B3 (crisis mode, DEC-136): the commits `0a23f93..8f4a601` and R-065. One `code-reviewer` agent; the main session checked R-084, and added R-093 and R-094 from the walk of the exit flow on the demo | `8f4a601` | Approve with follow-ups: no Critical or Major finding; nothing blocks B4 |
+| [7](review_7.md) | 2026-10-22 | Phase review of B4 (crisis mode, DEC-136): the commits `fd21ef8..0e979be`. One `code-reviewer` agent; the main session checked R-095 to R-097, and added R-102 from the walk of the exit flow on the demo | `0e979be` | Request changes: R-095, R-096 and R-097 (Major); the reviewer says that R-095 blocks the test phase |
 
 ## Status at a glance
 
@@ -127,6 +128,14 @@ coverage, the questions, the test gaps and the strengths.
 | [R-092](review_6.md#r-092--two-commit-trailers-do-not-follow-the-conventions) | Two commit trailers do not follow the conventions | Note | **Won't fix** (the history of the branch stays, as for R-074) — found in review 6 |
 | [R-093](review_6.md#r-093--the-server-accepts-a-language-code-that-is-well-formed-but-not-registered-such-as-trtr) | The server accepts a language code that is well formed but not registered, such as trtr | Minor | **Open** — found in review 6 |
 | [R-094](review_6.md#r-094--the-version-headings-of-the-document-page-read-revision03) | The version headings of the document page read "Revision03" | Minor | **Open** — found in review 6 |
+| [R-095](review_7.md#r-095--the-limits-of-dec-072-use-fixed-windows-on-the-clock-of-redis) | The limits of DEC-072 use fixed windows on the clock of Redis | Major | **Open** (the reviewer says it blocks the test phase; waits for the owner's call) — found in review 7 |
+| [R-096](review_7.md#r-096--the-code-is-compared-against-a-row-read-with-no-lock-so-concurrent-lookups-can-test-more-than-five-codes) | The code is compared against a row read with no lock, so concurrent lookups can test more than five codes | Major | **Open** — found in review 7 |
+| [R-097](review_7.md#r-097--a-visitor-can-make-the-portal-send-a-bioeksen-mail-that-holds-any-text-a-url-included-to-any-address) | A visitor can make the portal send a Bioeksen mail that holds any text, a URL included, to any address | Major | **Open** (waits for Q-19) — found in review 7 |
+| [R-098](review_7.md#r-098--the-body-schema-runs-before-the-rate-limit) | The body schema runs before the rate limit | Minor | **Open** — found in review 7 |
+| [R-099](review_7.md#r-099--two-service-headers-say-that-no-log-record-holds-a-verification-id-but-a-failure-record-logs-the-path) | Two service headers say that no log record holds a verification id, but a failure record logs the path | Note | **Open** — found in review 7 |
+| [R-100](review_7.md#r-100--the-key-move-reads-the-whole-access-record-table-on-each-hourly-pass) | The key move reads the whole access-record table on each hourly pass | Note | **Open** — found in review 7 |
+| [R-101](review_7.md#r-101--commit-0e979be-is-a-chore-with-test-exempt-acceptance) | Commit 0e979be is a chore with Test-Exempt: acceptance | Note | **Won't fix** (the history of the branch stays, as for R-092) — found in review 7 |
+| [R-102](review_7.md#r-102--the-draft-consent-text-says-that-the-visitor-can-give-a-first-and-last-name-which-the-page-does-not-ask-for) | The draft consent text says that the visitor can give a first and last name, which the page does not ask for | Minor | **Open** (for the owner and the legal function) — found in review 7 |
 
 ### Fixes not yet checked
 
@@ -148,6 +157,7 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | The commits `f903986..b415029` (stage B1) | 4 (phase review: the code commits read, one layer each way; the UI by search and spot reads; the file service not in depth; the integration and e2e tiers not run, DEC-136). The exit flow walked on the demo by the main session |
 | The commits `1902f5d..4afd75f` (stage B2) | 5 (phase review: the domain, the services, the repositories, the routes, the actions, `src/lib/http`, the schemas and the migration read in full, with the data passes; the UI by search and spot reads; the integration and e2e tiers and the dependency audit not run, DEC-136). The exit flow walked on the demo by the main session |
 | The commits `0a23f93..8f4a601` (stage B3) | 6 (phase review: the eifu module, the changed catalog and platform code, `src/lib/db`, `src/lib/transaction`, the routes, the actions and the migration read in full, with the data passes; the pages selectively; no test, integration or e2e tier run, DEC-136). The exit flow walked on the demo by the main session |
+| The commits `fd21ef8..0e979be` (stage B4) | 7 (phase review: every changed file of `src/` read in full, one layer each way; the migration and the data passes; the unit tests of the touched libraries run; no integration, e2e or build run, DEC-136). The exit flow and the SQL checks of FND-06.AC3 to AC5 done on the demo by the main session |
 
 ## Questions for the author
 
@@ -171,6 +181,8 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | Q-16 | Does the limit of failed operator authentications fail open or closed when Redis is down? | Open (owner) |
 | Q-17 | Is a larger public common-password list than the 41 entries of DEC-137 wanted? | Open (owner) |
 | Q-18 | CAT-20 rule 1: must the system refuse a catalog number whose stem is not the product's `internal_code`? | Open (owner) |
+| Q-19 | Which characters may a catalog number and a LOT number have at the verification step? | Open (owner). See R-097 |
+| Q-20 | For `OVERRIDE_TARGET_NOT_PUBLISHED` and `NO_FILE_FOR_VERSION`, does the access record store the id of the version that gave no document? | Open (owner) |
 
 ## Test coverage gaps
 

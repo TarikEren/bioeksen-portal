@@ -152,3 +152,28 @@ lookup: the awaited code mail, the one transaction of the lookup, the read of
 DEC-139 (the part of a client address in a log record). The check
 `access_record_anonymized_keeps_no_identity` of IFU-81.AC6 comes with the table
 now; it needs no decision.
+
+## Stage check (2026-10-22)
+
+The gate of `crisis_mode.md` §5 at `0e979be`:
+
+- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
+  ran in the image of the demo).
+- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
+  tests (RC-1).
+- No `MOCK:` comment remains in `src/`.
+- The demo starts from `compose.demo.yaml`, and the migration `eifu_lookup`
+  applies there. The exit flow passed in the browser: a visitor with no session
+  proved an email address with the mailed code and got the files of the correct
+  version; a second lookup gave `LOT_CATALOG_MISMATCH`; each lookup has its
+  access record with the encrypted identity. `/eifu` has
+  `X-Robots-Tag: noindex` and loads nothing from another host. The SQL checks
+  of FND-06.AC3 to AC5 pass on the demo database. Screenshots:
+  `docs/plans/b4-exit/`.
+- Review 7 is recorded. R-095, R-096 and R-097 are Major, and the reviewer says
+  that R-095 blocks the test phase. Each finding waits for the call of the owner
+  (§4 step 6).
+
+**Result:** B4 passes each check of the gate except one: an open finding
+(R-095) may block the test phase. The owner decides before the test phase
+starts.
