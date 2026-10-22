@@ -32,17 +32,26 @@ export type ErrorDetails = readonly FieldIssue[] | { readonly [key: string]: Jso
 export interface AppErrorOptions {
   readonly details?: ErrorDetails;
   readonly cause?: unknown;
+  /**
+   * Why the failure happened, for the log record only (`reason=` in the tail).
+   * The answer never carries it, so a rejection stays silent about the claim
+   * or the principal (`sds-auth`, **What a rejection may say**). It is a fixed
+   * phrase, never a value taken from the request.
+   */
+  readonly reason?: string;
 }
 
 export class AppError extends Error {
   readonly code: ErrorCode;
   readonly details: ErrorDetails;
+  readonly reason: string | null;
 
   constructor(code: ErrorCode, message: string, options: AppErrorOptions = {}) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = "AppError";
     this.code = code;
     this.details = options.details ?? null;
+    this.reason = options.reason ?? null;
   }
 
   /** The HTTP status of the code. */

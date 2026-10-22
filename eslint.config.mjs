@@ -123,12 +123,26 @@ const eslintConfig = defineConfig([
     // FND-03 rule 1: only the configuration module reads `process.env`. The
     // scripts under `src/scripts/` are tooling of the repository, not the app.
     files: ["src/**/*.{ts,tsx,mts}"],
-    ignores: ["src/lib/config/**", "src/scripts/**"],
+    ignores: ["src/lib/config/**", "src/scripts/**", "src/instrumentation.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
         {
           selector: "MemberExpression[object.name='process'][property.name='env']",
+          message: "Only src/lib/config reads process.env (FND-03 rule 1, sds-config).",
+        },
+      ],
+    },
+  },
+  {
+    // The start hook reads the runtime name that Next.js sets. It is not a
+    // setting of the app, and the server code loads only after this check.
+    files: ["src/instrumentation.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[object.object.name='process'][object.property.name='env']:not([property.name='NEXT_RUNTIME'])",
           message: "Only src/lib/config reads process.env (FND-03 rule 1, sds-config).",
         },
       ],

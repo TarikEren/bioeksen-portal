@@ -59,6 +59,57 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
+/**
+ * The Meaning text of each code in `code-prefixes.md`. The prose of a log
+ * record is this text with its first character lowercased (**Message prose**).
+ */
+export const CODE_MEANINGS: Readonly<Record<ErrorCode, string>> = {
+  "AUTH-4100": "Credential missing",
+  "AUTH-4101": "Credential invalid",
+  "AUTH-4102": "Credential expired",
+  "AUTH-4103": "Credential malformed",
+  "AUTH-5500": "Identity provider unavailable",
+  "PERM-4150": "Not permitted",
+  "PERM-4151": "Operator role required",
+  "PERM-4152": "Resource belongs to another principal",
+  "VAL-4000": "Request body malformed",
+  "VAL-4001": "Required field missing",
+  "VAL-4002": "Unknown value for an enumerated field",
+  "VAL-4003": "Query parameter malformed",
+  "VAL-4004": "endDate earlier than startDate",
+  "VAL-4005": "Pagination out of range",
+  "VAL-4006": "Field value invalid",
+  "VAL-4007": "Unknown field",
+  "VAL-4550": "Request body too large",
+  "VAL-4600": "Unsupported media type",
+  "RES-4200": "Resource does not exist",
+  "RES-4300": "Resource already exists",
+  "RES-4301": "Conflicting concurrent update",
+  "RES-4302": "Operation not allowed in current state",
+  "RES-4500": "Method not allowed",
+  "RATE-4400": "Rate limit exceeded",
+  "DB-5000": "Query failed",
+  "DB-5001": "Write failed",
+  "DB-5002": "Transaction rolled back",
+  "DB-5500": "Database unavailable",
+  "DB-5501": "Connection pool exhausted",
+  "CACHE-5000": "Cache operation failed",
+  "CACHE-5500": "Cache unavailable",
+  "UP-5000": "Upstream response unusable",
+  "UP-5500": "Upstream unavailable",
+  "UP-5501": "Upstream timed out",
+  "CFG-5000": "Required configuration missing",
+  "CFG-5001": "Configuration value invalid",
+  "JOB-4000": "Job parameters invalid",
+  "JOB-5000": "Job failed",
+  "JOB-5001": "Job timed out",
+  "LOG-4000": "Log record malformed",
+  "LOG-5000": "Log submission rejected",
+  "LOG-5500": "Log aggregator unavailable",
+  "SYS-5000": "Unhandled error",
+  "SYS-5500": "Not ready",
+};
+
 /** The HTTP status of each range of code numbers (`error-codes.md`). */
 const STATUS_RANGES: readonly (readonly [first: number, last: number, status: number])[] = [
   [4000, 4099, 400],
