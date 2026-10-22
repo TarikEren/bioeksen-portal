@@ -166,3 +166,22 @@ service makes a self-signed certificate for the host `mailpit` in a shared
 volume. Mailpit offers STARTTLS with this certificate. The app, the worker and
 bootstrap trust it through `NODE_EXTRA_CA_CERTS`. No setting of the app
 changes, and no check of TLS is switched off.
+
+## Stage check (2026-10-22)
+
+The gate of `crisis_mode.md` §5 at `38e11e3`:
+
+- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
+  ran in the image of the demo).
+- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
+  tests (RC-1).
+- No `MOCK:` comment remains in `src/`.
+- The demo starts from `compose.demo.yaml`. The exit flow passed in the
+  browser: bootstrap, the invitation in Mailpit over STARTTLS, the password,
+  the sign-in, a second user, the IFU Manager role, and one
+  `platform_audit_record` row for each creation and grant. Screenshots:
+  `docs/plans/b1-exit/`.
+- Review 4 is recorded. The owner deferred R-053 to R-058; no open finding
+  blocks B2.
+
+**Result:** B1 passes the gate.

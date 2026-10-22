@@ -25,7 +25,7 @@ coverage, the questions, the test gaps and the strengths.
 | [1](review_1.md) | 2026-10-22 | Stage B0 build: backend `20e604b`..`bfe8170`, frontend `19b9f54`. Two `code-reviewer` agents; the main session checked each claim before it recorded it | `19b9f54` | Request changes: R-001 and R-002 (Major) |
 | [2](review_2.md) | 2026-10-22 | The fixes of review 1 (`41b3b1f..8a561f9`), every file under `tests/`, and an anti-overfitting pass over `src/`. Two `code-reviewer` agents; the main session checked the claims before it recorded them | `8a561f9` | Request changes: R-025 and R-026 (Major) |
 | [3](review_3.md) | 2026-10-22 | Phase review of B0 (crisis mode, DEC-136): the commits `a4c0d57..ee293cf` and the review-2 findings they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them | `ee293cf` | Approve with follow-ups: no Critical or Major finding |
-| [4](review_4.md) | 2026-10-22 | Phase review of B1 (crisis mode, DEC-136): the commits `f903986..b415029` and R-049, R-050. One `code-reviewer` agent; the main session checked the claims before it recorded them, and added R-061 to R-063 from the walk of the exit flow on the demo | `b415029` | Request changes: R-053, R-054 and R-061 (Major). The owner deferred R-053 to R-058 (2026-10-22); no finding blocks B2 |
+| [4](review_4.md) | 2026-10-22 | Phase review of B1 (crisis mode, DEC-136): the commits `f903986..b415029` and R-049, R-050. One `code-reviewer` agent; the main session checked the claims before it recorded them, and added R-061 to R-063 from the walk of the exit flow on the demo | `b415029` | Request changes: R-053, R-054 and R-061 (Major). The owner deferred R-053 to R-058 (2026-10-22); no finding blocks B2. `38e11e3` fixed R-059, R-061, R-062 |
 
 ## Status at a glance
 
@@ -89,10 +89,10 @@ coverage, the questions, the test gaps and the strengths.
 | [R-056](review_4.md#r-056--the-server-actions-validate-the-input-before-they-authenticate) | The server actions validate the input before they authenticate | Minor | **Open** (deferred by the owner) — found in review 4 |
 | [R-057](review_4.md#r-057--a-granted-server-action-writes-no-security-record) | A granted server action writes no SECURITY record | Minor | **Open** (deferred by the owner) — found in review 4 |
 | [R-058](review_4.md#r-058--if-the-step-after-the-commit-fails-a-password-reset-leaves-the-other-sessions-alive) | If the step after the commit fails, a password reset leaves the other sessions alive | Minor | **Open** (deferred by the owner) — found in review 4 |
-| [R-059](review_4.md#r-059--two-pages-make-a-navigation-with-a-get-form-and-a-submit-button) | Two pages make a navigation with a GET form and a submit button | Minor | **Open** — found in review 4 |
+| [R-059](review_4.md#r-059--two-pages-make-a-navigation-with-a-get-form-and-a-submit-button) | Two pages make a navigation with a GET form and a submit button | Minor | **Fixed (38e11e3)** — found in review 4, checked in the browser |
 | [R-060](review_4.md#r-060--three-commits-that-change-tests-carry-test-exempt-acceptance) | Three commits that change tests carry Test-Exempt: acceptance | Note | **Won't fix** (the history of the branch stays) — found in review 4 |
-| [R-061](review_4.md#r-061--in-the-sidebar-the-selected-language-can-hardly-be-read-and-the-other-language-looks-selected) | In the sidebar, the selected language can hardly be read, and the other language looks selected | Major | **Open** — found in review 4 |
-| [R-062](review_4.md#r-062--the-letter-of-the-brand-mark-in-the-sidebar-does-not-show) | The letter of the brand mark in the sidebar does not show | Minor | **Open** — found in review 4 |
+| [R-061](review_4.md#r-061--in-the-sidebar-the-selected-language-can-hardly-be-read-and-the-other-language-looks-selected) | In the sidebar, the selected language can hardly be read, and the other language looks selected | Major | **Fixed (38e11e3)** — found in review 4, checked in the browser |
+| [R-062](review_4.md#r-062--the-letter-of-the-brand-mark-in-the-sidebar-does-not-show) | The letter of the brand mark in the sidebar does not show | Minor | **Fixed (38e11e3)** — found in review 4, checked in the browser |
 | [R-063](review_4.md#r-063--at-a-width-of-1024-px-the-user-list-scrolls-sideways-and-cuts-the-last-column) | At a width of 1024 px, the user list scrolls sideways and cuts the last column | Minor | **Open** — found in review 4 |
 
 ### Fixes not yet checked

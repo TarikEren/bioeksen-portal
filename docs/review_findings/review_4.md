@@ -29,7 +29,7 @@ and component tiers give 299 passed and 4 failed (only FND-09.AC2).
 2026-10-22 the owner deferred the fixes of R-053 to R-058 until the owner
 calls for them, and changed `crisis_mode.md` §4 step 6: a finding is fixed
 at once only when it blocks the next step of the build. No finding of this
-review blocks B2.
+review blocks B2. `38e11e3` fixed R-059, R-061 and R-062.
 
 ## Findings
 
@@ -79,7 +79,7 @@ Line numbers are as of `b415029`.
 
 ### R-059 — Two pages make a navigation with a GET form and a submit button
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
+- **Status:** **Fixed (38e11e3)** — checked in the browser by the main session (a link) · **Severity:** Minor · **Found:** review 4 (phase reviewer; confirmed)
 - **Where:** `src/app/(public)/page.tsx:37-41`; `src/app/backoffice/users/page.tsx:112`.
 - **Problem:** a screen reader announces the link to `/sign-in` and to the new-user page as a button (`sds-nextjs-frontend` §5).
 - **Fix:** a Next.js link with `buttonVariants` of `@heroui/styles`, as `AppLink` does with `linkVariants`.
@@ -93,21 +93,21 @@ Line numbers are as of `b415029`.
 
 ### R-061 — In the sidebar, the selected language can hardly be read, and the other language looks selected
 
-- **Status:** **Open** · **Severity:** Major · **Found:** review 4 (main session, walk of the exit flow; measured in the browser)
+- **Status:** **Fixed (38e11e3)** — checked in the browser by the main session (`docs/plans/b1-exit/08-after-fixes.jpg`) · **Severity:** Major · **Found:** review 4 (main session, walk of the exit flow; measured in the browser)
 - **Where:** the language switch in the `.sidebar-theme` region of `src/app/backoffice/layout.tsx` (`src/app/_components/language-switch.tsx` or its sidebar wrapper). Screenshot: `docs/plans/b1-exit/07-user-list.jpg`.
 - **Problem:** the selected item ("Türkçe") has dark green text (`oklab(0.47 …)`) on a 15 % green fill over the dark sidebar. The item that is not selected ("English") has the solid fill and white text, so it looks selected. This fails WCAG 2.2 AA on a primary flow (DEC-018) and shows the state the wrong way.
 - **Fix:** in the `.sidebar-theme` region, give the selected item the strong fill and the other item the quiet style, with token pairs of `src/app/globals.css` that meet AA. Add no color (DEC-015).
 
 ### R-062 — The letter of the brand mark in the sidebar does not show
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (main session, walk of the exit flow)
+- **Status:** **Fixed (38e11e3)** — checked in the browser by the main session · **Severity:** Minor · **Found:** review 4 (main session, walk of the exit flow)
 - **Where:** `src/app/_components/brand-mark.tsx` in the sidebar of `src/app/backoffice/layout.tsx`. Screenshot: `docs/plans/b1-exit/07-user-list.jpg`.
 - **Problem:** the DOM holds the letter "B", but the square shows empty on the screen.
 - **Fix:** make the letter visible with a token pair of `globals.css` that meets AA in the `.sidebar-theme` region.
 
 ### R-063 — At a width of 1024 px, the user list scrolls sideways and cuts the last column
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 4 (main session, walk of the exit flow)
+- **Status:** **Open** — `38e11e3` removed the minimum width, but at 1024 px the table still holds 727 px in 712 px, so the last column is cut by 15 px · **Severity:** Minor · **Found:** review 4 (main session, walk of the exit flow)
 - **Where:** `src/app/backoffice/users/page.tsx` (`DataTable` with `min-w-[720px]`). Screenshot: `docs/plans/b1-exit/07-user-list.jpg`.
 - **Problem:** with the 256 px sidebar, the "Created" column is cut at 1024 px.
 - **Fix:** let the columns wrap (or drop the minimum width) so that six columns fit at 1024 px.
