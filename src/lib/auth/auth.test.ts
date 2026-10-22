@@ -31,6 +31,26 @@ async function codeOf(action: Promise<unknown>): Promise<string | null> {
   }
 }
 
+/**
+ * Runs an action that waits for the jitter of a retry, on a clock that the test
+ * moves, so the test does not wait (`sds-testing`, **Determinism**).
+ */
+async function withFakeClock<T>(action: Promise<T>): Promise<T> {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
+  try {
+    let settled = false;
+    const watched = action.finally(() => {
+      settled = true;
+    });
+    for (let step = 0; !settled && step < 40; step += 1) {
+      await vi.advanceTimersByTimeAsync(250);
+    }
+    return await watched;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 describe("authenticateOperator", () => {
   let authenticate: Authenticate;
   let sign: (claims: Record<string, unknown>, kid?: string) => Promise<string>;
@@ -88,21 +108,21 @@ describe("authenticateOperator", () => {
     providerUp = false;
     const token = await sign({ aud: "api://another-app" }, "never-seen");
 
-    expect(await codeOf(authenticate(`Bearer ${token}`))).toBe("AUTH-4101");
+    expect(await codeOf(withFakeClock(authenticate(`Bearer ${token}`)))).toBe("AUTH-4101");
   });
 
   it("gives AUTH-4101 for another issuer or tenant when the provider is down", async () => {
     providerUp = false;
 
-    expect(await codeOf(authenticate(`Bearer ${await sign({ iss: "https://other.example.invalid" }, "never-seen")}`))).toBe(
+    expect(await codeOf(withFakeClock(authenticate(`Bearer ${await sign({ iss: "https://other.example.invalid" }, "never-seen")}`)))).toBe(
       "AUTH-4101",
     );
-    expect(await codeOf(authenticate(`Bearer ${await sign({ tid: "other-tenant" }, "never-seen")}`))).toBe("AUTH-4101");
+    expect(await codeOf(withFakeClock(authenticate(`Bearer ${await sign({ tid: "other-tenant" }, "never-seen")}`)))).toBe("AUTH-4101");
   });
 
   it("gives AUTH-5500 for a token that would be good, with a kid it does not know, when the provider is down", async () => {
     providerUp = false;
 
-    expect(await codeOf(authenticate(`Bearer ${await sign({}, "never-seen")}`))).toBe("AUTH-5500");
+    expect(await codeOf(withFakeClock(authenticate(`Bearer ${await sign({}, "never-seen")}`)))).toBe("AUTH-5500");
   });
 });

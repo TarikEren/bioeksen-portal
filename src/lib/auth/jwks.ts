@@ -5,16 +5,26 @@
  * The cache holds the keys of the JWKS endpoint:
  * - it refreshes the keys when they are older than `maxAgeSeconds`;
  * - it fetches again when a token names a `kid` that it does not hold, at most
- *   `FETCH_BUDGET` times in `FETCH_WINDOW_MS`, so a token with a junk `kid`
- *   cannot make the app hammer the issuer;
+ *   `JWKS_REFETCH_BUDGET.fetches` times in one window, so a token with a junk
+ *   `kid` cannot make the app hammer the issuer;
  * - it keeps a key it holds when a refresh fails, because the key may still be
  *   good, and it answers `AUTH-5500` only when the key is unknown and the
  *   fetch fails.
  *
- * The fetch is a call on the request path. It follows `service-calls.md`: a
- * timeout for each attempt, one retry after a connection failure, a timeout or a
- * 502, 503 or 504, and a total under 3 s. The values, and the one departure (no
- * separate connect timeout), are in `@/lib/config/empirical`.
+ * The fetch is a call on the request path, and it follows `service-calls.md`:
+ * - a timeout of 1.2 s for each attempt, and at most two attempts;
+ * - the retry follows a connection failure, a timeout, or a 502, 503 or 504;
+ * - the wait before the retry has full jitter (a random time from 0 to 200 ms);
+ * - the retry fits the retry budget: 10% of the successful fetches of the last
+ *   60 s, plus 3;
+ * - a circuit breaker for the endpoint opens after 5 consecutive retryable
+ *   failures, fails the fetch at once for 30 s (doubling on each re-open, to 5
+ *   minutes), and lets one trial call through when it is half-open. A change of
+ *   state is logged.
+ *
+ * The values, and the one departure (no separate connect timeout, no deadline
+ * header), are in `@/lib/config/empirical`. The clock, the wait and the random
+ * source are options, so that a test fixes them.
  */
 import "server-only";
 
@@ -23,6 +33,9 @@ import { z } from "zod";
 
 import { JWKS_FETCH, JWKS_REFETCH_BUDGET } from "@/lib/config/empirical";
 import { AppError } from "@/lib/errors";
+import { logger } from "@/lib/logging";
+
+import { CircuitBreaker, RetryBudget, fullJitter } from "./resilience";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -40,6 +53,12 @@ const keySetSchema = z.object({ keys: z.array(z.unknown()) });
 export interface JwksCacheOptions {
   readonly uri: string;
   readonly maxAgeSeconds: number;
+  /** The clock, in milliseconds. Default: `Date.now`. */
+  readonly now?: () => number;
+  /** Waits for a time in milliseconds. Default: `setTimeout`. */
+  readonly wait?: (milliseconds: number) => Promise<void>;
+  /** A number in [0, 1) for the jitter. Default: `Math.random`. */
+  readonly random?: () => number;
 }
 
 export class JwksCache {
@@ -50,9 +69,32 @@ export class JwksCache {
   private inFlight: Promise<boolean> | undefined;
   /** Whether the last fetch failed. While the budget is spent, it tells the cause of an unknown kid. */
   private lastFetchFailed = false;
+  private readonly now: () => number;
+  private readonly wait: (milliseconds: number) => Promise<void>;
+  private readonly random: () => number;
+  private readonly retryBudget = new RetryBudget();
+  private readonly breaker: CircuitBreaker;
 
   constructor(options: JwksCacheOptions) {
     this.options = options;
+    this.now = options.now ?? Date.now;
+    this.wait = options.wait ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+    this.random = options.random ?? Math.random;
+    this.breaker = new CircuitBreaker({
+      onTransition: (state) => {
+        // Every change of state is logged: UP-5500 on opening, and no code on closing.
+        if (state === "open") {
+          logger.failure("UP-5500", { tail: { target: "jwks", breaker: state } });
+        } else {
+          logger.write({
+            severity: "INFO",
+            type: "APP",
+            message: "circuit breaker changed state",
+            tail: { target: "jwks", breaker: state },
+          });
+        }
+      },
+    });
   }
 
   /**
@@ -66,7 +108,7 @@ export class JwksCache {
     if (kid === undefined) {
       throw new AppError("AUTH-4101", "Credential invalid", { reason: "token header has no kid" });
     }
-    const now = Date.now();
+    const now = this.now();
     const known = this.keys.get(kid);
     const fresh = now - this.fetchedAt < this.options.maxAgeSeconds * 1000;
     if (known !== undefined && fresh) {
@@ -108,25 +150,42 @@ export class JwksCache {
     return this.inFlight;
   }
 
-  /** One try, and one retry after a failure that may pass. @returns `null` when no attempt got an answer. */
+  /**
+   * One try, and one retry after a failure that may pass, if the retry budget
+   * and the breaker allow it.
+   *
+   * @returns `null` when no attempt got an answer, or the breaker refused the call.
+   */
   private async fetchWithRetry(): Promise<Response | null> {
     for (let attempt = 1; attempt <= JWKS_FETCH.attempts; attempt += 1) {
+      if (!this.breaker.allowsCall(this.now())) {
+        return null;
+      }
+      let response: Response | null = null;
       try {
-        const response = await fetch(this.options.uri, {
+        response = await fetch(this.options.uri, {
           headers: { accept: "application/json" },
           redirect: "error",
           signal: AbortSignal.timeout(JWKS_FETCH.attemptTimeoutMs),
         });
-        const retryable = response.status === 502 || response.status === 503 || response.status === 504;
-        if (!retryable || attempt === JWKS_FETCH.attempts) {
-          return response;
-        }
       } catch {
-        if (attempt === JWKS_FETCH.attempts) {
-          return null;
-        }
+        response = null;
       }
-      await new Promise((resolve) => setTimeout(resolve, JWKS_FETCH.backoffMs));
+
+      if (response !== null && ![502, 503, 504].includes(response.status)) {
+        // The target answered. A 4xx is an answer, and it does not trip the breaker.
+        this.breaker.recordSuccess();
+        if (response.ok) {
+          this.retryBudget.recordSuccess(this.now());
+        }
+        return response;
+      }
+      this.breaker.recordRetryableFailure(this.now());
+      if (attempt === JWKS_FETCH.attempts || !this.retryBudget.allowsRetry(this.now())) {
+        return response;
+      }
+      this.retryBudget.recordRetry(this.now());
+      await this.wait(fullJitter(JWKS_FETCH.backoffMs, this.random));
     }
     return null;
   }
@@ -165,7 +224,7 @@ export class JwksCache {
         }
       }
       this.keys = next;
-      this.fetchedAt = Date.now();
+      this.fetchedAt = this.now();
       return true;
     } catch {
       return false;

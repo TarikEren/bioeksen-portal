@@ -10,7 +10,7 @@ export const JWKS_FETCH = {
   attemptTimeoutMs: 1_200,
   /** One try and one retry, on a connection failure, a timeout or a 502, 503 or 504. */
   attempts: 2,
-  /** The wait before the retry. Two attempts and this wait fit in the total budget of 3 s. */
+  /** The delay before the retry: the wait is a random time from 0 to this value (full jitter). Two attempts and this delay fit in the total budget of 3 s. */
   backoffMs: 200,
   /**
    * Departure from `service-calls.md`: the connect timeout (500 ms) is not set on
