@@ -1,9 +1,7 @@
 /**
  * `GET /api/v1/catalog/lot-imports/template` downloads the import template, an
  * XLSX file in the active language (`catalog.lot.manage`, DEC-057, CAT-61.AC1).
- *
- * MOCK: CAT-61. Until step 4 builds the file with `exceljs` (DEC-055), the answer
- * is 500 `SYS-5000`, the "not implemented" answer of the registry.
+ * The service builds the file with `exceljs` (DEC-055).
  */
 import { requireActor } from "@/lib/auth/session";
 import { defineMethodNotAllowed, defineRoute } from "@/lib/http";

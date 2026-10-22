@@ -3,20 +3,33 @@
  * DEC-051, DEC-052, DEC-053, DEC-055).
  *
  * It reads pasted text, CSV, TSV and text files in UTF-8, or in Windows-1254 when
- * the bytes are not valid UTF-8 (DEC-052). It finds the columns by the header
- * labels in either language, without letter case and accents. It handles the
- * input with no header (rule 4). It does not read the registered LOTs: the
- * planner does (`import-planner.ts`).
+ * the bytes are not valid UTF-8 (DEC-052), and the first sheet of an XLSX file
+ * (`xlsx-sheet.ts`, DEC-055). It finds the columns by the header labels in
+ * either language, without letter case and accents. It handles the input with no
+ * header (rule 4). It does not read the registered LOTs: the planner does
+ * (`import-planner.ts`).
  *
- * MOCK: CAT-60 (XLSX). The reading of an XLSX file with `exceljs` (DEC-055)
- * arrives in step 4. Until then, an XLSX file gives three fixed sample rows.
- *
- * This file is pure.
+ * This file does no I/O: the bytes of the file are in memory.
  */
 import { AppError, CODE_MEANINGS, type FieldIssue } from "@/lib/errors";
 import { IMPORT_MAX_ROWS, type ImportPlanRow, type LotImportInput } from "@/lib/schemas/catalog";
 
 import { cleanTransport } from "./lot-number";
+import { type SheetCell, readFirstSheet } from "./xlsx-sheet";
+
+/** One non-blank record of the source: the number of its row, from 1, and its cells. */
+interface SourceRecord {
+  readonly number: number;
+  readonly cells: SheetCell[];
+}
+
+/** The text of a cell. A date cell is its date `YYYY-MM-DD` (UTC), because the reader gives the date at midnight UTC. */
+function cellText(cell: SheetCell): string {
+  if (typeof cell === "string") {
+    return cell;
+  }
+  return Number.isNaN(cell.getTime()) ? "" : cell.toISOString().slice(0, 10);
+}
 
 /** One data row of the input, with the three cells that the import uses. */
 export interface ImportRow {
@@ -89,8 +102,8 @@ function detectDelimiter(text: string): string {
  *
  * @returns `null` when a quote is not closed.
  */
-function parseDelimited(text: string, delimiter: string): { number: number; cells: string[] }[] | null {
-  const records: { number: number; cells: string[] }[] = [];
+function parseDelimited(text: string, delimiter: string): SourceRecord[] | null {
+  const records: SourceRecord[] = [];
   let cells: string[] = [];
   let cell = "";
   let recordNumber = 1;
@@ -169,19 +182,19 @@ function findHeaderColumns(first: readonly string[]): { catalog: number | null; 
 
 function buildRow(
   rowNumber: number,
-  cells: readonly string[],
+  cells: readonly SheetCell[],
   columns: Columns,
   requestCatalogNumber: string | null,
 ): ImportRow {
-  const catalogCell = columns.catalog === null ? null : (cells[columns.catalog] ?? "");
-  const lotCell = cells[columns.lot] ?? "";
+  const catalogCell = columns.catalog === null ? null : cellText(cells[columns.catalog] ?? "");
+  const lotCell = cellText(cells[columns.lot] ?? "");
   const dateCell = columns.date === null ? null : (cells[columns.date] ?? "");
   return {
     rowNumber,
     rawCells: {
       ...(catalogCell === null ? {} : { catalogNumber: catalogCell }),
       lotNumber: lotCell,
-      ...(dateCell === null ? {} : { manufacturingDate: dateCell }),
+      ...(dateCell === null ? {} : { manufacturingDate: cellText(dateCell) }),
     },
     catalogNumberCell: catalogCell ?? requestCatalogNumber,
     lotCell,
@@ -190,27 +203,19 @@ function buildRow(
 }
 
 /**
- * Reads the rows of an input.
+ * The non-blank records of the source: the first sheet of an XLSX file, or the
+ * delimited text of the other inputs.
  *
- * @throws AppError `VAL-4006` with one `details` entry for each fault: an input
- * that is not readable, a column that is not in the input, no data rows, and
- * more than 5,000 data rows (CAT-60 rule 12, DEC-051).
+ * @throws AppError `VAL-4006` for a source that is not readable.
  */
-export function readImportRows(input: LotImportInput): ImportRow[] {
-  const field = sourceField(input);
-  const requestCatalogNumber = input.catalogNumber === null ? null : cleanTransport(input.catalogNumber);
-
+async function readRecords(input: LotImportInput, field: "text" | "file"): Promise<SourceRecord[]> {
   if (input.source.kind === "file" && (isZip(input.source.bytes) || /\.xlsx$/i.test(input.source.filename ?? ""))) {
-    // MOCK: CAT-60 (XLSX): three fixed rows stand for the first sheet of the file.
-    return [
-      ["BS-GHPV-L-100", "B2604021100GHPVV", "2026-04-02"],
-      ["BS-GHPV-L-25", "B2604021130GHPVV", "02.04.2026"],
-      ["BS-GHPV-L-100", "B2604031000GHPVV", ""],
-    ].map(([catalog = "", lot = "", date = ""], index) =>
-      buildRow(index + 2, [catalog, lot, date], { catalog: 0, lot: 1, date: 2 }, requestCatalogNumber),
-    );
+    const sheet = await readFirstSheet(input.source.bytes);
+    if (sheet === null) {
+      throw unreadable(field, "is not a readable XLSX, CSV, TSV or text file");
+    }
+    return sheet.filter((record) => record.cells.some((cell) => cleanTransport(cellText(cell)) !== ""));
   }
-
   const text = input.source.kind === "text" ? input.source.text : decodeBytes(input.source.bytes);
   if (text.includes("\u0000")) {
     throw unreadable(field, "is not a readable XLSX, CSV, TSV or text file");
@@ -220,12 +225,27 @@ export function readImportRows(input: LotImportInput): ImportRow[] {
   if (records === null) {
     throw unreadable(field, "is not readable: a quote is not closed");
   }
+  return records;
+}
+
+/**
+ * Reads the rows of an input.
+ *
+ * @throws AppError `VAL-4006` with one `details` entry for each fault: an input
+ * that is not readable, a column that is not in the input, no data rows, and
+ * more than 5,000 data rows (CAT-60 rule 12, DEC-051).
+ */
+export async function readImportRows(input: LotImportInput): Promise<ImportRow[]> {
+  const field = sourceField(input);
+  const requestCatalogNumber = input.catalogNumber === null ? null : cleanTransport(input.catalogNumber);
+
+  const records = await readRecords(input, field);
   const first = records[0];
   if (first === undefined) {
     throw unreadable(field, "has no data rows");
   }
 
-  const header = findHeaderColumns(first.cells);
+  const header = findHeaderColumns(first.cells.map(cellText));
   const faults: FieldIssue[] = [];
   let columns: Columns;
   let dataRecords: typeof records;

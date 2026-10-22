@@ -482,6 +482,18 @@ export const en: Dictionary = {
       template: {
         link: "Download the template (XLSX)",
         hint: "The header row of the template is in the active language.",
+        file: {
+          dataSheet: "LOTs",
+          instructionsSheet: "Instructions",
+          catalogNumberColumn: "Catalog No",
+          lotColumn: "LOT No",
+          manufacturingDateColumn: "Manufacturing date",
+          instructionRows: "Write one row for each LOT on the first sheet. Do not delete the header row.",
+          instructionCatalogNumber: "Catalog No: the catalog number of the catalog, written exactly as it is there.",
+          instructionLot: "LOT No: starts with the letter B, then encodes the manufacturing date as YYMMDD. Example: B2603091224GHPVV.",
+          instructionDate: "Manufacturing date: optional. YYYY-MM-DD, DD.MM.YYYY or DD/MM/YYYY, or a date cell. The day always comes before the month.",
+          instructionLimits: "An import holds 5,000 rows and 5 MiB at most.",
+        },
       },
       table: "Import list",
       empty: "There is no import yet.",

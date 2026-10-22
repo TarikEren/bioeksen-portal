@@ -34,6 +34,7 @@
     "@heroui/styles": "^3.2.6",
     "@prisma/orm-postgres": "8.0.0-rc.18",
     "dotenv": "^18.0.8",
+    "exceljs": "^4.4.0",
     "jose": "^6.2.13",
     "next": "16.4.2",
     "nodemailer": "^10.1.7",

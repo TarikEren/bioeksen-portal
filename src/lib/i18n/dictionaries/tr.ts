@@ -497,6 +497,18 @@ export const tr = {
       template: {
         link: "Şablonu indir (XLSX)",
         hint: "Şablonun başlık satırı etkin dildedir.",
+        file: {
+          dataSheet: "LOT listesi",
+          instructionsSheet: "Yönergeler",
+          catalogNumberColumn: "Katalog No",
+          lotColumn: "LOT No",
+          manufacturingDateColumn: "Üretim Tarihi",
+          instructionRows: "Birinci sayfaya her LOT için bir satır yazın. Başlık satırını silmeyin.",
+          instructionCatalogNumber: "Katalog No: katalogdaki katalog numarası, tam olarak yazıldığı gibi.",
+          instructionLot: "LOT No: B harfiyle başlar ve ardından YYAAGG üretim tarihini kodlar. Örnek: B2603091224GHPVV.",
+          instructionDate: "Üretim Tarihi: isteğe bağlı. YYYY-AA-GG, GG.AA.YYYY veya GG/AA/YYYY biçiminde ya da bir tarih hücresi. Gün her zaman aydan önce gelir.",
+          instructionLimits: "Bir içe aktarma en çok 5.000 satır ve 5 MiB olabilir.",
+        },
       },
       table: "İçe aktarma listesi",
       empty: "Henüz içe aktarma yok.",
