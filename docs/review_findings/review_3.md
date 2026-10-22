@@ -28,14 +28,14 @@ Line numbers are as of `ee293cf`.
 
 ### R-049 — In the demo, a request with no credential gets 503 AUTH-5500 instead of 401 AUTH-4100
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 3 (phase reviewer; confirmed)
+- **Status:** **Fixed (270a6e0)** — checked in review 4 · **Severity:** Minor · **Found:** review 3 (phase reviewer; confirmed)
 - **Where:** `src/lib/auth/index.ts:110-113`, `authenticateOperator`, and its header at `:6-9`; the developer tests `src/lib/auth/auth.test.ts:158-167` and `src/app/api/demo.test.ts:81-96`.
 - **Problem:** with `APP_ENV` `demo` and no `ENTRA_*` setting, a request with no `Authorization` header, a `Basic` header, `Bearer not-a-jwt` or an expired token gets 503 `AUTH-5500`. The `sds-auth` order gives `AUTH-4100`, `AUTH-4100`, `AUTH-4103` and `AUTH-4102` (steps 2 to 4 need no identity provider). FND-03.AC5 limits the 503 to a request with a bearer token (Q-13). Each anonymous call writes an `ERROR` record, not a `WARNING`.
 - **Fix:** run steps 2 to 4 first; throw `AUTH-5500` when the provider is absent only at step 6. Correct the header and the two developer tests.
 
 ### R-050 — The fakes of @/lib/db and @/lib/cache in two route tests are not typed to the real modules
 
-- **Status:** **Open** · **Severity:** Minor · **Found:** review 3 (phase reviewer; confirmed)
+- **Status:** **Fixed (b415029)** — checked in review 4 · **Severity:** Minor · **Found:** review 3 (phase reviewer; confirmed)
 - **Where:** `src/app/api/routes.test.ts:17-27`; `src/app/api/demo.test.ts:12-22`.
 - **Problem:** the `vi.mock` factories are not checked against the modules; the fake `toDatabaseError` returns its input, while the real one returns an `AppError` (`sds-testing` › **Type safety**; same class as R-020).
 - **Fix:** `vi.mock(import("@/lib/db"), …)` or `satisfies` the module type; the fake `toDatabaseError` returns an `AppError`.

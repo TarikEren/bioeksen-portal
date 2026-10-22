@@ -25,6 +25,7 @@ coverage, the questions, the test gaps and the strengths.
 | [1](review_1.md) | 2026-10-22 | Stage B0 build: backend `20e604b`..`bfe8170`, frontend `19b9f54`. Two `code-reviewer` agents; the main session checked each claim before it recorded it | `19b9f54` | Request changes: R-001 and R-002 (Major) |
 | [2](review_2.md) | 2026-10-22 | The fixes of review 1 (`41b3b1f..8a561f9`), every file under `tests/`, and an anti-overfitting pass over `src/`. Two `code-reviewer` agents; the main session checked the claims before it recorded them | `8a561f9` | Request changes: R-025 and R-026 (Major) |
 | [3](review_3.md) | 2026-10-22 | Phase review of B0 (crisis mode, DEC-136): the commits `a4c0d57..ee293cf` and the review-2 findings they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them | `ee293cf` | Approve with follow-ups: no Critical or Major finding |
+| [4](review_4.md) | 2026-10-22 | Phase review of B1 (crisis mode, DEC-136): the commits `f903986..b415029` and R-049, R-050. One `code-reviewer` agent; the main session checked the claims before it recorded them, and added R-061 to R-063 from the walk of the exit flow on the demo | `b415029` | Request changes: R-053, R-054 and R-061 (Major) |
 
 ## Status at a glance
 
@@ -78,14 +79,25 @@ coverage, the questions, the test gaps and the strengths.
 | [R-046](review_2.md#r-046--the-text-reaches-client-components-through-props-not-from-the-locale-provider) | The text reaches client components through props, not from the locale provider | Note | **Open** — found in review 2 |
 | [R-047](review_2.md#r-047--an-http-method-that-nextjs-does-not-know-gets-a-bare-400-under-api) | An HTTP method that Next.js does not know gets a bare 400 under /api | Note | **Open** — found in review 2 |
 | [R-048](review_2.md#r-048--no-test-uses-the-playwright-web-server-and-it-reads-the-shell-and-env) | No test uses the Playwright web server, and it reads the shell and .env | Note | **Fixed (dbbb65d)** — found in review 2, checked in review 3 |
-| [R-049](review_3.md#r-049--in-the-demo-a-request-with-no-credential-gets-503-auth-5500-instead-of-401-auth-4100) | In the demo, a request with no credential gets 503 AUTH-5500 instead of 401 AUTH-4100 | Minor | **Open** — found in review 3 |
-| [R-050](review_3.md#r-050--the-fakes-of-libdb-and-libcache-in-two-route-tests-are-not-typed-to-the-real-modules) | The fakes of @/lib/db and @/lib/cache in two route tests are not typed to the real modules | Minor | **Open** — found in review 3 |
+| [R-049](review_3.md#r-049--in-the-demo-a-request-with-no-credential-gets-503-auth-5500-instead-of-401-auth-4100) | In the demo, a request with no credential gets 503 AUTH-5500 instead of 401 AUTH-4100 | Minor | **Fixed (270a6e0)** — found in review 3, checked in review 4 |
+| [R-050](review_3.md#r-050--the-fakes-of-libdb-and-libcache-in-two-route-tests-are-not-typed-to-the-real-modules) | The fakes of @/lib/db and @/lib/cache in two route tests are not typed to the real modules | Minor | **Fixed (b415029)** — found in review 3, checked in review 4 |
 | [R-051](review_3.md#r-051--commit-2775b51-has-the-type-fix-but-it-changes-only-a-test) | Commit 2775b51 has the type fix, but it changes only a test | Minor | **Won't fix** (the history of the branch stays) — found in review 3 |
 | [R-052](review_3.md#r-052--production-accepts-the-example-identity-key-and-pepper-of-envexample) | Production accepts the example identity key and pepper of .env.example | Note | **Open** — found in review 3 |
+| [R-053](review_4.md#r-053--concurrent-sign-ins-pass-the-limits-of-dec-027) | Concurrent sign-ins pass the limits of DEC-027 | Major | **Open** — found in review 4 |
+| [R-054](review_4.md#r-054--the-session-cookie-has-no-secure-flag-when-public_base_url-is-http) | The session cookie has no Secure flag when PUBLIC_BASE_URL is http | Major | **Open** — found in review 4 |
+| [R-055](review_4.md#r-055--a-direct-caller-can-forge-the-source-address) | A direct caller can forge the source address | Minor | **Open** (waits for Q-15) — found in review 4 |
+| [R-056](review_4.md#r-056--the-server-actions-validate-the-input-before-they-authenticate) | The server actions validate the input before they authenticate | Minor | **Open** — found in review 4 |
+| [R-057](review_4.md#r-057--a-granted-server-action-writes-no-security-record) | A granted server action writes no SECURITY record | Minor | **Open** — found in review 4 |
+| [R-058](review_4.md#r-058--if-the-step-after-the-commit-fails-a-password-reset-leaves-the-other-sessions-alive) | If the step after the commit fails, a password reset leaves the other sessions alive | Minor | **Open** — found in review 4 |
+| [R-059](review_4.md#r-059--two-pages-make-a-navigation-with-a-get-form-and-a-submit-button) | Two pages make a navigation with a GET form and a submit button | Minor | **Open** — found in review 4 |
+| [R-060](review_4.md#r-060--three-commits-that-change-tests-carry-test-exempt-acceptance) | Three commits that change tests carry Test-Exempt: acceptance | Note | **Won't fix** (the history of the branch stays) — found in review 4 |
+| [R-061](review_4.md#r-061--in-the-sidebar-the-selected-language-can-hardly-be-read-and-the-other-language-looks-selected) | In the sidebar, the selected language can hardly be read, and the other language looks selected | Major | **Open** — found in review 4 |
+| [R-062](review_4.md#r-062--the-letter-of-the-brand-mark-in-the-sidebar-does-not-show) | The letter of the brand mark in the sidebar does not show | Minor | **Open** — found in review 4 |
+| [R-063](review_4.md#r-063--at-a-width-of-1024-px-the-user-list-scrolls-sideways-and-cuts-the-last-column) | At a width of 1024 px, the user list scrolls sideways and cuts the last column | Minor | **Open** — found in review 4 |
 
 ### Fixes not yet checked
 
-None. Review 3 checked the fixes that the commits `a4c0d57..ee293cf` claim.
+None. Review 4 checked R-049 and R-050.
 R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 
 ## Coverage
@@ -100,6 +112,7 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | `src/**`, anti-overfitting pass | 2 (searched for fixture values, test-only names and seam paths) |
 | `src/app/globals.css` | Not reviewed: the owner's palette (DEC-015); FND-09.AC2 measures it |
 | The commits `a4c0d57..ee293cf`: the fixes of review 2, the demo of DEC-135 (`c445391`, `db2a720` `Dockerfile`, `4299cdc` `compose.demo.yaml`), `2775b51`, `ee293cf` | 3 (phase review: the fix and demo commits read in full, one layer each way; the test-only commits read for their verdicts; the integration, e2e and smoke tiers and Docker not run, DEC-136) |
+| The commits `f903986..b415029` (stage B1) | 4 (phase review: the code commits read, one layer each way; the UI by search and spot reads; the file service not in depth; the integration and e2e tiers not run, DEC-136). The exit flow walked on the demo by the main session |
 
 ## Questions for the author
 
@@ -119,6 +132,9 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | Q-12 | Does the refetch budget replace the retry budget and the breaker of `service-calls.md`? | Answered (review 2): no. They are *Structural* rules; the fetch follows them. See R-030 |
 | Q-13 | DEC-135: does the 503 `AUTH-5500` of the demo apply before step 2 of the `sds-auth` order, or only to a request that reaches step 6? | Answered (review 3): only at step 6, as FND-03.AC5 says (a request with a bearer token). See R-049 |
 | Q-14 | FND-03: in the demo, are the `ENTRA_*` settings optional one by one, or all or none? | Answered (review 3): all or none. The FND-03 row says so |
+| Q-15 | DEC-038: can the deploy rules require that only the trusted proxy reaches the app port, and that the proxy appends to `X-Forwarded-For`? | Open (owner). See R-055 |
+| Q-16 | Does the limit of failed operator authentications fail open or closed when Redis is down? | Open (owner) |
+| Q-17 | Is a larger public common-password list than the 41 entries of DEC-137 wanted? | Open (owner) |
 
 ## Test coverage gaps
 
