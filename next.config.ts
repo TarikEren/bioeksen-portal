@@ -6,6 +6,10 @@ import { SECURITY_HEADERS } from "./src/lib/security/headers";
 // Prerendering does not work with the nonce of the Content Security Policy
 // (FND-07).
 const nextConfig: NextConfig = {
+  // The container image (`Dockerfile`) carries the standalone output: a server
+  // and only the files that it traces, with no `node_modules` install (sds-ci,
+  // **The container image**).
+  output: "standalone",
   // The server does not tell which framework it runs.
   poweredByHeader: false,
   turbopack: {

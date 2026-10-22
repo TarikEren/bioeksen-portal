@@ -1,0 +1,39 @@
+# What the build context leaves out (sds-ci, The container image). The context
+# holds the source that the build needs and nothing else: no history, no
+# installed dependencies, no build output, no setting file, no local data.
+
+# History and the roles' own files
+.git
+.gitignore
+.gitattributes
+.claude
+.forgejo
+.github
+.gitea
+
+# Installed dependencies and build output
+node_modules
+.next
+out
+build
+dist
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# Settings and secrets: they arrive at run time, never in a layer
+.env
+.env.*
+*.pem
+
+# Test output and local data
+test-results
+playwright-report
+*.log
+.DS_Store
+
+# Documents and local container files
+docs
+Dockerfile
+.dockerignore
+compose.*.yaml
