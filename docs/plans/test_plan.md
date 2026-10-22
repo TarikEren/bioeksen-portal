@@ -165,3 +165,22 @@ LOT names the member (`catalog-numbers/{id}`, `lots/{id}`), which has no `GET`.
 they are Default decisions now: DEC-054 (the `multipart/form-data` input),
 DEC-055 (`exceljs` and the `TextDecoder` of Node), DEC-056 (the list of the
 imports) and DEC-057 (the permission of the template download).
+
+## Stage check (2026-10-22)
+
+The gate of `crisis_mode.md` §5 at `4afd75f`:
+
+- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
+  ran in the image of the demo).
+- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
+  tests (RC-1).
+- No `MOCK:` comment remains in `src/`.
+- The demo starts from `compose.demo.yaml`, and the migration `catalog`
+  applies there. The exit flow passed in the browser, as the IFU Manager: a
+  product with two catalog numbers, a LOT import with its row report, and a
+  LOT with a date conflict corrected with a reason. Each change has its
+  `platform_audit_record` row. Screenshots: `docs/plans/b2-exit/`.
+- Review 5 is recorded. R-064 and R-065 are Major; no open finding blocks B3.
+  Each finding waits for the call of the owner (§4 step 6).
+
+**Result:** B2 passes the gate.

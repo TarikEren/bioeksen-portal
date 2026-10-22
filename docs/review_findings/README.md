@@ -26,6 +26,7 @@ coverage, the questions, the test gaps and the strengths.
 | [2](review_2.md) | 2026-10-22 | The fixes of review 1 (`41b3b1f..8a561f9`), every file under `tests/`, and an anti-overfitting pass over `src/`. Two `code-reviewer` agents; the main session checked the claims before it recorded them | `8a561f9` | Request changes: R-025 and R-026 (Major) |
 | [3](review_3.md) | 2026-10-22 | Phase review of B0 (crisis mode, DEC-136): the commits `a4c0d57..ee293cf` and the review-2 findings they claim to fix. One `code-reviewer` agent; the main session checked the claims before it recorded them | `ee293cf` | Approve with follow-ups: no Critical or Major finding |
 | [4](review_4.md) | 2026-10-22 | Phase review of B1 (crisis mode, DEC-136): the commits `f903986..b415029` and R-049, R-050. One `code-reviewer` agent; the main session checked the claims before it recorded them, and added R-061 to R-063 from the walk of the exit flow on the demo | `b415029` | Request changes: R-053, R-054 and R-061 (Major). The owner deferred R-053 to R-058 (2026-10-22); no finding blocks B2. `38e11e3` fixed R-059, R-061, R-062 |
+| [5](review_5.md) | 2026-10-22 | Phase review of B2 (crisis mode, DEC-136): the commits `1902f5d..4afd75f`. One `code-reviewer` agent; the main session checked the Major claims, and added R-079 to R-083 from the walk of the exit flow on the demo | `4afd75f` | Approve with follow-ups: R-064 and R-065 (Major); no finding blocks B3 |
 
 ## Status at a glance
 
@@ -94,6 +95,26 @@ coverage, the questions, the test gaps and the strengths.
 | [R-061](review_4.md#r-061--in-the-sidebar-the-selected-language-can-hardly-be-read-and-the-other-language-looks-selected) | In the sidebar, the selected language can hardly be read, and the other language looks selected | Major | **Fixed (38e11e3)** — found in review 4, checked in the browser |
 | [R-062](review_4.md#r-062--the-letter-of-the-brand-mark-in-the-sidebar-does-not-show) | The letter of the brand mark in the sidebar does not show | Minor | **Fixed (38e11e3)** — found in review 4, checked in the browser |
 | [R-063](review_4.md#r-063--at-a-width-of-1024-px-the-user-list-scrolls-sideways-and-cuts-the-last-column) | At a width of 1024 px, the user list scrolls sideways and cuts the last column | Minor | **Open** — found in review 4 |
+| [R-064](review_5.md#r-064--an-xlsx-file-of-5-mib-can-make-the-server-unpack-gigabytes-and-parse-every-row-before-the-5000-row-limit) | An XLSX file of 5 MiB can make the server unpack gigabytes and parse every row before the 5,000-row limit | Major | **Open** — found in review 5 |
+| [R-065](review_5.md#r-065--an-import-commit-locks-no-product-row-so-the-stem-and-status-lock-and-the-product-scope-can-race) | An import commit locks no product row, so the stem and status lock and the product scope can race | Major | **Open** — found in review 5 |
+| [R-066](review_5.md#r-066--product-search-lower-cases-with-the-turkish-locale-so-a-query-with-i-misses-latin-text) | Product search lower-cases with the Turkish locale, so a query with "i" misses Latin text | Minor | **Open** — found in review 5 |
+| [R-067](review_5.md#r-067--the-registration-audit-row-says-that-a-kit-code-mismatch-was-confirmed-when-no-mismatch-existed) | The registration audit row says that a kit-code mismatch was confirmed when no mismatch existed | Minor | **Open** — found in review 5 |
+| [R-068](review_5.md#r-068--a-commit-with-a-productid-that-names-no-product-tries-to-record-a-failed-import-which-the-foreign-key-refuses-and-logs-an-error) | A commit with a productId that names no product tries to record a FAILED import, which the foreign key refuses, and logs an ERROR | Minor | **Open** — found in review 5 |
+| [R-069](review_5.md#r-069--the-import-reader-reports-only-the-first-group-of-faults) | The import reader reports only the first group of faults | Minor | **Open** — found in review 5 |
+| [R-070](review_5.md#r-070--the-import-server-actions-do-not-check-that-the-argument-is-formdata) | The import server actions do not check that the argument is FormData | Minor | **Open** — found in review 5 |
+| [R-071](review_5.md#r-071--the-confirmation-of-dec-050-and-the-issue-texts-depend-on-english-details-phrases-that-are-copied-by-hand) | The confirmation of DEC-050 and the issue texts depend on English details phrases that are copied by hand | Minor | **Open** — found in review 5 |
+| [R-072](review_5.md#r-072--the-comment-of-the-vectors-file-says-that-the-special-characters-are-escapes-but-the-file-holds-the-raw-characters) | The comment of the vectors file says that the special characters are escapes, but the file holds the raw characters | Minor | **Open** — found in review 5 |
+| [R-073](review_5.md#r-073--the-two-day-first-date-forms-accept-mixed-separators) | The two day-first date forms accept mixed separators | Minor | **Open** — found in review 5 |
+| [R-074](review_5.md#r-074--commit-0adcae0-alone-does-not-type-check) | Commit 0adcae0 alone does not type check | Note | **Won't fix** (the history of the branch stays, as for R-045 and R-051) — found in review 5 |
+| [R-075](review_5.md#r-075--exceljs-adds-79-packages-some-of-them-deprecated-and-the-dependency-audit-has-not-run) | exceljs adds 79 packages, some of them deprecated, and the dependency audit has not run | Note | **Open** — found in review 5 |
+| [R-076](review_5.md#r-076--the-check-of-failurecode-lets-a-failed-import-have-no-code) | The check of failure_code lets a FAILED import have no code | Note | **Open** — found in review 5 |
+| [R-077](review_5.md#r-077--the-migration-comment-says-that-an-integration-test-proves-each-trigger-and-none-does-yet) | The migration comment says that an integration test proves each trigger, and none does yet | Note | **Open** — found in review 5 |
+| [R-078](review_5.md#r-078--kit-codets-takes-a-substring-of-the-part-of-a-lot-number-after-its-date) | kit-code.ts takes a substring of the part of a LOT number after its date | Note | **Open** — found in review 5 |
+| [R-079](review_5.md#r-079--at-1024-px-lot-numbers-and-catalog-numbers-break-inside-the-value) | At 1024 px, LOT numbers and catalog numbers break inside the value | Minor | **Open** — found in review 5 |
+| [R-080](review_5.md#r-080--the-import-tables-show-the-supplied-date-as-typed-or-none-in-the-column-manufacturing-date) | The import tables show the supplied date as typed, or "None", in the column "Manufacturing date" | Minor | **Open** — found in review 5 |
+| [R-081](review_5.md#r-081--the-import-report-shows-all-products-in-the-face-of-the-identifiers) | The import report shows "All products" in the face of the identifiers | Minor | **Open** — found in review 5 |
+| [R-082](review_5.md#r-082--a-group-heading-of-the-preview-says-1-rows) | A group heading of the preview says "1 rows" | Minor | **Open** — found in review 5 |
+| [R-083](review_5.md#r-083--the-message-registered-with-a-date-conflict-stays-after-the-date-is-corrected) | The message "registered with a date conflict" stays after the date is corrected | Minor | **Open** — found in review 5 |
 
 ### Fixes not yet checked
 
@@ -113,6 +134,7 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | `src/app/globals.css` | Not reviewed: the owner's palette (DEC-015); FND-09.AC2 measures it |
 | The commits `a4c0d57..ee293cf`: the fixes of review 2, the demo of DEC-135 (`c445391`, `db2a720` `Dockerfile`, `4299cdc` `compose.demo.yaml`), `2775b51`, `ee293cf` | 3 (phase review: the fix and demo commits read in full, one layer each way; the test-only commits read for their verdicts; the integration, e2e and smoke tiers and Docker not run, DEC-136) |
 | The commits `f903986..b415029` (stage B1) | 4 (phase review: the code commits read, one layer each way; the UI by search and spot reads; the file service not in depth; the integration and e2e tiers not run, DEC-136). The exit flow walked on the demo by the main session |
+| The commits `1902f5d..4afd75f` (stage B2) | 5 (phase review: the domain, the services, the repositories, the routes, the actions, `src/lib/http`, the schemas and the migration read in full, with the data passes; the UI by search and spot reads; the integration and e2e tiers and the dependency audit not run, DEC-136). The exit flow walked on the demo by the main session |
 
 ## Questions for the author
 
@@ -135,6 +157,7 @@ R-046 has no fix yet. R-047 waits for IT (`docs/required_changes.md`, RC-12).
 | Q-15 | DEC-038: can the deploy rules require that only the trusted proxy reaches the app port, and that the proxy appends to `X-Forwarded-For`? | Open (owner). See R-055 |
 | Q-16 | Does the limit of failed operator authentications fail open or closed when Redis is down? | Open (owner) |
 | Q-17 | Is a larger public common-password list than the 41 entries of DEC-137 wanted? | Open (owner) |
+| Q-18 | CAT-20 rule 1: must the system refuse a catalog number whose stem is not the product's `internal_code`? | Open (owner) |
 
 ## Test coverage gaps
 
