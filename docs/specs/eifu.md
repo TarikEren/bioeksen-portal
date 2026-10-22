@@ -24,6 +24,11 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-067 | A lookup does not resolve a LOT with a date conflict, also when the LOT has an active override. | Pending | QA | questions.md 10 | IFU-60 | eng/eifu-resolution-specification.md §A date conflict blocks an override |
 | DEC-068 | A LOT that was made before the first applicability period of its product gets the outcome `NO_APPLICABLE_VERSION`. Any other date without a period gets the same outcome. | Pending | PO | questions.md 11 | IFU-60, IFU-70 | eng/deferred-work.md §3 |
 | DEC-069 | A lookup returns every language file of the resolved version, sorted by the language code. The system never puts one language in place of another. A language code is a BCP 47 tag of up to 35 characters. The interface languages do not limit the language codes. | Decided | PO | — | IFU-20, IFU-60 | eng/localization.md §e-IFU languages; RFC 5646 §4.4.1 |
+| DEC-092 | The browser sends a document file to `POST /api/v1/eifu/document-versions/{id}/files` and to the replacement endpoint with `fetch`, as `multipart/form-data` with the limit of IFU-20 rule 2. A server action does not take a document file. | Default | ENG | — | IFU-20, IFU-32 | B3 contract; owner answer 2026-10-22 |
+| DEC-093 | `GET /api/v1/eifu/document-files/{id}/download-url` gives a signed URL of DEC-076 to a holder of `eifu.document.view`, after the check of that permission (DEC-125). | Default | ENG | — | IFU-20 | B3 contract; owner answer 2026-10-22 |
+| DEC-094 | The page of a LOT in the backoffice is `/backoffice/catalog/lots/{id}`. The list of the overrides is `/backoffice/lot-overrides`, with `eifu.document.view`. | Default | ENG | — | IFU-40 | B3 contract; owner answer 2026-10-22 |
+| DEC-095 | The version page is `/backoffice/documents/{documentId}/versions/{versionId}`. | Default | ENG | — | IFU-10 | B3 contract; owner answer 2026-10-22 |
+| DEC-096 | The trigger `product_identity_is_settled` on `catalog_product` refuses a change of the stem or the regulatory status while an `eifu_document` names the product. The migration of the eifu module creates it, so that the catalog module never imports the eifu module (DEC-004). The catalog service maps the refusal to 409 `RES-4302`. | Default | ENG | — | IFU-10, CAT-10 | B3 contract; owner answer 2026-10-22 |
 
 ### The public lookup
 
@@ -94,7 +99,7 @@ criterion names, and no row changes.
    reads (DEC-062).
 4. A field of a version changes only while the version is `DRAFT`.
 5. The stem and the regulatory status of a product change only while no
-   document names the product (CAT-10).
+   document names the product (CAT-10, DEC-096).
 6. The system never deletes a document or a version (DEC-010).
 7. A person needs `eifu.document.view` to see documents. A person needs
    `eifu.document.manage` to create documents and versions. The system audits
@@ -133,7 +138,7 @@ label, up to 16 characters), `status`, `proposed_effective_from`
 **Screens.** Backoffice › Documents:
 - the list of documents by product;
 - the document page with its versions, their states and their periods;
-- the version page with its files and the actions of the moves.
+- the version page with its files and the actions of the moves (DEC-095).
 
 **Acceptance.**
 - **AC1.** When an IFU Manager creates a document with the document number
@@ -166,7 +171,8 @@ label, up to 16 characters), `status`, `proposed_effective_from`
 **Rules.**
 1. A person uploads a file through
    `POST /api/v1/eifu/document-versions/{id}/files` (multipart, with
-   `languageCode` and one file). A person can upload a file only to a `DRAFT`
+   `languageCode` and one file; DEC-092). A manager downloads a file as
+   DEC-093 says. A person can upload a file only to a `DRAFT`
    version. A published version changes its files only through IFU-32.
 2. The body limit of this endpoint is 20 MiB (20,971,520 bytes). This limit is
    recorded, as `sds-api-design` requires. The server reads the file type from
@@ -348,7 +354,7 @@ unique index on `lot_id` where `is_active`.
 
 **Screens.** The page of the LOT in the backoffice shows its active override
 and the history of its overrides. It has the form to create or end an
-override.
+override. The paths follow DEC-094.
 
 **Acceptance.**
 - **AC1.** When an IFU Manager creates an override with a reason, from a LOT

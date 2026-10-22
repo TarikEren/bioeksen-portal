@@ -4,7 +4,7 @@ This is the contract of stage B3, step 1 of the loop of `crisis_mode.md`
 (DEC-136). It names what the agents build. It writes no test. The contract of
 B2 is in git: `git show feature/b2-catalog:docs/plans/test_plan.md`.
 
-**Status.** Draft. The owner has not approved it.
+**Status.** The owner approved this contract on 2026-10-22.
 
 **Items.** IFU-10, IFU-20, IFU-30 (with IFU-31, IFU-32), IFU-40, and the
 document part of CAT-10.AC4 (IFU-10 rule 5, AC8).
@@ -159,14 +159,12 @@ server actions.
 | 6 Fix | Developers | Only a finding that blocks B4, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**Choices the specs leave open** (record them as Default decisions if the
-owner accepts them):
-- The browser uploads a document file to the route handler with `fetch`
-  (20 MiB, IFU-20 rule 2); a server action does not take the file.
-- `GET document-files/{id}/download-url` gives a manager a signed URL of
-  DEC-076 after the check of `eifu.document.view` (DEC-125).
-- The LOT page is `/backoffice/catalog/lots/[id]` (IFU-40 *Screens*), and a
-  list of the overrides is added at `/backoffice/lot-overrides` (the mockup).
-- The version page is `/backoffice/documents/[id]/versions/[versionId]`.
-- The document lock of a product is a trigger on `catalog_product` in the
-  eifu migration, so that the catalog module does not import the eifu module.
+**Choices the specs left open.** The owner accepted them on 2026-10-22, and
+they are Default decisions now: DEC-092 (the file upload with `fetch`),
+DEC-093 (the signed download URL for a manager), DEC-094 (the LOT page and the
+list of the overrides), DEC-095 (the version page) and DEC-096 (the trigger of
+the document lock of a product).
+
+**R-065 in step 4** (owner answer 2026-10-22). The step-4 agent also fixes
+R-065 of review 5: the import commit reads the catalog numbers and the products
+of its rows `FOR SHARE`, sorted by id, before it plans, as `registerLot` does.
