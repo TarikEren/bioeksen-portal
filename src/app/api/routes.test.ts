@@ -24,7 +24,7 @@ async function load(settings: Record<string, string>): Promise<{ health: Handler
   return {
     health: await import("./health/route"),
     echo: await import("./test/echo/route"),
-    unknown: await import("./[...path]/route"),
+    unknown: await import("./[[...path]]/route"),
   };
 }
 
@@ -81,6 +81,18 @@ describe("answers that Next.js would make by itself", () => {
         expect(await response.json()).toMatchObject({ status: "fail", code: "RES-4200" });
       }
     });
+  });
+
+  it("answers /api itself, which has no segment after it, in the envelope too", async () => {
+    const routes = await load({ ...usableEnvironment });
+
+    for (const method of ["GET", "POST", "OPTIONS"]) {
+      const response = await call(routes.unknown, method, "/api");
+
+      expect(response.status, method).toBe(404);
+      expect(response.headers.get("x-request-id"), method).not.toBeNull();
+      expect(await response.json()).toMatchObject({ status: "fail", code: "RES-4200" });
+    }
   });
 
   it("answers another method on the echo seam with 405 RES-4500 and Allow when the seams are on", async () => {

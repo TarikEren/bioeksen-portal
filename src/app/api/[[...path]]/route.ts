@@ -1,7 +1,8 @@
 /**
  * Every path under `/api` that no other route serves: 404 `RES-4200` in the
  * envelope of `sds-api-design`, with the request id (FND-05 rule 4). The folder
- * name is a catch-all, and the handler never reads the path.
+ * name is an optional catch-all, so `/api` itself is included, and the handler never
+ * reads the path.
  */
 import { defineNotFound } from "@/lib/http";
 
