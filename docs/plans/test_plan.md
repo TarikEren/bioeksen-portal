@@ -163,11 +163,15 @@ empty database, and `db verify` passes.
 FND-09.AC2 stays red until the file changes, and the stage cannot exit with a
 red criterion. The owner changes the file before the exit.
 
-## Owner decision on the integration tier (2026-10-22)
+## Owner decisions on the slow tiers (2026-10-22)
 
-Nobody runs `pnpm run test:integration` until the e-IFU stages (B3 and B4)
-are built. The agents still write integration tests. At the B0 exit, the
-integration tier is reported as "not run (owner decision)", never as passed.
+- Nobody runs `pnpm run test:integration` until the e-IFU stages (B3 and B4)
+  are built.
+- Nobody runs `pnpm run test:e2e` until the e-IFU frontend (the public lookup
+  of B4) is built.
+- The agents still write those tests; `typecheck` and `lint` check them. At
+  the B0 exit, each of the two tiers is reported as "not run (owner
+  decision)", never as passed.
 
 ## Answers to the test questions (2026-10-22)
 
