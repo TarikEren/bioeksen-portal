@@ -97,6 +97,21 @@ export async function findLotByNumber(executor: Executor, catalogNumberId: bigin
 }
 
 /**
+ * Whether a LOT with the LOT number exists under a catalog number other than the
+ * given one (IFU-60 rule 2, step 4). The index `lot_number_idx` serves it (DEC-045).
+ */
+export async function lotNumberExistsUnderOtherCatalogNumber(
+  executor: Executor,
+  lotNumber: string,
+  catalogNumberId: bigint,
+): Promise<boolean> {
+  const row = await executor.orm.public.CatalogLot.where((lot) =>
+    and(lot.lotNumber.eq(lotNumber), lot.catalogNumberId.neq(catalogNumberId)),
+  ).first();
+  return row !== null;
+}
+
+/**
  * The registered LOTs of the catalog numbers with one of the LOT numbers. The
  * planner of an import reads them for its rows (CAT-60 rule 6).
  */

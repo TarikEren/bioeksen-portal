@@ -14,7 +14,7 @@
  */
 import "server-only";
 
-import { and } from "@prisma/orm-postgres/orm-client";
+import { and, or } from "@prisma/orm-postgres/orm-client";
 
 import { type Executor, fromColumnInstant, toColumnInstant } from "@/lib/db";
 
@@ -63,6 +63,32 @@ export async function listPeriodsOfVersions(executor: Executor, versionIds: read
   }
   const rows = await executor.orm.public.EifuApplicability.where((period) => period.documentVersionId.in([...versionIds]))
     .orderBy((period) => period.id.asc())
+    .all();
+  return rows.map(toPeriodRow);
+}
+
+/**
+ * The live periods of the product that contain the date, at most `limit` rows
+ * (IFU-60 rule 2, step 7). A period is half-open: `effective_from` is inside it
+ * and `effective_to` is not (DEC-061). The read never sorts: no rule picks a
+ * period by an order (IFU-60 rule 3), and the exclusion constraint of the table
+ * allows one live period for a date, so a second row is an ambiguity.
+ */
+export async function listLivePeriodsContaining(
+  executor: Executor,
+  productId: bigint,
+  date: string,
+  limit: number,
+): Promise<PeriodRow[]> {
+  const rows = await executor.orm.public.EifuApplicability.where((period) =>
+    and(
+      period.productId.eq(productId),
+      period.withdrawnAt.isNull(),
+      period.effectiveFrom.lte(date),
+      or(period.effectiveTo.isNull(), period.effectiveTo.gt(date)),
+    ),
+  )
+    .limit(limit)
     .all();
   return rows.map(toPeriodRow);
 }

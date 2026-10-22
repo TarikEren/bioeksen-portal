@@ -168,6 +168,14 @@ export async function findActiveFile(executor: Executor, documentVersionId: bigi
   return row === null ? null : toFileRow(row);
 }
 
+/** The active files of the version, in no order: the lookup sorts them by the language code (IFU-60 rule 2, DEC-069). */
+export async function listActiveFilesOfVersion(executor: Executor, documentVersionId: bigint): Promise<FileRow[]> {
+  const rows = await executor.orm.public.EifuDocumentFile.where((file) =>
+    and(file.documentVersionId.eq(documentVersionId), file.isActive.eq(true)),
+  ).all();
+  return rows.map(toFileRow);
+}
+
 /** Whether the version has an active file (IFU-30 rule 3, step 2). */
 export async function hasActiveFile(executor: Executor, documentVersionId: bigint): Promise<boolean> {
   const row = await executor.orm.public.EifuDocumentFile.where((file) =>

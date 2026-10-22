@@ -15,12 +15,10 @@
  * - An override bypasses the manufacturing date and nothing else (DEC-066). A date
  *   conflict stops the lookup before the override is read (DEC-067).
  */
+import { cleanTransport } from "@/lib/format/transport-cleanup";
 import type { LocalizedName } from "@/lib/schemas/catalog";
 import type { DocumentTitle, VersionStatus } from "@/lib/schemas/eifu";
 import type { Outcome } from "@/lib/schemas/lookup";
-// The transport cleanup is a pure function of the catalog (CAT-30 rule 1). The
-// resolution reads no catalog row through it.
-import { cleanTransport } from "@/modules/catalog/domain/lot-number";
 
 /** The most periods that the step of the periods reads (IFU-60 rule 2, step 7). */
 export const PERIOD_LIMIT = 2;
