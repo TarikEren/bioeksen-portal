@@ -3,9 +3,9 @@
  * integration suite).
  *
  * AC1 changes the contract in a copy of the repository and runs
- * `pnpm run db:check` there. If the drift check needs a database, it gets the
- * disposable integration database (`TEST_DATABASE_URL`, checked by the guard),
- * never another one.
+ * `pnpm run db:check` there. The drift check gets its target only from
+ * `TEST_DATABASE_URL`: the disposable integration database, checked by the
+ * guard. It never gets `DATABASE_URL` (`sds-testing`, **Test databases**).
  *
  * AC2 runs the integration suite of the repository against a database whose
  * name does not end in `_integration`, and proves that the suite refuses to
@@ -44,12 +44,12 @@ function integrationDatabaseUrl(): string {
 describe("FND-06 drift check", () => {
   let copy: RepositoryCopy;
   let original: string;
-  let env: Record<string, string>;
+  let checkEnv: Record<string, string>;
 
   beforeAll(() => {
     copy = copyRepository({ linkNodeModules: true });
     original = copy.read(CONTRACT);
-    env = { DATABASE_URL: integrationDatabaseUrl() };
+    checkEnv = { TEST_DATABASE_URL: integrationDatabaseUrl() };
   });
 
   afterAll(() => {
@@ -57,7 +57,7 @@ describe("FND-06 drift check", () => {
   });
 
   async function dbCheck(): Promise<RunResult> {
-    return await copy.pnpm(["run", "db:check"], { env });
+    return await copy.pnpm(["run", "db:check"], { env: checkEnv });
   }
 
   /** The drift check passes when the contract and the migrations agree. */
@@ -75,7 +75,7 @@ describe("FND-06 drift check", () => {
     expect(control.code, `precondition: the drift check passes on the unchanged copy\n${tail(control)}`).toBe(0);
 
     copy.write(CONTRACT, original + DRIFT_MODEL);
-    const emitted = await copy.pnpm(["run", "contract:emit"], { env });
+    const emitted = await copy.pnpm(["run", "contract:emit"]);
     expect(emitted.code, `precondition: the changed contract emits\n${tail(emitted)}`).toBe(0);
     const result = await dbCheck();
 
@@ -85,7 +85,7 @@ describe("FND-06 drift check", () => {
   /** The drift check fails when contract.prisma changed and nobody emitted or planned a migration. */
   it("FND-06.AC1: the drift check fails when contract.prisma has a model that no migration creates", async () => {
     copy.write(CONTRACT, original);
-    await copy.pnpm(["run", "contract:emit"], { env });
+    await copy.pnpm(["run", "contract:emit"]);
     const control = await dbCheck();
     expect(control.code, `precondition: the drift check passes on the unchanged copy\n${tail(control)}`).toBe(0);
 
@@ -93,6 +93,28 @@ describe("FND-06 drift check", () => {
     const result = await dbCheck();
 
     expect(result.code, tail(result)).not.toBe(0);
+  });
+  // Source: sds-testing, "Test databases": the target is never the database of the app's own configuration.
+  /** Without TEST_DATABASE_URL the drift check does not run (exit 2), and does not touch the DATABASE_URL database. */
+  it("FND-06.AC1: without TEST_DATABASE_URL the drift check exits 2 and changes no database", async () => {
+    const sentinel = `qa_db_check_sentinel_${String(process.pid)}`;
+    const client = new Client({ connectionString: integrationDatabaseUrl() });
+    await client.connect();
+    try {
+      await client.query(`CREATE TABLE IF NOT EXISTS public."${sentinel}" (id integer PRIMARY KEY)`);
+      await client.query(`INSERT INTO public."${sentinel}" (id) VALUES (1) ON CONFLICT DO NOTHING`);
+
+      copy.write(CONTRACT, original);
+      // DATABASE_URL names a database that holds the sentinel; the check must not use it.
+      const result = await copy.pnpm(["run", "db:check"], { env: { DATABASE_URL: integrationDatabaseUrl() } });
+
+      expect(result.code, tail(result)).toBe(2);
+      const kept = await client.query(`SELECT count(*)::int AS count FROM public."${sentinel}"`);
+      expect(kept.rows[0]?.count, "the database of DATABASE_URL still holds the sentinel row").toBe(1);
+    } finally {
+      await client.query(`DROP TABLE IF EXISTS public."${sentinel}"`);
+      await client.end();
+    }
   });
 });
 
