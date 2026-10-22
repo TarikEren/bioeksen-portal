@@ -120,12 +120,22 @@ export async function objectExists(key: string): Promise<boolean> {
   }
 }
 
-/** A URL for a download, signed for the public endpoint of the store (DEC-132). It makes no call. */
-export async function signGetUrl(key: string, expiresInSeconds: number): Promise<string> {
+/**
+ * A URL for a download, signed for the public endpoint of the store (DEC-132). It
+ * makes no call. `contentDisposition` is the header that the store answers with,
+ * so the file downloads under the name that the caller chose (DEC-076).
+ */
+export async function signGetUrl(key: string, expiresInSeconds: number, contentDisposition?: string): Promise<string> {
   try {
-    return await getSignedUrl(getClients().signer, new GetObjectCommand({ Bucket: documentsBucket(), Key: key }), {
-      expiresIn: expiresInSeconds,
-    });
+    return await getSignedUrl(
+      getClients().signer,
+      new GetObjectCommand({
+        Bucket: documentsBucket(),
+        Key: key,
+        ...(contentDisposition === undefined ? {} : { ResponseContentDisposition: contentDisposition }),
+      }),
+      { expiresIn: expiresInSeconds },
+    );
   } catch (error) {
     throw toObjectStoreError(error);
   }
