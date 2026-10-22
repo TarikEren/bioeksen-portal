@@ -54,7 +54,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],
-          globalSetup: ["tests/support/global-setup/vitest.ts"],
+          globalSetup: ["tests/support/global-setup/vitest.ts", "tests/support/global-setup/jwks.ts"],
           setupFiles: ["tests/support/setup/integration-env.ts"],
           // One database for the worktree. The files run one after the other.
           fileParallelism: false,

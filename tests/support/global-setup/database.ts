@@ -14,13 +14,12 @@
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { Client } from "pg";
 
 import { type DisposableDatabase, type DisposableTier, assertDisposableDatabase } from "../db-guard";
-
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+// Playwright loads this file as CommonJS, where import.meta does not exist.
+import { repositoryRoot } from "../paths";
 
 /** The variable that holds the connection string of each tier. */
 export const TIER_VARIABLES: Readonly<Record<DisposableTier, string>> = {
@@ -54,7 +53,7 @@ async function recreateDatabase(connectionString: string, name: string): Promise
 }
 
 function applyMigrations(connectionString: string): void {
-  const require = createRequire(import.meta.url);
+  const require = createRequire(path.join(repositoryRoot, "package.json"));
   const binary = path.join(path.dirname(require.resolve("prisma/package.json")), "dist", "prisma.js");
   const result = spawnSync(process.execPath, [binary, "db", "migrate", "--db", connectionString, "--no-interactive"], {
     cwd: repositoryRoot,

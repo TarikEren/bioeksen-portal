@@ -10,7 +10,7 @@
     "test:integration": "vitest run --project integration",
     "test:pipeline": "vitest run --project pipeline",
     "test:e2e": "playwright test",
-    "test:results": "node -e \"console.error('test:results is not ready: tests/support/results.ts is written by the qa-engineer (B0 skeleton).'); process.exit(2)\"",
+    "test:results": "node --no-warnings tests/support/results.ts",
     "prebuild": "prisma contract emit",
     "build": "next build",
     "start": "next start",
