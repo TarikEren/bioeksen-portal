@@ -1,26 +1,210 @@
 @import "tailwindcss";
+@import "@heroui/styles"; 
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Theme colors — Fluent ramp, dark → light.
+     NOTE: this direction is the reverse of the previous palette, where
+     --theme-darker was the lightest value. Anything mapping a token to a ramp
+     position had to be re-pointed; see .sidebar-theme and [data-theme="dark"]. */
+  --theme-darker: #214737;
+  --theme-dark: #2d614b;
+  --theme-dark-alt: #357359;
+  --theme-primary: #3a7f62;
+  --theme-secondary: #4b8f73;
+  --theme-tertiary: #79b39a;
+  --theme-light: #b6d9ca;
+  --theme-lighter: #d6ebe2;
+  --theme-lighter-alt: #f5faf8;
+
+  /* Neutral colors */
+  --black: #000000;
+  --neutral-dark: #201f1e;
+  --neutral-primary: #323130;
+  --neutral-primary-alt: #3b3a39;
+  --neutral-secondary: #605e5c;
+  --neutral-tertiary: #a19f9d;
+  --neutral-tertiary-alt: #c8c6c4;
+  --neutral-quaternary-alt: #e1dfdd;
+  --neutral-light: #edebe9;
+  --neutral-lighter: #f3f2f1;
+  --neutral-lighter-alt: #faf9f8;
+  --white: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* Theme colors */
+  --color-theme-darker: var(--theme-darker);
+  --color-theme-dark: var(--theme-dark);
+  --color-theme-dark-alt: var(--theme-dark-alt);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-secondary: var(--theme-secondary);
+  --color-theme-tertiary: var(--theme-tertiary);
+  --color-theme-light: var(--theme-light);
+  --color-theme-lighter: var(--theme-lighter);
+  --color-theme-lighter-alt: var(--theme-lighter-alt);
+
+  /* Neutral colors */
+  --color-black: var(--black);
+  --color-neutral-dark: var(--neutral-dark);
+  --color-neutral-primary: var(--neutral-primary);
+  --color-neutral-primary-alt: var(--neutral-primary-alt);
+  --color-neutral-secondary: var(--neutral-secondary);
+  --color-neutral-tertiary: var(--neutral-tertiary);
+  --color-neutral-tertiary-alt: var(--neutral-tertiary-alt);
+  --color-neutral-quaternary-alt: var(--neutral-quaternary-alt);
+  --color-neutral-light: var(--neutral-light);
+  --color-neutral-lighter: var(--neutral-lighter);
+  --color-neutral-lighter-alt: var(--neutral-lighter-alt);
+  --color-white: var(--white);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  /* Base */
+  --background: var(--neutral-lighter);
+  --foreground: var(--neutral-primary);
+
+  /* Surfaces (cards, tables, disclosures) */
+  --surface: var(--white);
+  --surface-foreground: var(--neutral-primary);
+  --surface-secondary: var(--neutral-lighter-alt);
+  --surface-secondary-foreground: var(--neutral-primary);
+  --surface-tertiary: var(--neutral-lighter);
+  --surface-tertiary-foreground: var(--neutral-primary);
+
+  /* Overlays (popover, tooltip, modal, menu) */
+  --overlay: var(--white);
+  --overlay-foreground: var(--neutral-primary);
+
+  --muted: var(--neutral-secondary);
+  --default: var(--neutral-light);
+  --default-foreground: var(--neutral-primary);
+
+  /* Accent — the brand green drives every primary control */
+  --accent: var(--theme-primary);
+  --accent-foreground: var(--white);
+  --focus: var(--theme-primary);
+  --link: var(--theme-primary);
+
+  /* Form fields */
+  --field-background: var(--white);
+  --field-foreground: var(--neutral-primary);
+  --field-placeholder: var(--neutral-tertiary);
+  --segment: var(--white);
+  --segment-foreground: var(--neutral-primary);
+
+  /* Lines */
+  --border: var(--neutral-quaternary-alt);
+  --separator: var(--neutral-light);
+
+  /* Status — success takes the brand green; warning/danger stay on
+     HeroUI's built-in hues, since the palette carries no amber or red. */
+  --success: var(--theme-dark-alt);
+  --success-foreground: var(--white);
+}
+
+/* For reducing the incessant rounding — globally, no per-component rules.
+ *
+ * HeroUI replaces Tailwind's radius scale with multiples of its own --radius:
+ *   xs .25x   sm .5x   md .75x   lg 1x   xl 1.5x   2xl 2x   3xl 3x   4xl 4x
+ * so --radius alone rescales every component proportionally. Lowering it on its
+ * own keeps the hierarchy (cards rounder than buttons) but never gets the big
+ * steps flat — at --radius: 0.25rem a Card still lands on 3x = 0.75rem.
+ *
+ * To actually flatten, the upper steps are pinned as well. Set --radius alone
+ * and delete the @theme block if you would rather keep the proportions.
+ *
+ * rounded-full is a literal, outside the scale, so Avatar and Badge stay round.
+ */
+@theme {
+  --radius-md: 0.25rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.25rem;
+  --radius-2xl: 0.25rem;
+  --radius-3xl: 0.25rem;
+  --radius-4xl: 0.25rem;
+}
+
+:root {
+  /* Drives xs/sm and anything using --radius directly (Table root is
+     calc(var(--radius) * 2.5)). --field-radius would otherwise derive
+     calc(var(--radius) * 1.5), so it is pinned too. */
+  --radius: 0.25rem;
+  --field-radius: 0.25rem;
+}
+
+.sidebar-theme {
+  color-scheme: dark;
+
+  /* Chrome uses the DARK end of the ramp, not --theme-primary.
+     --theme-primary is the accent: correct for small controls on a white page
+     (4.78:1 with white — the lightest value that still passes AA), too light
+     for a full-height panel. --theme-darker gives 10.4:1.
+     Raised surfaces step UP from here, as in any dark surface. */
+  --surface: var(--theme-darker);
+  --surface-foreground: var(--white);
+  --surface-secondary: var(--theme-dark);
+  --surface-secondary-foreground: var(--white);
+  --surface-tertiary: var(--theme-dark-alt);
+  --surface-tertiary-foreground: var(--white);
+
+  --foreground: var(--white);
+  --muted: var(--white);
+
+  --default: var(--theme-dark);
+  --default-foreground: var(--white);
+
+  /* Accent must be LIGHT against the green, with dark text on it — 6.8:1. */
+  --accent: var(--theme-light);
+  --accent-foreground: var(--theme-darker);
+  --focus: var(--theme-light);
+  --link: var(--theme-lighter);
+
+  --border: var(--theme-dark);
+  --separator: var(--theme-dark);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Re-pointed for the Fluent ramp direction. Previously --theme-lighter-alt
+     was #020504 and served as the dark background; it is now #f5faf8, so every
+     one of these would have resolved to a near-white value on a dark theme. */
+  --background: var(--neutral-dark);
+  --foreground: var(--neutral-lighter);
+
+  --surface: var(--theme-darker);
+  --surface-foreground: var(--neutral-lighter);
+  --surface-secondary: var(--theme-dark);
+  --surface-secondary-foreground: var(--neutral-lighter);
+  --surface-tertiary: var(--theme-dark-alt);
+  --surface-tertiary-foreground: var(--neutral-lighter);
+
+  --overlay: var(--theme-darker);
+  --overlay-foreground: var(--neutral-lighter);
+
+  --muted: var(--neutral-tertiary);
+  --default: var(--neutral-primary-alt);
+  --default-foreground: var(--neutral-lighter);
+
+  --accent: var(--theme-tertiary);
+  --accent-foreground: var(--theme-darker);
+  --focus: var(--theme-tertiary);
+  --link: var(--theme-light);
+
+  --field-background: var(--neutral-primary);
+  --field-foreground: var(--neutral-lighter);
+  --field-placeholder: var(--neutral-tertiary);
+  --segment: var(--neutral-primary-alt);
+  --segment-foreground: var(--neutral-lighter);
+
+  --border: var(--neutral-primary-alt);
+  --separator: var(--neutral-primary);
+
+  --success: var(--theme-tertiary);
+  --success-foreground: var(--theme-darker);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
