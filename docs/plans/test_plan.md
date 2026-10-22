@@ -1,186 +1,172 @@
-# Stage B2: Product catalog (crisis mode)
+# Stage B3: Documents and publication (crisis mode)
 
-This is the contract of stage B2, step 1 of the loop of `crisis_mode.md`
+This is the contract of stage B3, step 1 of the loop of `crisis_mode.md`
 (DEC-136). It names what the agents build. It writes no test. The contract of
-B1 is in git: `git show feature/b1-identity:docs/plans/test_plan.md`.
+B2 is in git: `git show feature/b2-catalog:docs/plans/test_plan.md`.
 
-**Status.** The owner approved this contract on 2026-10-22.
+**Status.** Draft. The owner has not approved it.
 
-**Items.** FND-09 (AC3), CAT-10, CAT-20, CAT-30, CAT-40 (with CAT-41), CAT-50,
-CAT-60 (with CAT-61).
+**Items.** IFU-10, IFU-20, IFU-30 (with IFU-31, IFU-32), IFU-40, and the
+document part of CAT-10.AC4 (IFU-10 rule 5, AC8).
 
-**Exit flow** (README › *Build order*). On the demo: an IFU Manager enters a
-product with two catalog numbers, imports LOTs with a row report, and
-corrects a LOT whose dates disagree. Each change has its
+**Exit flow** (README › *Build order*). On the demo, as the IFU Manager: one
+document of `BS-GHPV-L` gets three versions, each with a file, published with
+the starts 2024-01-01, 2025-01-01 and 2026-01-01. The periods are
+[2024-01-01, 2025-01-01), [2025-01-01, 2026-01-01) and [2026-01-01, open), and
+the first two versions are `SUPERSEDED` (IFU-30.AC1, AC2). The manager replaces
+the `tr` file of a published version with a reason, withdraws a version, and
+sets an override from a LOT to a `SUPERSEDED` version. Each change has its
 `platform_audit_record` row.
 
-**Rules in force that are Pending.** DEC-013 (SDS), DEC-039 (SDS), DEC-040
-(PM), DEC-044, DEC-046, DEC-047 (QA), DEC-048 (PM), DEC-050 (QA), DEC-135 (IT).
-The build follows the rule in each row until the owner answers.
+**Rules in force that are Pending.** DEC-013, DEC-039 (SDS), DEC-060 (QA),
+DEC-135 (IT). The build follows the rule in each row.
 
 **The UI reference.** The mockup `BioeksenPortal/frontend`,
-`src/features/catalog/` (product list, product page, new product, new catalog
-number, LOT panel, date correction drawer, LOT import form). The specs win on
-a conflict.
+`src/features/documents/` (document list, document page, new document, new
+revision, file upload, publish form, LOT override page and drawer, LOT picker)
+and `src/features/catalog/ProductDocuments.tsx`. The specs win on a conflict.
 
 ## API
 
-All paths are under `/api/v1/catalog/`. Bodies and lists follow
-`sds-api-design` and B1 (camelCase, ids as strings, 201 with `Location`, the
-list body, `PATCH` as a JSON Merge Patch). Each route needs a session (401
-`AUTH-4100`), checks `Origin` on a change (401 `AUTH-4101`), and needs the
-permission of its row (403 `PERM-4150`). Business dates are `YYYY-MM-DD`
-(DEC-039).
+All paths are under `/api/v1/eifu/`. Bodies, lists, `PATCH` (JSON Merge Patch),
+the session, the Origin check and the permission refusals follow B1 and B2.
+Business dates are `YYYY-MM-DD` (DEC-039).
 
 | Method and path | Permission | Body or query | Success | Failures |
 |---|---|---|---|---|
-| `GET products` | `catalog.product.view` | `page`, `limit`, `q` (stem, name in either language, or catalog number), `active` | 200 list of `ProductSummary` | — |
-| `POST products` | `catalog.product.manage` | `CreateProductInput`: `internalCode`, `name {tr, en}`, `description {tr, en}?`, `regulatoryStatus`, `kitCodeBase?` | 201 `{ product: ProductDetail }`; one audit row (CAT-10.AC1) | 409 `RES-4300` same stem and status (AC2); 400 `VAL-4001`, `details` names the missing entry (AC3) |
-| `GET products/{id}` | `catalog.product.view` | — | 200 `{ product: ProductDetail }` with its catalog numbers | 404 `RES-4200` |
-| `PATCH products/{id}` | `catalog.product.manage` | `name`, `description`, `internalCode`, `regulatoryStatus`, `kitCodeBase` | 200; one audit row | 409 `RES-4302` stem or status while the product has a LOT (AC4; the document check comes in B3); 409 `RES-4300` |
-| `POST products/{id}/deactivation` | `catalog.product.manage` | — | 200; the row stays; one audit row (AC5) | 409 `RES-4302` when inactive |
-| `POST products/{id}/catalog-numbers` | `catalog.catalog_number.manage` | `catalogNumber`, `packSize?`, `format?` | 201 `{ catalogNumber: CatalogNumberView }`; cleanup once (CAT-20.AC3); one audit row (AC1) | 409 `RES-4300` anywhere in the catalog (AC2) |
-| `PATCH catalog-numbers/{id}` | `catalog.catalog_number.manage` | `packSize`, `format`, `productId` (a move) | 200; one audit row | 409 `RES-4302` a move while it has a LOT (AC4) |
-| `POST catalog-numbers/{id}/deactivation` | `catalog.catalog_number.manage` | — | 200; the row stays (AC5) | 409 `RES-4302` when inactive |
-| `GET products/{id}/lots` | `catalog.lot.view` | `page`, `limit`, `catalogNumberId?`, `conflict?` | 200 list of `LotView` (dates, source, conflict marker) | 404 `RES-4200` |
-| `POST catalog-numbers/{id}/lots` | `catalog.lot.manage` | `lotNumber`, `suppliedManufacturingDate?`, `expiryDate?`, `confirmKitCodeMismatch?` | 201 `{ lot: LotView }`; one audit row with both dates where they differ (CAT-40) | 409 `RES-4300` (AC2); 400 `VAL-4006` on `lotNumber` (format, date, kit code: three issues) or `expiryDate` (CAT-30.AC2, AC3; CAT-40.AC6, AC7) |
-| `POST lots/{id}/manufacturing-date-correction` | `catalog.lot.correct` | `manufacturingDate`, `reason` | 200; source `MANUAL_CORRECTION`, no conflict; one audit row with the date before, after, the encoded date and the reason (CAT-41.AC1) | 400 `VAL-4001` no reason (AC2); 403 `PERM-4150` (AC3) |
-| `POST lot-imports/preview` | `catalog.lot.manage` | the import input (below) | 200 `{ plan }`: each row with its outcome and reason, grouped by product, the counts, and a warning when an earlier import had the same hash (CAT-60 rule 9) | 400 `VAL-4001` no input; 400 `VAL-4006` with a `details` entry for each fault (AC10, AC19, AC20); 413 `VAL-4550` (AC11) |
-| `POST lot-imports` | `catalog.lot.manage` | the import input | 201 with `Location`, `{ import: LotImportView }`; one audit row with the counts (AC2) | as the preview; a stop records the import as `FAILED` (AC14) |
-| `GET lot-imports` | `catalog.lot.view` | `page`, `limit` | 200 list of `LotImportView` (the screen *LOT imports*) | — |
-| `GET lot-imports/{id}` | `catalog.lot.view` | — | 200 `{ import: LotImportView }` with its counts | 404 `RES-4200` |
-| `GET lot-imports/{id}/rows` | `catalog.lot.view` | `page`, `limit`, `outcome?` | 200 list of `LotImportRowView` | 404 `RES-4200` |
-| `GET lot-imports/template` | `catalog.lot.manage` | — | 200, an XLSX in the active language (CAT-61.AC1) | — |
+| `GET documents` | `eifu.document.view` | `page`, `limit`, `productId?`, `q` (document number or title) | 200 list of `DocumentSummary` (product, the version in force today) | — |
+| `POST documents` | `eifu.document.manage` | `documentNumber`, `title {tr, en}`, `productId` | 201 `{ document }`; one audit row (IFU-10.AC1) | 409 `RES-4300` (AC2); 400 `VAL-4001` |
+| `GET documents/{id}` | `eifu.document.view` | — | 200 `{ document: DocumentDetail }` with its versions, states and periods | 404 `RES-4200` |
+| `PATCH documents/{id}` | `eifu.document.manage` | `title`, `productId` | 200; one audit row | 409 `RES-4302` a product change after a publication (AC4) |
+| `POST documents/{id}/versions` | `eifu.document.manage` | `revision`, `proposedEffectiveFrom?` | 201 `{ version }` as `DRAFT` (AC3) | 409 `RES-4300` (AC3) |
+| `GET document-versions/{id}` | `eifu.document.view` | — | 200 `{ version: VersionDetail }` with its files, its period, its replacements | 404 `RES-4200` |
+| `PATCH document-versions/{id}` | `eifu.document.manage` | `proposedEffectiveFrom` | 200; one audit row (AC5) | 409 `RES-4302` when not `DRAFT` (AC6) |
+| `POST document-versions/{id}/files` | `eifu.document.manage` | multipart: `languageCode`, `file`, `sha256?`; limit 20 MiB | 201 `{ file }`; one audit row (IFU-20.AC1) | 400 `VAL-4006` on `file` (not a PDF, no bytes, a hash that differs) or `languageCode` (AC2, AC6–AC8); 413 `VAL-4550` (AC3); 409 `RES-4300` (AC4); 409 `RES-4302` (AC5) |
+| `POST document-files/{id}/deactivation` | `eifu.document.manage` | — | 200; the row stays (AC9) | 409 `RES-4302` when the version is not `DRAFT` |
+| `GET document-files/{id}/download-url` | `eifu.document.view` | — | 200 `{ url }`: a signed URL of DEC-076 (5 minutes, the attachment name of DEC-076) | 404 `RES-4200` |
+| `POST document-versions/{id}/publication` | `eifu.document.publish` | `effectiveFrom`, `expectedProductId` | 200; the period of IFU-30 rule 3; one audit row with the superseded version (AC1, AC2) | 400 `VAL-4006` on `effectiveFrom` (AC3, AC8); 409 `RES-4302` (AC4, AC5); 409 `RES-4301` (AC6) |
+| `POST document-versions/{id}/withdrawal` | `eifu.document.withdraw` | `reason`, `reopenPrevious?` | 200; one audit row with the reason and the reopened version (IFU-31.AC1, AC2, AC5) | 409 `RES-4302` (AC3); 400 `VAL-4001` (AC4) |
+| `POST document-files/{id}/replacement` | `eifu.document.replace_published_file` | multipart: `reason`, `file`, `sha256?`; limit 20 MiB | 201 `{ file, replacement }`; one audit row (IFU-32.AC1) | 400 `VAL-4006` same bytes (AC2); 400 `VAL-4001` (AC3); 400 `VAL-4007` a `languageCode` (AC4); 409 `RES-4302` (AC5) |
+| `GET lots/{lotId}/overrides` | `eifu.document.view` | — | 200 `{ active, history }` | 404 `RES-4200` |
+| `POST lots/{lotId}/overrides` | `eifu.lot_override.manage` | `documentVersionId`, `reason` | 201 `{ override }`; one audit row (IFU-40.AC1) | 400 `VAL-4006` on `documentVersionId` (AC2, AC3); 409 `RES-4300` (AC4); 400 `VAL-4001` (AC5) |
+| `POST lot-overrides/{id}/deactivation` | `eifu.lot_override.manage` | `reason` | 200; the row stays; one audit row (AC6) | 400 `VAL-4001` (AC7) |
+| `GET lot-overrides` | `eifu.document.view` | `page`, `limit`, `active?` | 200 list of `LotOverrideView` | — |
 
-**The import input.** `multipart/form-data` with the fields `text` (pasted
-text) or `file`, `productId?` (an import for one product, CAT-60 rule 5) and
-`catalogNumber?` (one-column input without a header, rule 4). The body limit
-is 5 MiB (DEC-051), counted as it arrives, before the media type (B0 order).
+The file body is read as it arrives, with the order of B0 (size, then media
+type). The server reads the type from the bytes (`%PDF-`), not from the name
+(IFU-20 rule 2).
 
 ## Data
 
-One migration `catalog` (`prisma migration plan`, never `db update`). The
-DELETE and TRUNCATE triggers call `platform_refuse_delete()` as `rawSql` in the
-same migration, on each table (DEC-010).
+One migration `eifu_documents` (`prisma migration plan`, never `db update`).
+The extension `btree_gist`, the exclusion constraint, the triggers and the
+DELETE/TRUNCATE triggers with `platform_refuse_delete()` are `rawSql` in the
+same migration (DEC-005).
 
 | Table | Columns and constraints (the spec names them) |
 |---|---|
-| `catalog_product` | `id`; `internal_code` (≤ 64); `name` JSONB `{tr, en}` with its check (DEC-011); `description` JSONB, optional, same check; `regulatory_status` check `IVD`/`RUO`, no default; `kit_code_base` (≤ 32), optional; `is_active`; `created_at`, `updated_at`. `product_unique_identity` `UNIQUE (internal_code, regulatory_status)` |
-| `catalog_catalog_number` | `id`; `product_id` → `catalog_product` restrict; `catalog_number` (≤ 64); `pack_size` (≤ 32), optional; `format` check `VCAP`/`LYOPHILIZED`/`LIQUID`, optional; `is_active`; timestamps. `catalog_number_unique` `UNIQUE (catalog_number)` |
-| `catalog_lot` | `id`; `catalog_number_id` → restrict; `lot_number` (≤ 64); `manufacturing_date` date; `manufacturing_date_source` check `PARSED_FROM_LOT`/`SUPPLIED`/`MANUAL_CORRECTION`; `supplied_manufacturing_date` date, optional; `expiry_date` date, optional; `has_date_conflict`; `lot_import_id`, optional; timestamps. `lot_unique_per_catalog_number`; `lot_expiry_after_manufacturing`; index `lot_number_idx` |
-| `catalog_lot_import` | `id`; `source_filename`, optional; `source_hash`; `product_id`, optional; `uploaded_by_user_id`; `status` check `PROCESSING`/`COMPLETED`/`FAILED`; `row_count`, `created_count`, `existing_count`, `conflict_count`, `invalid_count`; `failure_code` (only when `FAILED`); `created_at`, `completed_at`. `lot_import_counts_add_up` |
-| `catalog_lot_import_row` | `id`; `lot_import_id`; `row_number` (from 1); `outcome`; `reason`; `raw_cells` JSONB; `lot_id`, optional. `lot_import_row_unique` |
+| `eifu_document` | `document_number` (`document_number_unique`); `document_type` check `IFU`; `title` JSONB `{tr, en}` with its check (DEC-011); `product_id` → `catalog_product` restrict. Trigger `document_product_is_settled` |
+| `eifu_document_version` | `document_id`; `revision` (≤ 16); `status` check `DRAFT`/`PUBLISHED`/`SUPERSEDED`/`WITHDRAWN`; `proposed_effective_from` date; `published_at`, `published_by_user_id`, `superseded_at`, `withdrawn_at`, `withdrawn_by_user_id`, `withdrawal_reason`. `document_version_unique_revision` |
+| `eifu_document_file` | `document_version_id`; `language_code` (≤ 35); `storage_key`; `file_hash` (64 hex); `file_size_bytes`; `content_type`; `original_filename`; `is_active`. `document_file_one_active_per_language` |
+| `eifu_applicability` | `document_version_id`; `product_id`; `effective_from`, `effective_to` dates; `withdrawn_at`. `applicability_period_is_ordered`; `applicability_no_overlap_per_product` (EXCLUDE … gist, `btree_gist`); trigger `applicability_on_document_product`; index `applicability_lookup_idx` |
+| `eifu_file_replacement` | the columns of IFU-32 *Data*; `file_replacement_reason_is_present` |
+| `eifu_lot_override` | `lot_id` → `catalog_lot` restrict; `document_version_id`; `reason`; `created_by_user_id`; `is_active`; `ended_by_user_id`, `ended_at`, `end_reason`. `lot_override_reason_is_present`; `lot_override_one_active_per_lot` |
 
-`uploaded_by_user_id` holds the user id with no foreign key to
-`identity_user` (DEC-004: a module reads another module only through its
-service).
+The user columns (`*_by_user_id`) have no foreign key to `identity_user`
+(DEC-004, as in B2).
 
-Audited actions (PLT-40): `catalog.product.created`, `catalog.product.changed`,
-`catalog.product.deactivated`, `catalog.catalog_number.created`,
-`catalog.catalog_number.changed`, `catalog.catalog_number.deactivated`,
-`catalog.lot.registered`, `catalog.lot.manufacturing_date_corrected`,
-`catalog.lot_import.committed`. A move of a catalog number is a `changed`
-row with the product before and after.
+**The document lock of a product** (IFU-10 rule 5, AC8; CAT-10.AC4). The stem
+and the regulatory status of a product change only while no document names
+it. The catalog module must not import the eifu module (the eifu module reads
+the catalog). The check is a trigger in this migration on `catalog_product`
+(`product_identity_is_settled`), which refuses the change when an
+`eifu_document` names the product; the catalog service maps it to 409
+`RES-4302`.
 
-**The import status of a stop** (CAT-60 rule 8): the commit transaction rolls
-back, then a second transaction records the import as `FAILED` with the code.
+Audited actions (PLT-40): `eifu.document.created`, `eifu.document.changed`,
+`eifu.document_version.created`, `eifu.document_version.changed`,
+`eifu.document_file.uploaded`, `eifu.document_file.deactivated`,
+`eifu.document_version.published` (the row names the superseded version),
+`eifu.document_version.withdrawn` (the reason, the reopened version),
+`eifu.document_file.replaced`, `eifu.lot_override.created`,
+`eifu.lot_override.ended`.
+
+The files go to the object store through `storeDocumentFile` of PLT-10 (B1),
+with the key of PLT-10 rule 3 and `If-None-Match: *`.
 
 ## Services and types
 
-Types and zod schemas: `src/lib/schemas/catalog.ts` (`CreateProductInput`,
-`UpdateProductInput`, `ProductSummary`, `ProductDetail`, `CatalogNumberInput`,
-`CatalogNumberView`, `RegisterLotInput`, `LotView`, `CorrectionInput`,
-`ImportPlan`, `LotImportView`, `LotImportRowView`, `RegulatoryStatus`,
-`Format`, `Outcome`, `Reason`).
+Types and zod schemas: `src/lib/schemas/eifu.ts` (`CreateDocumentInput`,
+`UpdateDocumentInput`, `DocumentSummary`, `DocumentDetail`,
+`CreateVersionInput`, `UpdateVersionInput`, `VersionDetail`, `FileView`,
+`PeriodView`, `PublishInput`, `WithdrawInput`, `ReplacementView`,
+`CreateOverrideInput`, `EndOverrideInput`, `LotOverrideView`,
+`VersionStatus`, `LanguageCode` (BCP 47, ≤ 35, DEC-069)).
 
 | File | Functions |
 |---|---|
-| `src/modules/catalog/domain/lot-number.ts` | `cleanTransport(value)` (CAT-30 rule 1), `readEncodedDate(lotNumber)` (DEC-044). No other code takes a substring of a LOT number (rule 3) |
-| `src/modules/catalog/domain/kit-code.ts` | `expectedKitCode(base, format)`, `kitCodeMatches(lotNumber, base, format)` (DEC-048, DEC-049) |
-| `src/modules/catalog/domain/supplied-date.ts` | `readSuppliedDate(cell)` (DEC-053) |
-| `src/modules/catalog/domain/import-reader.ts` | the input to rows: CSV, TSV, text, XLSX (first sheet); UTF-8 or Windows-1254 (DEC-052); the header labels in either language, without letter case and accents; the no-header cases (rule 4) |
-| `src/modules/catalog/domain/import-planner.ts` | one outcome and one reason for each row (rule 6), from the rows and the registered LOTs |
-| `src/modules/catalog/services/product-service.ts` | `listProducts`, `createProduct`, `getProduct`, `updateProduct`, `deactivateProduct` |
-| `src/modules/catalog/services/catalog-number-service.ts` | `addCatalogNumber`, `updateCatalogNumber`, `deactivateCatalogNumber` |
-| `src/modules/catalog/services/lot-service.ts` | `listLots`, `registerLot`, `correctManufacturingDate` |
-| `src/modules/catalog/services/lot-import-service.ts` | `previewImport`, `commitImport`, `listImports`, `getImport`, `listImportRows`, `importTemplate(actor, language)` |
+| `src/modules/eifu/services/document-service.ts` | `listDocuments`, `createDocument`, `getDocument`, `updateDocument`, `createVersion`, `getVersion`, `updateVersion` |
+| `src/modules/eifu/services/file-service.ts` | `uploadFile`, `deactivateFile`, `fileDownloadUrl`, `replacePublishedFile` |
+| `src/modules/eifu/services/publication-service.ts` | `publishVersion` (IFU-30 rule 3, in one transaction), `withdrawVersion` (IFU-31) |
+| `src/modules/eifu/services/override-service.ts` | `listOverridesOfLot`, `createOverride`, `endOverride`, `listOverrides` |
+| `src/modules/eifu/domain/pdf.ts`, `language-code.ts` | the PDF check from the bytes; the BCP 47 check |
 
-Each service takes the session `actor` and checks its permission. The vectors
-of CAT-30 rule 5 are one data file, `tests/fixtures/cat-30-vectors.json`,
-which the test phase reads.
+The eifu services read products and LOTs only through the catalog services
+(DEC-004). The catalog module gains the small reads that eifu needs (a product
+by id, a LOT with its catalog number and product). Each service takes the
+session `actor` and checks its permission.
 
-**Mock data** (step 2): `src/lib/mock/catalog.ts`: three products
-(`BS-GHPV-L` `IVD` with the kit code base `GHPV` and the catalog numbers
-`BS-GHPV-L-100` and `BS-GHPV-L-25`, both `VCAP`; `BS-STI-L` `IVD`; `BS-STI-L`
-`RUO`), five LOTs (one with a date conflict), and one import with its rows.
+**Mock data** (step 2): `src/lib/mock/eifu.ts`: one document `KTL-0042` of a
+product, with the versions `01` (`SUPERSEDED`, [2024-01-01, 2025-01-01)),
+`02` (`PUBLISHED`, [2025-01-01, open)) and `03` (`DRAFT`), each published
+version with a `tr` and an `en` file; one replacement; one active override.
 Each mock function carries `// MOCK: <item>`.
 
 ## UI
 
-The text comes from the dictionaries, in the group `catalog`. A catalog
-number, a LOT number and a manufacturing date are in IBM Plex Mono; their
-labels are in IBM Plex Sans (FND-09.AC3, DEC-016). A conflict shows with an
-icon and a text, never by color alone (DEC-019).
+The text comes from the dictionaries, in the group `eifu`. A document number,
+a revision label, a date, a language code and a hash are in IBM Plex Mono
+(DEC-016). A state shows with an icon and a text (DEC-019); the states have
+the Turkish labels of IFU-10 *States*.
 
 | Page | Path | Content |
 |---|---|---|
-| Products | `/backoffice/catalog/products` | The list with the search (stem, name, catalog number) and the status; "new product" with `catalog.product.manage` |
-| New product | `/backoffice/catalog/products/new` | Stem, name tr/en, description tr/en, regulatory status (no default), kit code base |
-| Product | `/backoffice/catalog/products/[id]` | The details, change and deactivate; the catalog numbers with add, change, move and deactivate; the LOTs with the dates, the source and the conflict marker, the single-LOT form with the confirmation of a kit-code mismatch (DEC-050), and the date correction with a reason (CAT-41). The documents section comes in B3 |
-| LOT imports | `/backoffice/catalog/lot-imports` | The list of imports with the status and the counts; "new import" with `catalog.lot.manage`; the template download |
-| New import | `/backoffice/catalog/lot-imports/new` | The paste field, the file field, the choice of one product, the preview grouped by product with the outcome of each row and the hash warning, the commit |
-| Import report | `/backoffice/catalog/lot-imports/[id]` | The counts and the rows, with the outcome, the reason and the raw cells |
+| Documents | `/backoffice/documents` | The list by product, with the search and the version in force today; "new document" with `eifu.document.manage` |
+| New document | `/backoffice/documents/new` | Document number, title tr/en, product |
+| Document | `/backoffice/documents/[id]` | The details and the change (the product only before the first publication); the versions with their states and periods as a timeline; "new version" |
+| Version | `/backoffice/documents/[id]/versions/[versionId]` | The files with their language, size, hash and download link; upload and deactivate on a `DRAFT`; the proposed start; publish (`effectiveFrom`, the product that the person sees); withdraw (reason, reopen); replace a file of a published version (reason); the replacement history |
+| LOT | `/backoffice/catalog/lots/[id]` | The LOT (from the catalog), its active override, the history, and the forms to create (a `PUBLISHED` or `SUPERSEDED` version of the LOT's product, a reason) and to end (a reason) an override (IFU-40 *Screens*) |
+| LOT overrides | `/backoffice/lot-overrides` | The list of the overrides, active first, with a link to each LOT (after the mockup) |
 
-The sidebar gains the group *e-IFU* with *Product catalog*
-(`catalog.product.view`) and *LOT imports* (`catalog.lot.view`). The card
-*Product catalog* of the start page becomes a link.
+The product page gains the section *Documents* (the documents of the product
+and the version in force today), and each LOT row links to its LOT page. The
+sidebar group *e-IFU* gains *Documents* (`eifu.document.view`) and *LOT
+overrides* (`eifu.document.view`). The start-page card *Instructions for use*
+becomes a link.
+
+The document file upload goes from the browser to the route handler with
+`fetch` (multipart, 20 MiB), not through a server action; the other forms use
+server actions.
 
 ## Tasks
 
 | Step | Who | Done when |
 |---|---|---|
-| 2 Mock skeleton | Backend agent | The schemas, every service of the table on mocks, the routes and the server actions, the multipart route wrapper |
+| 2 Mock skeleton | Backend agent | The schemas, every service on mocks, the routes and the server actions, the multipart route at 20 MiB |
 | 3 Frontend | Frontend agent | Each page of the UI table works on the mocks, in Turkish and English, after the mockup |
-| 4 Backend | Backend agent | The migration, the repositories, the real services, the domain functions, the XLSX reading and the template, the vectors file. Each `MOCK:` goes |
-| 5 Phase review | `code-reviewer` | The commits of B2, against the items above |
-| 6 Fix | Developers | Only a finding that blocks B3, unless the owner calls for more |
+| 4 Backend | Backend agent | The migration with its raw objects, the repositories, the real services, the files in MinIO, the document lock of a product. Each `MOCK:` goes |
+| 5 Phase review | `code-reviewer` | The commits of B3, against the items above |
+| 6 Fix | Developers | Only a finding that blocks B4, unless the owner calls for more |
 | 7 Stage check | Main session | The gate of `crisis_mode.md` §5, with the exit flow in the demo |
 
-**Carried from step 2 to step 4** (step 2 is `768fcb7`, `864e4d8`). The real
-XLSX reading (DEC-055; the reader gives three sample rows for an XLSX file now)
-and the template download (it answers 500 `SYS-5000` now). The nine catalog
-actions in `AuditActionCode` of `src/modules/platform/services/audit-service.ts`
-(the mock keeps its audit rows in the mock store). The migration, the
-repositories and the services on the database. The domain functions and the
-planner are real already.
-
-**Filled by step 2.** A blank name entry, a blank reason and a blank LOT number
-give 400 `VAL-4001` with a `details` entry (CAT-10.AC3, CAT-41.AC2). A LOT with
-a date conflict has the source `PARSED_FROM_LOT`, because its stored date is the
-encoded date (CAT-40 rule 3 names no source). `PATCH` takes `application/json`
-or `application/merge-patch+json`. The `Location` of a catalog number and of a
-LOT names the member (`catalog-numbers/{id}`, `lots/{id}`), which has no `GET`.
-
-**Choices the specs left open.** The owner accepted them on 2026-10-22, and
-they are Default decisions now: DEC-054 (the `multipart/form-data` input),
-DEC-055 (`exceljs` and the `TextDecoder` of Node), DEC-056 (the list of the
-imports) and DEC-057 (the permission of the template download).
-
-## Stage check (2026-10-22)
-
-The gate of `crisis_mode.md` §5 at `4afd75f`:
-
-- `pnpm run typecheck`, `pnpm run lint` and `pnpm run build` pass (the build
-  ran in the image of the demo).
-- `pnpm run test`: 299 passed, 4 failed; the 4 are the FND-09.AC2 contrast
-  tests (RC-1).
-- No `MOCK:` comment remains in `src/`.
-- The demo starts from `compose.demo.yaml`, and the migration `catalog`
-  applies there. The exit flow passed in the browser, as the IFU Manager: a
-  product with two catalog numbers, a LOT import with its row report, and a
-  LOT with a date conflict corrected with a reason. Each change has its
-  `platform_audit_record` row. Screenshots: `docs/plans/b2-exit/`.
-- Review 5 is recorded. R-064 and R-065 are Major; no open finding blocks B3.
-  Each finding waits for the call of the owner (§4 step 6).
-
-**Result:** B2 passes the gate.
+**Choices the specs leave open** (record them as Default decisions if the
+owner accepts them):
+- The browser uploads a document file to the route handler with `fetch`
+  (20 MiB, IFU-20 rule 2); a server action does not take the file.
+- `GET document-files/{id}/download-url` gives a manager a signed URL of
+  DEC-076 after the check of `eifu.document.view` (DEC-125).
+- The LOT page is `/backoffice/catalog/lots/[id]` (IFU-40 *Screens*), and a
+  list of the overrides is added at `/backoffice/lot-overrides` (the mockup).
+- The version page is `/backoffice/documents/[id]/versions/[versionId]`.
+- The document lock of a product is a trigger on `catalog_product` in the
+  eifu migration, so that the catalog module does not import the eifu module.
