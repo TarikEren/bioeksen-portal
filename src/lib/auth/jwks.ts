@@ -11,20 +11,19 @@
  *   good, and it answers `AUTH-5500` only when the key is unknown and the
  *   fetch fails.
  *
- * The call has one deadline and no retry (`service-calls.md`): a failed fetch
- * is the answer of this request, and the next request tries again within the
- * budget.
+ * The fetch is a call on the request path. It follows `service-calls.md`: a
+ * timeout for each attempt, one retry after a connection failure, a timeout or a
+ * 502, 503 or 504, and a total under 3 s. The values, and the one departure (no
+ * separate connect timeout), are in `@/lib/config/empirical`.
  */
 import "server-only";
 
 import { type CryptoKey, type JWK, type KeyObject, importJWK } from "jose";
 import { z } from "zod";
 
+import { JWKS_FETCH, JWKS_REFETCH_BUDGET } from "@/lib/config/empirical";
 import { AppError } from "@/lib/errors";
 
-const FETCH_TIMEOUT_MS = 3_000;
-const FETCH_BUDGET = 6;
-const FETCH_WINDOW_MS = 60_000;
 const MAX_BODY_BYTES = 256 * 1024;
 
 type SigningKey = CryptoKey | KeyObject;
@@ -98,8 +97,8 @@ export class JwksCache {
   }
 
   private hasBudget(now: number): boolean {
-    this.attempts = this.attempts.filter((attemptAt) => now - attemptAt < FETCH_WINDOW_MS);
-    return this.attempts.length < FETCH_BUDGET;
+    this.attempts = this.attempts.filter((attemptAt) => now - attemptAt < JWKS_REFETCH_BUDGET.windowMs);
+    return this.attempts.length < JWKS_REFETCH_BUDGET.fetches;
   }
 
   private refresh(now: number): Promise<boolean> {
@@ -107,6 +106,29 @@ export class JwksCache {
       this.inFlight = undefined;
     });
     return this.inFlight;
+  }
+
+  /** One try, and one retry after a failure that may pass. @returns `null` when no attempt got an answer. */
+  private async fetchWithRetry(): Promise<Response | null> {
+    for (let attempt = 1; attempt <= JWKS_FETCH.attempts; attempt += 1) {
+      try {
+        const response = await fetch(this.options.uri, {
+          headers: { accept: "application/json" },
+          redirect: "error",
+          signal: AbortSignal.timeout(JWKS_FETCH.attemptTimeoutMs),
+        });
+        const retryable = response.status === 502 || response.status === 503 || response.status === 504;
+        if (!retryable || attempt === JWKS_FETCH.attempts) {
+          return response;
+        }
+      } catch {
+        if (attempt === JWKS_FETCH.attempts) {
+          return null;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, JWKS_FETCH.backoffMs));
+    }
+    return null;
   }
 
   /** @returns `true` when the key set was fetched and read. */
@@ -119,12 +141,8 @@ export class JwksCache {
   private async fetchKeySet(now: number): Promise<boolean> {
     this.attempts.push(now);
     try {
-      const response = await fetch(this.options.uri, {
-        headers: { accept: "application/json" },
-        redirect: "error",
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-      if (!response.ok) {
+      const response = await this.fetchWithRetry();
+      if (response === null || !response.ok) {
         return false;
       }
       const text = await response.text();

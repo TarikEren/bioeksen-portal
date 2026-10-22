@@ -74,6 +74,40 @@ describe("JwksCache", () => {
     expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(6);
   });
 
+  // Source: service-calls.md (request path: one try and one retry); review 1, R-015.
+  it("retries once after a connection failure, and gets the keys", async () => {
+    const body = { keys: [await publicJwk("a")] };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValue(Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await codeOf(new JwksCache(options).resolve("a"))).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries once after a 503, and not after a 404", async () => {
+    const body = { keys: [await publicJwk("a")] };
+    const afterOutage = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response("", { status: 503 })).mockResolvedValue(Response.json(body));
+    vi.stubGlobal("fetch", afterOutage);
+    expect(await codeOf(new JwksCache(options).resolve("a"))).toBeNull();
+    expect(afterOutage).toHaveBeenCalledTimes(2);
+
+    const missing = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 404 }));
+    vi.stubGlobal("fetch", missing);
+    expect(await codeOf(new JwksCache(options).resolve("a"))).toBe("AUTH-5500");
+    expect(missing).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes at most two attempts for one fetch, and spends one unit of the budget", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await codeOf(new JwksCache(options).resolve("a"))).toBe("AUTH-5500");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps a key that it holds when a refresh fails", async () => {
     const body = { keys: [await publicJwk("a")] };
     let up = true;
