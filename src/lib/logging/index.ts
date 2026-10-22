@@ -15,10 +15,7 @@
  */
 import "server-only";
 
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-
-import { getConfigState, getLogLevel } from "@/lib/config";
+import { getConfigState, getLogLevel, readSoftwareId } from "@/lib/config";
 import { AppError, type ErrorCode } from "@/lib/errors";
 import { findRequestContext } from "@/lib/request-context";
 
@@ -29,6 +26,7 @@ import { insertLogRecords, type StoredLogRecord } from "./store";
 
 export { LOG_TYPES, SEVERITIES } from "./severities";
 export type { LogType, Severity } from "./severities";
+export { readSoftwareId } from "@/lib/config";
 export { findLogRecords } from "./store";
 export type { LogRecordFilter, LogRecordPage, StoredLogRecord } from "./store";
 
@@ -78,45 +76,6 @@ export interface Logger {
   failure(code: ErrorCode, options?: FailureOptions): void;
   /** Waits until the queue has reached the local store. Tests and `GET /api/admin/logs` use it. */
   flush(): Promise<void>;
-}
-
-const SOFTWARE_ID_FORMAT = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const SOFTWARE_ID_MAX_LENGTH = 63;
-
-let softwareId: string | undefined;
-
-/**
- * Reads the software id from the nearest `.bioeksen/software-id`, from the
- * working directory up.
- *
- * @throws AppError `CFG-5000` when no file holds an id, `CFG-5001` when the id
- * has a form that `log-record.md` does not allow.
- */
-export function readSoftwareId(): string {
-  if (softwareId !== undefined) {
-    return softwareId;
-  }
-  let directory = process.cwd();
-  for (;;) {
-    const candidate = path.join(directory, ".bioeksen", "software-id");
-    if (existsSync(candidate)) {
-      const value = readFileSync(candidate, "utf8").trim();
-      if (value === "") {
-        break;
-      }
-      if (value.length > SOFTWARE_ID_MAX_LENGTH || !SOFTWARE_ID_FORMAT.test(value)) {
-        throw new AppError("CFG-5001", "The software id has a form that is not allowed");
-      }
-      softwareId = value;
-      return value;
-    }
-    const parent = path.dirname(directory);
-    if (parent === directory) {
-      break;
-    }
-    directory = parent;
-  }
-  throw new AppError("CFG-5000", "The software id is not supplied");
 }
 
 /** The most records that wait for the store. The oldest record that is not `AUDIT` drops first. */
@@ -213,10 +172,22 @@ function write(entry: LogEntry): void {
       return;
     }
 
+    let softwareId: string;
+    try {
+      softwareId = readSoftwareId();
+    } catch (error) {
+      // Without the id, no record can be labeled. The local error channel gets the failure.
+      writeLocalError(
+        error instanceof AppError ? error.code : "SYS-5000",
+        `record not written: the software id of .bioeksen/software-id cannot be read (${entry.code ?? entry.severity})`,
+      );
+      return;
+    }
+
     const context = findRequestContext();
     const tail = context === undefined ? { ...entry.tail } : { request: context.requestId, ...entry.tail };
     const record: LogRecord = {
-      id: readSoftwareId(),
+      id: softwareId,
       timestamp: new Date().toISOString(),
       severity: entry.severity,
       type: entry.type,

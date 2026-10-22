@@ -22,7 +22,9 @@ import {
   crossChecks,
   schemaIssues,
 } from "./schema";
+import { readSoftwareId } from "./software-id";
 
+export { readSoftwareId } from "./software-id";
 export { configSchema } from "./schema";
 export type { Config, ConfigIssue } from "./schema";
 
@@ -88,8 +90,28 @@ function environment(): ConfigEnvironment {
  * `process.env`. The result stays the same for the life of the process.
  */
 export function getConfigState(): ConfigState {
-  state ??= evaluateConfig(environment());
+  state ??= withSoftwareId(evaluateConfig(environment()));
   return state;
+}
+
+/** The setting that names the file of the software id in a failure. */
+export const SOFTWARE_ID_SETTING = ".bioeksen/software-id";
+
+/**
+ * Adds the software id to the state. An app with no id cannot write a log
+ * record, so it does not report ready (`sds-config`: validate before ready).
+ */
+export function withSoftwareId(current: ConfigState, startDirectory?: string): ConfigState {
+  try {
+    readSoftwareId(startDirectory);
+    return current;
+  } catch (error) {
+    const issue: ConfigIssue =
+      error instanceof AppError && error.code === "CFG-5001"
+        ? { setting: SOFTWARE_ID_SETTING, code: "CFG-5001", reason: "the form is not allowed" }
+        : { setting: SOFTWARE_ID_SETTING, code: "CFG-5000", reason: "not supplied" };
+    return { status: "failed", issues: [...(current.status === "failed" ? current.issues : []), issue] };
+  }
 }
 
 /**
