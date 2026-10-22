@@ -121,6 +121,17 @@ describe("FND-05 failure codes in the log", () => {
     await expectLoggedWithCode(requestId, String(envelope["code"]));
   });
 
+  // Contract case "Generated" (sds-logging, log-record.md): the id the app makes is the request= of its records.
+  /** A failed request without X-Request-Id: the answer's new id and code are those of its log record. */
+  it("FND-05.AC2: a refused request without a request id is logged with the id that its answer carries", async () => {
+    const response = await call(getHealth, "/api/health");
+    const envelope = await expectEnvelope(response, 401, "AUTH-4100");
+    const requestId = response.headers.get("x-request-id") ?? "(no X-Request-Id)";
+    expect(requestId, "the answer carries a new request id").toMatch(REQUEST_ID_FORMAT);
+
+    await expectLoggedWithCode(requestId, String(envelope["code"]));
+  });
+
   /** A failed request's answer code equals its log record's code, and both carry its request id. */
   it("FND-05.AC2: an invalid body is logged with the code of its answer and its request id", async () => {
     const requestId = newRequestId();
