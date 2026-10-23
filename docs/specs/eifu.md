@@ -45,6 +45,7 @@ force. A *Pending* rule stays in force until the owner answers.
 | DEC-077 | The public lookup collects no first name and no last name. | Default | ENG | — | IFU-50, IFU-51 | adr/0018 §1; eng/privacy-data-residency.md §Data minimisation; audit D-3 |
 | DEC-097 | The public lookup runs in this way. `POST /api/v1/eifu/verifications` sends the code mail after the commit and waits for the result, so that its answer carries `UP-5500`, `UP-5501` or `UP-5000` (IFU-50 rule 4); a failure sets `send_failed_at`. `POST /api/v1/eifu/lookups` marks the verification used and writes the access record in one transaction, and makes the signed URLs after the commit. After a wrong code, the page reads `attemptsRemaining` with `GET /api/v1/eifu/verifications/{id}`; the error envelope stays as `sds-api-design` defines it. | Default | ENG | — | IFU-50, IFU-51, IFU-60, IFU-70, IFU-80 | B4 contract; owner answer 2026-10-22 |
 | DEC-098 | Until the legal function gives the consent text (DEC-074), the page shows the draft text of the owner's mockup in Turkish and English, with the draft marker. | Default | PO | — | IFU-70 | B4 contract; owner answer 2026-10-22 |
+| DEC-099 | At the verification step, a catalog number holds only the ASCII letters, the digits and the hyphen `-`. A LOT number holds only the ASCII letters, the digits, the hyphen `-` and the space `U+0020`. The system checks the characters after transport cleanup (CAT-30). A value with another character fails with 400 `VAL-4006`, whether or not the number exists, and the system sends no mail. So the code mail never holds a dot, a colon, a slash or an `@` that a visitor typed, and a mail client cannot make a link from the value (PLT-20, IFU-50.AC2). The registration (CAT-40) and the import (CAT-60) do not check these characters. | Decided | PO | — | IFU-50 | owner answer 2026-10-23 (questions.md 28; review 7, Q-19, R-097) |
 
 ### Access records and personal data
 
@@ -396,7 +397,8 @@ the consent, and sends a verification code.
 1. `POST /api/v1/eifu/verifications` takes `catalogNumber`, `lotNumber`,
    `email`, `noticeVersion` and `noticeAccepted` (DEC-070, DEC-077).
 2. `catalogNumber` and `lotNumber` have 1 to 64 characters after transport
-   cleanup (CAT-30). `email` is an email address of at most 254 characters.
+   cleanup (CAT-30), and only the characters of DEC-099. `email` is an email
+   address of at most 254 characters.
    `noticeVersion` is the current `EIFU_LEGAL_NOTICE_VERSION` (DEC-074).
    `noticeAccepted` is `true` (DEC-087).
 3. The answer is 201 with `Location`. Its body has `id` (a UUID, DEC-121) and
@@ -465,6 +467,10 @@ the consent, and sends a verification code.
   `RES-4200`.
 - **AC13.** When a verification ended more than 24 hours before a pass of
   PLT-30, the pass removes it.
+- **AC14.** If `catalogNumber` or `lotNumber` has a character that DEC-099
+  does not allow, for example `https://example.test/x` or `a@b`, the request
+  fails with 400 `VAL-4006`, and `details` names the field. The answer is the
+  same whether or not the number exists. The system sends no mail.
 
 **Trace.** adr/0018; eng/eifu-resolution-specification.md §Inputs and outputs; eng/notifications.md §Rules 4
 

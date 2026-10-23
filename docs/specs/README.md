@@ -32,11 +32,11 @@ The text follows ASD-STE-100 (Simplified Technical English).
 - Each decision is in the file of its subject:
   - `core.md`: DEC-001 to DEC-039; DEC-120 to DEC-139.
   - `catalog.md`: DEC-040 to DEC-057.
-  - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-098.
+  - `eifu.md`: DEC-060 to DEC-085; DEC-087 to DEC-099.
   - `academy.md`: DEC-100 to DEC-112.
 - A new decision takes the next free number of its file's block. The free
-  numbers are 058 and 059 for `catalog.md`, 099 for `eifu.md` and 113 to
-  119 for `academy.md`. `core.md` has no free number. Change the list above
+  numbers are 058 and 059 for `catalog.md` and 113 to 119 for
+  `academy.md`. `core.md` and `eifu.md` have no free number. Change the list above
   when you add a decision. Do not use the number 086 again.
 
 ## How to use the files

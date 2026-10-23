@@ -441,3 +441,20 @@ de hazır olduğunu bildirir. Demo gerçek kullanıcılar için değildir.
 **For:** DEC-135. **Owner:** IT.
 
 **Answer:**
+
+## 28. Doğrulama adımında katalog numarası ve LOT numarasının karakterleri
+
+Kod e-postası, ziyaretçinin yazdığı katalog numarasını ve LOT numarasını
+içerir (IFU-50.AC2). Bu iki alan için bir karakter kuralı yoktu. Bu nedenle
+bir ziyaretçi `https://...` gibi bir adresi veya herhangi bir metni, herhangi
+bir e-posta adresine Bioeksen adıyla gönderebiliyordu (R-097). Doğrulama
+adımında bu iki alan hangi karakterleri içerebilir?
+
+Yürürlükteki kural: DEC-099. Katalog numarası yalnızca ASCII harfleri,
+rakamları ve `-` içerir. LOT numarası yalnızca ASCII harfleri, rakamları, `-`
+ve boşluk içerir. Başka bir karakter 400 `VAL-4006` alır ve e-posta
+gönderilmez.
+
+**For:** DEC-099, IFU-50. **Owner:** PO.
+
+**Answer:** 2026-10-23, ürün sahibi: izin listesi kabul edildi (DEC-099).
