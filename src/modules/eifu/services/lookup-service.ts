@@ -7,8 +7,9 @@
  * error envelope is only for a fault of the request.
  *
  * The order of one request:
- * 1. The limit of the source counts the request with one atomic `INCR`
- *    (IFU-51.AC10). It comes first (`code-prefixes.md`, selection procedure).
+ * 1. The limit of the source counts the request in one atomic step, in a
+ *    sliding window on the clock of the app (IFU-51.AC10). It comes first
+ *    (`code-prefixes.md`, selection procedure).
  * 2. One transaction reads the verification `FOR UPDATE` and checks it. An
  *    unknown id is `VAL-4006` on `verificationId` (IFU-51.AC6). A used, ended,
  *    expired or failed verification is 409 `RES-4302` (IFU-51.AC2, AC4, AC5,
@@ -39,7 +40,7 @@ import { now } from "@/lib/clock";
 import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { validationError } from "@/lib/http/validation";
 import { logger } from "@/lib/logging";
-import { type QuotaLimit, consumeQuota } from "@/lib/rate-limit";
+import { type QuotaLimit, consumeQuotas } from "@/lib/rate-limit";
 import { findRequestContext } from "@/lib/request-context";
 import {
   LOOKUP_ISSUES,
@@ -66,7 +67,7 @@ import { unusableReason, verificationUuid } from "./verification-state";
 import { sourceOf } from "./verification-service";
 
 /** At most 30 lookups from one source address in 10 minutes (DEC-072, IFU-51.AC10). */
-const SOURCE_LOOKUPS: QuotaLimit & { readonly scope: string } = { scope: "eifu-lookup-source-10m", limit: 30, windowMs: 600_000 };
+const SOURCE_LOOKUPS: QuotaLimit = { scope: "eifu-lookup-source-10m", limit: 30, windowMs: 600_000 };
 
 /** A download link works for 5 minutes (DEC-076). */
 const DOWNLOAD_URL_SECONDS = 300;
@@ -232,7 +233,7 @@ async function recordLookup(row: VerificationRow, resolution: Resolution, at: Da
  */
 export async function lookup(input: LookupInput, meta: LookupMeta): Promise<LookupAnswer> {
   const at = now();
-  await consumeQuota(SOURCE_LOOKUPS.scope, sourceOf(meta.forwardedFor), SOURCE_LOOKUPS);
+  await consumeQuotas([{ quota: SOURCE_LOOKUPS, subject: sourceOf(meta.forwardedFor) }]);
 
   const publicId = verificationUuid(input.verificationId);
   if (publicId === null) {

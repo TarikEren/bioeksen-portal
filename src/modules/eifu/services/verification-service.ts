@@ -12,8 +12,9 @@
  *    `RATE-4400` before anything else (`code-prefixes.md`, selection procedure).
  * 2. The request is checked (IFU-50 rule 2). A request that fails counts against
  *    no limit.
- * 3. Each limit counts the request with one atomic `INCR` in Redis (DEC-007), so
- *    two requests at the same time cannot both take the last place.
+ * 3. One atomic step in Redis (DEC-007) checks the three limits again and counts
+ *    the request in all of them, so two requests at the same time cannot both
+ *    take the last place. Each limit is a sliding window on the clock of the app.
  * 4. The row is written with the email address and the client address encrypted
  *    (IFU-90) and the code as a keyed hash (DEC-071), and the transaction
  *    commits.
@@ -34,7 +35,7 @@ import { AppError, CODE_MEANINGS } from "@/lib/errors";
 import { cleanTransport } from "@/lib/format/transport-cleanup";
 import { type FieldFault, validationError } from "@/lib/http/validation";
 import { logger } from "@/lib/logging";
-import { type QuotaLimit, assertUnderQuota, consumeQuota } from "@/lib/rate-limit";
+import { type QuotaCount, type QuotaLimit, assertUnderQuotas, consumeQuotas } from "@/lib/rate-limit";
 import {
   LOOKUP_ISSUES,
   LOOKUP_NUMBER_MAX,
@@ -53,16 +54,11 @@ import { encryptIdentity, generateVerificationCode, hashVerificationCode, lookup
 import { findVerificationByPublicId, insertVerification, markVerificationSendFailed } from "../repositories/verification-repository";
 import { verificationUuid } from "./verification-state";
 
-/** A limit of DEC-072: the scope names the counter, and the quota is its size and its window. */
-interface Limit extends QuotaLimit {
-  readonly scope: string;
-}
-
 /** At most 3 verifications in 10 minutes and 10 in a day for one email address (IFU-50.AC7, AC8). */
-const EMAIL_SHORT: Limit = { scope: "eifu-verification-email-10m", limit: 3, windowMs: 600_000 };
-const EMAIL_DAY: Limit = { scope: "eifu-verification-email-1d", limit: 10, windowMs: 86_400_000 };
+const EMAIL_SHORT: QuotaLimit = { scope: "eifu-verification-email-10m", limit: 3, windowMs: 600_000 };
+const EMAIL_DAY: QuotaLimit = { scope: "eifu-verification-email-1d", limit: 10, windowMs: 86_400_000 };
 /** At most 20 verifications in an hour for one source address (IFU-50.AC9). */
-const SOURCE_HOUR: Limit = { scope: "eifu-verification-source-1h", limit: 20, windowMs: 3_600_000 };
+const SOURCE_HOUR: QuotaLimit ={ scope: "eifu-verification-source-1h", limit: 20, windowMs: 3_600_000 };
 
 /** The most characters of a user agent that a row keeps (IFU-50 rule 7). */
 const USER_AGENT_MAX = 512;
@@ -117,18 +113,19 @@ export async function createVerification(input: VerificationInput, meta: LookupM
   const source = sourceOf(meta.forwardedFor);
   const emailSubject = input.email.toLowerCase();
 
-  await assertUnderQuota(SOURCE_HOUR.scope, source, SOURCE_HOUR);
-  await assertUnderQuota(EMAIL_SHORT.scope, emailSubject, EMAIL_SHORT);
-  await assertUnderQuota(EMAIL_DAY.scope, emailSubject, EMAIL_DAY);
+  const counts: QuotaCount[] = [
+    { quota: SOURCE_HOUR, subject: source },
+    { quota: EMAIL_SHORT, subject: emailSubject },
+    { quota: EMAIL_DAY, subject: emailSubject },
+  ];
+  await assertUnderQuotas(counts);
 
   const faults = requestFaults(input);
   if (faults.length > 0) {
     throw validationError(faults);
   }
 
-  await consumeQuota(SOURCE_HOUR.scope, source, SOURCE_HOUR);
-  await consumeQuota(EMAIL_SHORT.scope, emailSubject, EMAIL_SHORT);
-  await consumeQuota(EMAIL_DAY.scope, emailSubject, EMAIL_DAY);
+  await consumeQuotas(counts);
 
   const publicId = randomUUID();
   const code = generateVerificationCode();
