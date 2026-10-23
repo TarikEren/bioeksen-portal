@@ -5,15 +5,16 @@
  *
  * Two forms:
  *
- * - A sliding window of failures for one source: `assertBelowLimit` refuses a
- *   caller that has `limit` failures in the last `windowMs`, and `recordFailure`
- *   adds one. The window is a sorted set of the times of the failures.
- * - A lock for consecutive failures of one subject (an email address):
- *   `recordConsecutiveFailure` counts the failures in a row, and the failure that
- *   reaches the threshold locks the subject for `lockMs`. `assertNotLocked`
- *   refuses a locked subject, also when its next try is right. A success ends the
- *   count (`clearConsecutiveFailures`).
- *
+ * - The failures of an attempt with a credential: a sliding window of failures
+ *   for one source, and optionally a lock for the failures in a row of one
+ *   subject (an email address). `reserveAttempt` counts the attempt as a failure
+ *   before the credential is checked, in one atomic step, so attempts at the
+ *   same time cannot all pass the limits while the count is low (R-053). It
+ *   refuses a source with `limit` failures in the last `windowMs`, and a locked
+ *   subject, also when its credential is right. The attempt that reaches the
+ *   threshold locks the subject for `lockMs`. A right credential gives the
+ *   attempt back and ends the failures in a row (`releaseSucceededAttempt`). An
+ *   attempt that reached no decision counts nothing (`cancelAttempt`).
  * - A quota of requests in a sliding window: `assertUnderQuotas` refuses a
  *   request when one of its quotas is used, and `consumeQuotas` counts the
  *   request in all of its quotas. Each quota is a sorted set of the times of the
@@ -54,91 +55,158 @@ export interface WindowLimit {
   readonly windowMs: number;
 }
 
-/**
- * Refuses a subject that has `limit` failures in the window.
- *
- * @throws RateLimitedError 429 `RATE-4400`, with the time until the oldest failure leaves the window.
- */
-export async function assertBelowLimit(scope: string, subject: string, window: WindowLimit): Promise<void> {
-  const key = keyOf(WINDOW_PREFIX, scope, subject);
-  const at = now().getTime();
-  const oldestInWindow = await withCache(async (cache) => {
-    await cache.zRemRangeByScore(key, 0, at - window.windowMs);
-    const count = await cache.zCard(key);
-    if (count < window.limit) {
-      return null;
-    }
-    // The failure that makes room is the one at the position `count - limit`.
-    const [blocking] = await cache.zRangeWithScores(key, count - window.limit, count - window.limit);
-    return blocking?.score ?? at;
-  });
-  if (oldestInWindow !== null) {
-    throw new RateLimitedError((oldestInWindow + window.windowMs - at) / 1000, "the source has too many failures in the window");
-  }
-}
-
-/** Adds one failure of a subject to its window. */
-export async function recordFailure(scope: string, subject: string, window: WindowLimit): Promise<void> {
-  const key = keyOf(WINDOW_PREFIX, scope, subject);
-  const at = now().getTime();
-  await withCache(async (cache) => {
-    // The member is unique, so two failures in one millisecond are two members.
-    await cache
-      .multi()
-      .zAdd(key, { score: at, value: `${at}-${Math.random().toString(36).slice(2)}` })
-      .pExpire(key, window.windowMs * 2)
-      .exec();
-  });
-}
-
-/**
- * Refuses a subject that is locked.
- *
- * @throws RateLimitedError 429 `RATE-4400`, with the time until the lock ends.
- */
-export async function assertNotLocked(scope: string, subject: string): Promise<void> {
-  const key = keyOf(LOCK_PREFIX, scope, subject);
-  const at = now().getTime();
-  const lockedUntil = await withCache(async (cache) => {
-    const stored = Number(await cache.hGet(key, "lockedUntil"));
-    if (Number.isFinite(stored) && stored > at) {
-      return stored;
-    }
-    if (Number.isFinite(stored) && stored > 0) {
-      // The lock has ended: the next failures count from zero (ACC-20.AC4).
-      await cache.del(key);
-    }
-    return null;
-  });
-  if (lockedUntil !== null) {
-    throw new RateLimitedError((lockedUntil - at) / 1000, "the subject is locked after consecutive failures");
-  }
-}
-
 export interface ConsecutiveLimit {
   /** The failures in a row that lock the subject. */
   readonly threshold: number;
   readonly lockMs: number;
 }
 
-/** Counts one more failure in a row. The failure that reaches the threshold locks the subject. */
-export async function recordConsecutiveFailure(scope: string, subject: string, limit: ConsecutiveLimit): Promise<void> {
-  const key = keyOf(LOCK_PREFIX, scope, subject);
-  const at = now().getTime();
-  await withCache(async (cache) => {
-    const failures = await cache.hIncrBy(key, "failures", 1);
-    if (failures >= limit.threshold) {
-      await cache.hSet(key, { lockedUntil: String(at + limit.lockMs) });
-    }
-    await cache.pExpire(key, COUNTER_TTL_MS);
-  });
+/** The limits of one attempt with a credential. */
+export interface AttemptLimits {
+  /** The window of failures of the source. */
+  readonly source: { readonly scope: string; readonly subject: string; readonly limit: WindowLimit };
+  /** The lock after failures in a row of a subject, when the attempt names one. */
+  readonly lock?: { readonly scope: string; readonly subject: string; readonly limit: ConsecutiveLimit };
 }
 
-/** Ends the count of failures in a row. A right password calls it. */
-export async function clearConsecutiveFailures(scope: string, subject: string): Promise<void> {
-  await withCache(async (cache) => {
-    await cache.del(keyOf(LOCK_PREFIX, scope, subject));
-  });
+/** An attempt that `reserveAttempt` counted as a failure. */
+export interface AttemptReservation {
+  readonly windowKey: string;
+  readonly member: string;
+  readonly lockKey: string | null;
+  /** The end of the lock that this attempt set, or `null` when it set none. */
+  readonly lockedUntil: string | null;
+}
+
+/**
+ * The reservation of an attempt, in one atomic step. `KEYS[1]` is the window of
+ * the source, and `KEYS[2]`, when it is there, the lock of the subject.
+ * `ARGV` holds the time of the app in milliseconds, the member, the limit and
+ * the length of the window, the threshold, the end of a lock that this attempt
+ * sets, and the expiry of the lock key.
+ *
+ * It returns `{1, ms}` when the source has `limit` failures in the window,
+ * `{2, ms}` when the subject is locked, with the milliseconds until the attempt
+ * may come again, and counts nothing. Otherwise it counts the attempt in the
+ * window and in the failures in a row, and returns `{0, 1}` when the attempt
+ * locked the subject, else `{0, 0}`. A lock that has ended is removed first, so
+ * the failures count from zero again (ACC-20.AC4).
+ */
+const RESERVE_SCRIPT = `
+local at = tonumber(ARGV[1])
+local limit = tonumber(ARGV[3])
+local window = tonumber(ARGV[4])
+redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", at - window)
+local count = redis.call("ZCARD", KEYS[1])
+if count >= limit then
+  local blocking = redis.call("ZRANGE", KEYS[1], count - limit, count - limit, "WITHSCORES")
+  return {1, tonumber(blocking[2]) + window - at}
+end
+local locked = 0
+if #KEYS == 2 then
+  local lockedUntil = tonumber(redis.call("HGET", KEYS[2], "lockedUntil"))
+  if lockedUntil ~= nil and lockedUntil > at then
+    return {2, lockedUntil - at}
+  end
+  if lockedUntil ~= nil then
+    redis.call("DEL", KEYS[2])
+  end
+  if redis.call("HINCRBY", KEYS[2], "failures", 1) >= tonumber(ARGV[5]) then
+    redis.call("HSET", KEYS[2], "lockedUntil", ARGV[6])
+    locked = 1
+  end
+  redis.call("PEXPIRE", KEYS[2], tonumber(ARGV[7]))
+end
+redis.call("ZADD", KEYS[1], at, ARGV[2])
+redis.call("PEXPIRE", KEYS[1], window * 2)
+return {0, locked}
+`;
+
+/**
+ * Gives an attempt back after a right credential: it leaves the window, and the
+ * failures in a row of the subject end. `KEYS` are as for `RESERVE_SCRIPT`, and
+ * `ARGV[1]` is the member.
+ */
+const RELEASE_SCRIPT = `
+redis.call("ZREM", KEYS[1], ARGV[1])
+if #KEYS == 2 then
+  redis.call("DEL", KEYS[2])
+end
+return 0
+`;
+
+/**
+ * Removes an attempt that reached no decision: it leaves the window, and the
+ * failures in a row lose the one that it added. A lock that it set ends.
+ * `KEYS` are as for `RESERVE_SCRIPT`, `ARGV[1]` is the member, and `ARGV[2]`
+ * the end of the lock that the attempt set, or an empty string.
+ */
+const CANCEL_SCRIPT = `
+redis.call("ZREM", KEYS[1], ARGV[1])
+if #KEYS == 2 and redis.call("HEXISTS", KEYS[2], "failures") == 1 then
+  if redis.call("HINCRBY", KEYS[2], "failures", -1) <= 0 then
+    redis.call("HDEL", KEYS[2], "failures")
+  end
+  if ARGV[2] ~= "" and redis.call("HGET", KEYS[2], "lockedUntil") == ARGV[2] then
+    redis.call("HDEL", KEYS[2], "lockedUntil")
+  end
+end
+return 0
+`;
+
+function keysOf(reservation: AttemptReservation): string[] {
+  return reservation.lockKey === null ? [reservation.windowKey] : [reservation.windowKey, reservation.lockKey];
+}
+
+/**
+ * Counts an attempt as a failure before its credential is checked (DEC-027,
+ * FND-04 rule 4). The check and the count are one atomic step, so attempts at
+ * the same time get one place each, and an attempt over a limit counts nothing.
+ *
+ * @throws RateLimitedError 429 `RATE-4400` when the source has `limit` failures in the window, with the time until the oldest one that blocks leaves it; or when the subject is locked, with the time until the lock ends.
+ */
+export async function reserveAttempt(limits: AttemptLimits): Promise<AttemptReservation> {
+  const at = now().getTime();
+  const { source, lock } = limits;
+  const windowKey = keyOf(WINDOW_PREFIX, source.scope, source.subject);
+  const lockKey = lock === undefined ? null : keyOf(LOCK_PREFIX, lock.scope, lock.subject);
+  // The member is unique, so two attempts in one millisecond are two members.
+  const member = `${at}-${Math.random().toString(36).slice(2)}`;
+  const lockEnd = lock === undefined ? "" : String(at + lock.limit.lockMs);
+  const reply = await withCache((cache) =>
+    cache.eval(RESERVE_SCRIPT, {
+      keys: lockKey === null ? [windowKey] : [windowKey, lockKey],
+      arguments: [
+        String(at),
+        member,
+        String(source.limit.limit),
+        String(source.limit.windowMs),
+        String(lock?.limit.threshold ?? 0),
+        lockEnd,
+        String(COUNTER_TTL_MS),
+      ],
+    }),
+  );
+  const [state, value] = Array.isArray(reply) ? reply.map(Number) : [Number.NaN, Number.NaN];
+  if (state === 1) {
+    throw new RateLimitedError(value / 1000, "the source has too many failures in the window");
+  }
+  if (state === 2) {
+    throw new RateLimitedError(value / 1000, "the subject is locked after consecutive failures");
+  }
+  return { windowKey, member, lockKey, lockedUntil: value === 1 ? lockEnd : null };
+}
+
+/** Gives the attempt back after a right credential, and ends the failures in a row of the subject. */
+export async function releaseSucceededAttempt(reservation: AttemptReservation): Promise<void> {
+  await withCache((cache) => cache.eval(RELEASE_SCRIPT, { keys: keysOf(reservation), arguments: [reservation.member] }));
+}
+
+/** Removes an attempt that reached no decision, for example because the database failed. It counts nothing then. */
+export async function cancelAttempt(reservation: AttemptReservation): Promise<void> {
+  await withCache((cache) =>
+    cache.eval(CANCEL_SCRIPT, { keys: keysOf(reservation), arguments: [reservation.member, reservation.lockedUntil ?? ""] }),
+  );
 }
 
 export interface QuotaLimit {

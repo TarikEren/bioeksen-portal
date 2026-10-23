@@ -15,11 +15,9 @@ import { logger } from "@/lib/logging";
 import {
   type ConsecutiveLimit,
   type WindowLimit,
-  assertBelowLimit,
-  assertNotLocked,
-  clearConsecutiveFailures,
-  recordConsecutiveFailure,
-  recordFailure,
+  cancelAttempt,
+  releaseSucceededAttempt,
+  reserveAttempt,
 } from "@/lib/rate-limit";
 import { resolveForwardedSource } from "@/lib/security";
 import type { Me, SignInInput } from "@/lib/schemas/identity";
@@ -72,20 +70,35 @@ function signInFailure(reason: string): AppError {
  * the password is right (ACC-20.AC3 to AC5). The email address counts whether or
  * not it has an account.
  *
+ * The attempt counts as a failure before the password is checked, in one atomic
+ * step, so sign-ins at the same time cannot all pass the limits while the count
+ * is low. A right password gives the attempt back. An attempt that fails for
+ * another reason, for example a database that does not answer, counts nothing.
+ *
  * @throws AppError `AUTH-4101` for a wrong password, an unknown email address
  * and an inactive account, with one body; `RATE-4400` (with `Retry-After`) over a limit.
  */
 export async function signIn(input: SignInInput, meta: SignInMeta): Promise<SignedIn> {
   const source = resolveForwardedSource(meta.forwardedFor, getConfig().TRUSTED_PROXIES ?? []) ?? UNKNOWN_SOURCE;
   const emailNormalized = normalizeEmail(input.email);
-  await assertBelowLimit(SOURCE_SCOPE, source, SOURCE_LIMIT);
-  await assertNotLocked(EMAIL_SCOPE, emailNormalized);
+  const attempt = await reserveAttempt({
+    source: { scope: SOURCE_SCOPE, subject: source, limit: SOURCE_LIMIT },
+    lock: { scope: EMAIL_SCOPE, subject: emailNormalized, limit: EMAIL_LIMIT },
+  });
 
   const executor = readExecutor();
-  const user = await findUserByEmail(executor, emailNormalized);
-  // The password is verified in every case, against a decoy when there is no hash,
-  // so the time of the answer does not tell the cases apart.
-  const passwordOk = await verifyPassword(input.password, user?.passwordHash ?? (await decoyHash()));
+  let user: Awaited<ReturnType<typeof findUserByEmail>>;
+  let passwordOk: boolean;
+  try {
+    user = await findUserByEmail(executor, emailNormalized);
+    // The password is verified in every case, against a decoy when there is no hash,
+    // so the time of the answer does not tell the cases apart.
+    passwordOk = await verifyPassword(input.password, user?.passwordHash ?? (await decoyHash()));
+  } catch (error) {
+    // If Redis fails here too, the attempt stays a failure: the safe side.
+    await cancelAttempt(attempt).catch(() => undefined);
+    throw error;
+  }
   const failure =
     user === null
       ? "no user has this email address"
@@ -97,12 +110,11 @@ export async function signIn(input: SignInInput, meta: SignInMeta): Promise<Sign
             ? "the password is wrong"
             : null;
   if (user === null || failure !== null) {
-    await recordFailure(SOURCE_SCOPE, source, SOURCE_LIMIT);
-    await recordConsecutiveFailure(EMAIL_SCOPE, emailNormalized, EMAIL_LIMIT);
+    // The reservation is the failure: it stays in the window and in the failures in a row.
     throw signInFailure(failure ?? "the password is wrong");
   }
 
-  await clearConsecutiveFailures(EMAIL_SCOPE, emailNormalized);
+  await releaseSucceededAttempt(attempt);
   const sessionId = await openSession(String(user.id));
   logger.write({ severity: "INFO", type: "SECURITY", message: "sign-in granted", tail: { sub: String(user.id) } });
   return { sessionId, user: toMe(user, await findActiveAssignments(executor, [user.id])) };

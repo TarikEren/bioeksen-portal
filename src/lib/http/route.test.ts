@@ -35,8 +35,9 @@ vi.mock("@/lib/config", () => ({
 
 // The failure limit of the operator endpoints needs Redis. Here no request is limited.
 vi.mock("@/lib/rate-limit", () => ({
-  assertBelowLimit: () => Promise.resolve(),
-  recordFailure: () => Promise.resolve(),
+  reserveAttempt: () => Promise.resolve({ windowKey: "window", member: "member", lockKey: null, lockedUntil: null }),
+  releaseSucceededAttempt: () => Promise.resolve(),
+  cancelAttempt: () => Promise.resolve(),
 }));
 
 vi.mock("@/lib/auth", () => ({

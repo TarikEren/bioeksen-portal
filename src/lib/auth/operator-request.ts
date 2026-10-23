@@ -7,7 +7,10 @@
  * next request, also when that request carries a valid operator token
  * (FND-04.AC5). The source address is the one of DEC-038. A failed
  * authentication is a request with no credential, an unparseable, expired or
- * rejected token (`AUTH-4100` to `AUTH-4103`).
+ * rejected token (`AUTH-4100` to `AUTH-4103`). Each request counts as a failure
+ * before its token is checked, in one atomic step, so requests at the same time
+ * cannot all pass the limit while the count is low. A granted request gives the
+ * place back, and a request that fails for another reason counts nothing.
  *
  * The limit protects against a token that an attacker guesses. If Redis is down,
  * the request goes on without the limit and the failure is logged: the full
@@ -19,7 +22,13 @@ import "server-only";
 import { getConfig } from "@/lib/config";
 import { AppError, type ErrorCode } from "@/lib/errors";
 import { logger } from "@/lib/logging";
-import { type WindowLimit, assertBelowLimit, recordFailure } from "@/lib/rate-limit";
+import {
+  type AttemptReservation,
+  type WindowLimit,
+  cancelAttempt,
+  releaseSucceededAttempt,
+  reserveAttempt,
+} from "@/lib/rate-limit";
 import { resolveForwardedSource } from "@/lib/security";
 
 import { type OperatorPrincipal, authenticateOperator } from "./index";
@@ -30,16 +39,23 @@ const UNKNOWN_SOURCE = "unknown";
 
 const FAILED_AUTHENTICATION: ReadonlySet<ErrorCode> = new Set(["AUTH-4100", "AUTH-4101", "AUTH-4102", "AUTH-4103"]);
 
-/** Runs a step of the limit. A failure of the cache is logged and does not stop the request. */
-async function limitStep(step: () => Promise<void>): Promise<void> {
+/** Runs a step of the limit. A failure of the cache is logged and does not stop the request: the step gives `null` then. */
+async function limitStep<T>(step: () => Promise<T>): Promise<T | null> {
   try {
-    await step();
+    return await step();
   } catch (error) {
     if (error instanceof AppError && (error.code === "CACHE-5000" || error.code === "CACHE-5500")) {
       logger.failure(error.code, { tail: { step: "operator failure limit" }, error: error.cause });
-      return;
+      return null;
     }
     throw error;
+  }
+}
+
+/** Gives back or removes the place of the request. With no reservation (the cache failed), it does nothing. */
+async function settle(reservation: AttemptReservation | null, settleStep: (reservation: AttemptReservation) => Promise<void>): Promise<void> {
+  if (reservation !== null) {
+    await limitStep(() => settleStep(reservation));
   }
 }
 
@@ -50,13 +66,17 @@ async function limitStep(step: () => Promise<void>): Promise<void> {
  */
 export async function authenticateOperatorRequest(headers: Headers): Promise<OperatorPrincipal> {
   const source = resolveForwardedSource(headers.get("x-forwarded-for"), getConfig().TRUSTED_PROXIES ?? []) ?? UNKNOWN_SOURCE;
-  await limitStep(() => assertBelowLimit(SCOPE, source, LIMIT));
+  const reservation = await limitStep(() => reserveAttempt({ source: { scope: SCOPE, subject: source, limit: LIMIT } }));
+  let principal: OperatorPrincipal;
   try {
-    return await authenticateOperator(headers.get("authorization"));
+    principal = await authenticateOperator(headers.get("authorization"));
   } catch (error) {
-    if (error instanceof AppError && FAILED_AUTHENTICATION.has(error.code)) {
-      await limitStep(() => recordFailure(SCOPE, source, LIMIT));
+    // A failed authentication keeps its place in the window. Any other error counts nothing.
+    if (!(error instanceof AppError && FAILED_AUTHENTICATION.has(error.code))) {
+      await settle(reservation, cancelAttempt);
     }
     throw error;
   }
+  await settle(reservation, releaseSucceededAttempt);
+  return principal;
 }
