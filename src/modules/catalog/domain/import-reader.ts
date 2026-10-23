@@ -210,11 +210,14 @@ function buildRow(
  */
 async function readRecords(input: LotImportInput, field: "text" | "file"): Promise<SourceRecord[]> {
   if (input.source.kind === "file" && (isZip(input.source.bytes) || /\.xlsx$/i.test(input.source.filename ?? ""))) {
-    const sheet = await readFirstSheet(input.source.bytes);
-    if (sheet === null) {
+    const sheet = await readFirstSheet(input.source.bytes, IMPORT_MAX_ROWS);
+    if (sheet.kind === "too-many-rows") {
+      throw unreadable(field, `has more than ${String(IMPORT_MAX_ROWS)} data rows`);
+    }
+    if (sheet.kind === "unreadable") {
       throw unreadable(field, "is not a readable XLSX, CSV, TSV or text file");
     }
-    return sheet.filter((record) => record.cells.some((cell) => cleanTransport(cellText(cell)) !== ""));
+    return sheet.records.filter((record) => record.cells.some((cell) => cleanTransport(cellText(cell)) !== ""));
   }
   const text = input.source.kind === "text" ? input.source.text : decodeBytes(input.source.bytes);
   if (text.includes("\u0000")) {
