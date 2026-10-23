@@ -14,7 +14,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { SESSION_COOKIE, parseSessionId } from "@/lib/auth/session";
-import { isDevelopmentServer } from "@/lib/config";
+import { isDevelopmentServer, isPublicBaseUrlSecure } from "@/lib/config";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@/lib/request-context/request-id";
 import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { applySecurityHeaders } from "@/lib/security/headers";
@@ -26,7 +26,10 @@ function isBackofficePath(pathname: string): boolean {
 
 export function proxy(request: NextRequest): NextResponse {
   const nonce = generateNonce();
-  const policy = buildContentSecurityPolicy(nonce, { development: isDevelopmentServer() });
+  const policy = buildContentSecurityPolicy(nonce, {
+    development: isDevelopmentServer(),
+    upgradeInsecureRequests: isPublicBaseUrlSecure(),
+  });
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
 
   // An optimistic check (ACC-30.AC1, `sds-nextjs-backend` §3): a person with no

@@ -17,6 +17,13 @@ export interface ContentSecurityPolicyOptions {
    * answer never has it.
    */
   readonly development?: boolean;
+  /**
+   * Adds `upgrade-insecure-requests`, so the browser asks for each resource over
+   * HTTPS. Only an app whose public address is HTTPS gets it: on a plain HTTP
+   * address other than `localhost`, the browser would ask for the CSS and the
+   * scripts over HTTPS, where nothing answers, and the page would have no styles.
+   */
+  readonly upgradeInsecureRequests?: boolean;
 }
 
 /**
@@ -25,14 +32,15 @@ export interface ContentSecurityPolicyOptions {
  * `script-src` holds `'self'` and the nonce, and neither `'unsafe-inline'` nor
  * (outside development) `'unsafe-eval'`. `style-src` holds `'self'` and
  * `'unsafe-inline'`, for the style attributes that React renders.
- * `frame-ancestors` is `'none'` (FND-07 rule 1).
+ * `frame-ancestors` is `'none'` (FND-07 rule 1). FND-07 does not require
+ * `upgrade-insecure-requests`; it is only for an HTTPS address.
  */
 export function buildContentSecurityPolicy(nonce: string, options: ContentSecurityPolicyOptions = {}): string {
   const scriptSources = ["'self'", `'nonce-${nonce}'`];
   if (options.development === true) {
     scriptSources.push("'unsafe-eval'");
   }
-  return [
+  const directives = [
     "default-src 'self'",
     `script-src ${scriptSources.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
@@ -43,6 +51,9 @@ export function buildContentSecurityPolicy(nonce: string, options: ContentSecuri
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
-  ].join("; ");
+  ];
+  if (options.upgradeInsecureRequests === true) {
+    directives.push("upgrade-insecure-requests");
+  }
+  return directives.join("; ");
 }
