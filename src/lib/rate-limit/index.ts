@@ -91,21 +91,27 @@ export interface AttemptReservation {
  * window and in the failures in a row, and returns `{0, 1}` when the attempt
  * locked the subject, else `{0, 0}`. A lock that has ended is removed first, so
  * the failures count from zero again (ACC-20.AC4).
+ *
+ * The window counts only the failures in (now - window, now], and a lock holds
+ * only from its start to its end. So when the test seam moves the clock of the
+ * app back, a failure or a lock from a later time does not count.
  */
 const RESERVE_SCRIPT = `
 local at = tonumber(ARGV[1])
 local limit = tonumber(ARGV[3])
 local window = tonumber(ARGV[4])
+local from = string.format("(%d", at - window)
 redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", at - window)
-local count = redis.call("ZCARD", KEYS[1])
+local count = redis.call("ZCOUNT", KEYS[1], from, at)
 if count >= limit then
-  local blocking = redis.call("ZRANGE", KEYS[1], count - limit, count - limit, "WITHSCORES")
+  local blocking = redis.call("ZRANGEBYSCORE", KEYS[1], from, at, "WITHSCORES", "LIMIT", count - limit, 1)
   return {1, tonumber(blocking[2]) + window - at}
 end
 local locked = 0
 if #KEYS == 2 then
   local lockedUntil = tonumber(redis.call("HGET", KEYS[2], "lockedUntil"))
-  if lockedUntil ~= nil and lockedUntil > at then
+  local lockMs = tonumber(ARGV[6]) - at
+  if lockedUntil ~= nil and lockedUntil > at and lockedUntil - lockMs <= at then
     return {2, lockedUntil - at}
   end
   if lockedUntil ~= nil then
@@ -234,7 +240,9 @@ export interface QuotaCount {
  * it returns the milliseconds until the request that blocks leaves its window,
  * and counts nothing. Otherwise it returns 0, and counts the request in every
  * quota when `ARGV[3]` is `1`. All the keys are on one Redis (DEC-007), so one
- * script can touch them all.
+ * script can touch them all. A window counts only the requests in
+ * (now - window, now], so a request from a later time does not count when the
+ * test seam moves the clock of the app back.
  */
 const QUOTA_SCRIPT = `
 local at = tonumber(ARGV[1])
@@ -242,10 +250,11 @@ local wait = 0
 for i, key in ipairs(KEYS) do
   local limit = tonumber(ARGV[2 + 2 * i])
   local window = tonumber(ARGV[3 + 2 * i])
+  local from = string.format("(%d", at - window)
   redis.call("ZREMRANGEBYSCORE", key, "-inf", at - window)
-  local count = redis.call("ZCARD", key)
+  local count = redis.call("ZCOUNT", key, from, at)
   if count >= limit then
-    local blocking = redis.call("ZRANGE", key, count - limit, count - limit, "WITHSCORES")
+    local blocking = redis.call("ZRANGEBYSCORE", key, from, at, "WITHSCORES", "LIMIT", count - limit, 1)
     local left = tonumber(blocking[2]) + window - at
     if left > wait then
       wait = left
