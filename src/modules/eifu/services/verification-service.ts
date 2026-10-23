@@ -72,22 +72,31 @@ export function sourceOf(forwardedFor: string | null): string {
 }
 
 /**
+ * The characters of the numbers after the transport cleanup (DEC-099,
+ * IFU-50.AC14). With no dot, colon, slash or `@`, the code mail cannot carry a
+ * link that a visitor typed (R-097). The cleanup removes a space at the ends,
+ * so a space in a LOT number is inside it (DEC-043).
+ */
+const CATALOG_NUMBER_CHARACTERS = /^[A-Za-z0-9-]+$/;
+const LOT_NUMBER_CHARACTERS = /^[A-Za-z0-9 -]+$/;
+
+/**
  * The faults of the request that the schema cannot see (IFU-50 rule 2): the
  * numbers after the transport cleanup, the consent and the version of its text.
- * A NUL character is a fault too: the store cannot hold it in a text column.
+ * A fault does not depend on whether the number exists (IFU-50.AC3).
  */
 function requestFaults(input: VerificationInput): FieldFault[] {
   const faults: FieldFault[] = [];
-  for (const [field, raw] of [
-    ["catalogNumber", input.catalogNumber],
-    ["lotNumber", input.lotNumber],
+  for (const [field, raw, characters] of [
+    ["catalogNumber", input.catalogNumber, CATALOG_NUMBER_CHARACTERS],
+    ["lotNumber", input.lotNumber, LOT_NUMBER_CHARACTERS],
   ] as const) {
     const cleaned = cleanTransport(raw);
     if (cleaned === "") {
       faults.push({ code: "VAL-4001", entry: { field, issue: LOOKUP_ISSUES.required } });
     } else if (cleaned.length > LOOKUP_NUMBER_MAX) {
       faults.push({ code: "VAL-4006", entry: { field, issue: LOOKUP_ISSUES.outOfRange } });
-    } else if (raw.includes("\u0000")) {
+    } else if (!characters.test(cleaned)) {
       faults.push({ code: "VAL-4006", entry: { field, issue: "has the wrong format" } });
     }
   }
