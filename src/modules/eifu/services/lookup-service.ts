@@ -9,14 +9,19 @@
  * The order of one request:
  * 1. The limit of the source counts the request with one atomic `INCR`
  *    (IFU-51.AC10). It comes first (`code-prefixes.md`, selection procedure).
- * 2. The verification is read. An unknown id is `VAL-4006` on `verificationId`
- *    (IFU-51.AC6). A used, ended, expired or failed verification is 409
- *    `RES-4302` (IFU-51.AC2, AC4, AC5, AC7).
- * 3. The code is checked against its keyed hash (DEC-071). A wrong code uses one
- *    of five tries, in a transaction that locks the row, and the fifth ends the
- *    verification (IFU-51.AC3). A code that is not six digits is a wrong code.
+ * 2. One transaction reads the verification `FOR UPDATE` and checks it. An
+ *    unknown id is `VAL-4006` on `verificationId` (IFU-51.AC6). A used, ended,
+ *    expired or failed verification is 409 `RES-4302` (IFU-51.AC2, AC4, AC5,
+ *    AC7).
+ * 3. In the same transaction, the code is checked against its keyed hash
+ *    (DEC-071). A wrong code uses one of five tries, and the fifth ends the
+ *    verification (IFU-51.AC3). The row is locked before the compare, so
+ *    lookups at the same time compare one after the other, and no more than five
+ *    wrong codes are compared. A code that is not six digits is a wrong code.
  * 4. A correct code runs the resolution of IFU-60 over the reads of
- *    `lookup-reads.ts`.
+ *    `lookup-reads.ts`. The resolution holds no lock: its reads take other
+ *    connections of the pool, and a transaction that waits for them while it
+ *    holds a connection can empty the pool.
  * 5. One transaction marks the verification used with a conditional update and
  *    writes the access record with the encrypted identity (IFU-51.AC8, IFU-80).
  *    Of two lookups with the correct code at the same time, one changes the row
@@ -44,7 +49,7 @@ import {
   type LookupMeta,
   MAX_CODE_ATTEMPTS,
 } from "@/lib/schemas/lookup";
-import { readExecutor, runTransaction } from "@/lib/transaction";
+import { runTransaction } from "@/lib/transaction";
 import { signedDownloadUrl } from "@/modules/platform/services/file-service";
 
 import { decryptIdentity, encryptIdentity, verificationCodeMatches } from "../domain/identity";
@@ -71,22 +76,41 @@ function unusable(reason: string): AppError {
   return new AppError("RES-4302", CODE_MEANINGS["RES-4302"], { reason });
 }
 
+/** The refusal of an id that names no verification (IFU-51.AC6). */
+function unknownVerification(): AppError {
+  return validationError([{ code: "VAL-4006", entry: { field: "verificationId", issue: LOOKUP_ISSUES.verificationNotFound } }]);
+}
+
+/** The result of the check of a code: the row when the code is correct. */
+type CodeCheck = { readonly matched: true; readonly row: VerificationRow } | { readonly matched: false };
+
 /**
- * Uses one try of the verification after a wrong code (IFU-51.AC3). The row is
- * locked, so two wrong codes at the same time use two tries, and the fifth try
- * ends the verification (DEC-071).
+ * Checks the code against the verification with its row locked (DEC-071,
+ * IFU-51.AC3, AC4). The row is read `FOR UPDATE` before the compare, so each
+ * lookup compares against the count of tries of the lookup before it. A wrong
+ * code uses one try, and the fifth ends the verification; the transaction
+ * commits the try. A correct code changes nothing here: `recordLookup` uses the
+ * verification.
  *
- * @throws AppError 409 `RES-4302` when another request ended the verification before this one got the lock.
+ * @throws AppError 400 `VAL-4006` on `verificationId` for an unknown id (IFU-51.AC6).
+ * @throws AppError 409 `RES-4302` for a used, ended, expired or failed verification (IFU-51.AC2, AC4, AC5, AC7).
  */
-async function registerWrongCode(publicId: string, at: Date): Promise<void> {
-  await runTransaction(async (tx) => {
-    const current = await findVerificationByPublicId(tx, publicId, true);
-    const reason = current === null ? "the verification is gone" : unusableReason(current, at);
-    if (current === null || reason !== null) {
-      throw unusable(reason ?? "the verification is gone");
+async function checkCode(publicId: string, code: string, at: Date): Promise<CodeCheck> {
+  return runTransaction(async (tx): Promise<CodeCheck> => {
+    const row = await findVerificationByPublicId(tx, publicId, true);
+    if (row === null) {
+      throw unknownVerification();
     }
-    const used = current.attemptsUsed + 1;
+    const reason = unusableReason(row, at);
+    if (reason !== null) {
+      throw unusable(reason);
+    }
+    if (verificationCodeMatches(row.codeHash, row.publicId, code)) {
+      return { matched: true, row };
+    }
+    const used = row.attemptsUsed + 1;
     await writeAttempts(tx, publicId, used, used >= MAX_CODE_ATTEMPTS ? at : null);
+    return { matched: false };
   });
 }
 
@@ -211,19 +235,14 @@ export async function lookup(input: LookupInput, meta: LookupMeta): Promise<Look
   await consumeQuota(SOURCE_LOOKUPS.scope, sourceOf(meta.forwardedFor), SOURCE_LOOKUPS);
 
   const publicId = verificationUuid(input.verificationId);
-  const row = publicId === null ? null : await findVerificationByPublicId(readExecutor(), publicId);
-  if (row === null) {
-    throw validationError([{ code: "VAL-4006", entry: { field: "verificationId", issue: LOOKUP_ISSUES.verificationNotFound } }]);
+  if (publicId === null) {
+    throw unknownVerification();
   }
-  const reason = unusableReason(row, at);
-  if (reason !== null) {
-    throw unusable(reason);
-  }
-
-  if (!verificationCodeMatches(row.codeHash, row.publicId, input.code)) {
-    await registerWrongCode(row.publicId, at);
+  const check = await checkCode(publicId, input.code, at);
+  if (!check.matched) {
     throw validationError([{ code: "VAL-4006", entry: { field: "code", issue: LOOKUP_ISSUES.codeWrong } }]);
   }
+  const { row } = check;
 
   const { reads, storageKeyOf } = createLookupReads();
   const resolution = await resolve({ catalogNumber: row.catalogNumberInput, lotNumber: row.lotNumberInput }, reads);
