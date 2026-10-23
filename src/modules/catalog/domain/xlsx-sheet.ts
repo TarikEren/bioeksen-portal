@@ -14,10 +14,13 @@
  * first sheet needs, each with a hard limit on the output: the workbook and its
  * relations, the first worksheet, the shared strings and the styles. The sizes
  * that the ZIP directory states count for nothing: the uploader writes them. It
- * counts the rows and the cells of the `sheetData` of the first worksheet and
- * the strings, and then gives `exceljs` a new workbook made of these parts only:
- * a worksheet that holds only that `sheetData`, so `exceljs` builds exactly the
- * rows and the cells that were counted.
+ * counts the rows and the cells of the `sheetData` of the first worksheet, the
+ * cells of its merged ranges, and the strings, and checks that each row and
+ * cell address is inside the sheet of Excel. Then it gives `exceljs` a new
+ * workbook made of these parts only: a worksheet that holds only that
+ * `sheetData` and its merged ranges, so `exceljs` builds exactly the rows and
+ * the cells that were counted. A merge still gives each of its cells the value
+ * of its first cell, as before (owner answer 2026-10-23).
  */
 import { crc32, inflateRawSync } from "node:zlib";
 
@@ -48,6 +51,15 @@ const MAX_STYLES_BYTES = 8 * 1024 * 1024;
 const MAX_ENTRIES = 1_000;
 /** The most columns that the reader takes from a row. The import uses three. */
 const MAX_COLUMNS = 100;
+/** The last row and the last column (`XFD`) of a sheet of Excel. */
+const MAX_ROW_NUMBER = 1_048_576;
+const MAX_COLUMN_NUMBER = 16_384;
+/**
+ * The most characters that the records may hold together. Many cells can show
+ * one shared string, so the records can hold far more text than the file
+ * unpacks to; they may hold no more than the parts could hold with no sharing.
+ */
+const MAX_TEXT_CHARACTERS = MAX_UNPACKED_BYTES;
 
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
 const CENTRAL_DIRECTORY_HEADER = 0x02014b50;
@@ -200,7 +212,14 @@ function firstWorksheetName(workbook: string, relations: string, entries: Map<st
       targets.set(id, target);
     }
   }
-  for (const tag of openingTags(workbook, "sheet")) {
+  const sheets = openingTags(workbook, "sheet");
+  const sheetIds = sheets.map((tag) => attributeOf(tag, "sheetId") ?? "");
+  // `exceljs` keeps the sheets by their id and leaves out the id 0, so an id
+  // twice or one that is not a positive number makes "the first sheet" unclear.
+  if (sheetIds.some((id) => !/^[1-9]\d{0,8}$/.test(id)) || new Set(sheetIds).size !== sheetIds.length) {
+    return null;
+  }
+  for (const tag of sheets) {
     const target = targets.get(attributeOf(tag, "r:id") ?? "");
     const name = target === undefined ? null : `xl/${target.replace(/^(\s|\/xl\/)+/, "")}`;
     if (name !== null && WORKSHEET_NAME.test(name) && entries.has(name)) {
@@ -210,24 +229,103 @@ function firstWorksheetName(workbook: string, relations: string, entries: Map<st
   return null;
 }
 
+/** The `sheetData` element of a worksheet, and where it starts and ends in the worksheet. */
+interface SheetDataSpan {
+  readonly text: string;
+  readonly start: number;
+  readonly end: number;
+}
+
 /**
- * The `sheetData` element of a worksheet, as text: `<sheetData/>` when the
- * worksheet has none, `null` when it is not closed.
+ * The `sheetData` element of a worksheet: `<sheetData/>` when the worksheet has
+ * none, `null` when it is not closed.
  */
-function sheetDataOf(worksheet: string): string | null {
+function sheetDataOf(worksheet: string): SheetDataSpan | null {
   const start = worksheet.search(/<sheetData[\s/>]/);
   if (start === -1) {
-    return "<sheetData/>";
+    return { text: "<sheetData/>", start: 0, end: 0 };
   }
   const openEnd = worksheet.indexOf(">", start);
   if (openEnd === -1) {
     return null;
   }
   if (worksheet[openEnd - 1] === "/") {
-    return worksheet.slice(start, openEnd + 1);
+    return { text: worksheet.slice(start, openEnd + 1), start, end: openEnd + 1 };
   }
   const close = worksheet.indexOf("</sheetData>", openEnd);
-  return close === -1 ? null : worksheet.slice(start, close + "</sheetData>".length);
+  if (close === -1) {
+    return null;
+  }
+  const end = close + "</sheetData>".length;
+  return { text: worksheet.slice(start, end), start, end };
+}
+
+/**
+ * The row and the column of an address such as `B12` (a `$` mark is allowed),
+ * or `null` when it is not an address inside the sheet of Excel.
+ */
+function cellAddress(text: string): { readonly row: number; readonly column: number } | null {
+  const match = /^\$?([A-Za-z]{1,3})\$?(\d{1,7})$/.exec(text);
+  if (match === null) {
+    return null;
+  }
+  const [, letters = "", digits = ""] = match;
+  let column = 0;
+  for (const letter of letters.toUpperCase()) {
+    column = column * 26 + letter.charCodeAt(0) - 64;
+  }
+  const row = Number(digits);
+  return row >= 1 && row <= MAX_ROW_NUMBER && column <= MAX_COLUMN_NUMBER ? { row, column } : null;
+}
+
+/**
+ * Whether each row number and each cell address of the `sheetData` is inside
+ * the sheet of Excel. `exceljs` keeps the rows and the cells in arrays by their
+ * numbers and walks those arrays, so one row with the number 4,294,967,295
+ * blocks the process for minutes (R-064).
+ */
+function addressesInSheet(sheetData: string): boolean {
+  for (const tag of openingTags(sheetData, "row")) {
+    const number = attributeOf(tag, "r");
+    if (number !== undefined && !(/^\d{1,7}$/.test(number) && Number(number) >= 1 && Number(number) <= MAX_ROW_NUMBER)) {
+      return false;
+    }
+  }
+  for (const tag of openingTags(sheetData, "c")) {
+    const address = attributeOf(tag, "r");
+    if (address !== undefined && cellAddress(address) === null) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The merged ranges of the worksheet, outside its `sheetData`, as `exceljs`
+ * reads them, with the count of the cells that they cover. `null` when a range
+ * is not inside the sheet of Excel.
+ */
+function mergedRanges(worksheet: string, sheetData: SheetDataSpan): { readonly ranges: string[]; readonly cells: number } | null {
+  const outside = worksheet.slice(0, sheetData.start) + worksheet.slice(sheetData.end);
+  const start = outside.search(/<mergeCells[\s>]/);
+  if (start === -1) {
+    return { ranges: [], cells: 0 };
+  }
+  const close = outside.indexOf("</mergeCells>", start);
+  const section = close === -1 ? outside.slice(start) : outside.slice(start, close);
+  const ranges: string[] = [];
+  let cells = 0;
+  for (const tag of openingTags(section, "mergeCell")) {
+    const [first = "", last = first] = (attributeOf(tag, "ref") ?? "").split(":");
+    const from = cellAddress(first);
+    const to = cellAddress(last);
+    if (from === null || to === null) {
+      return null;
+    }
+    ranges.push(`${first}:${last}`);
+    cells += (Math.abs(to.row - from.row) + 1) * (Math.abs(to.column - from.column) + 1);
+  }
+  return { ranges, cells };
 }
 
 /** A ZIP file that stores the parts as they are, with no compression. */
@@ -307,31 +405,38 @@ function boundedWorkbook(bytes: Uint8Array, maxRows: number): Buffer | "unreadab
     return "unreadable";
   }
   budget -= worksheet.byteLength;
-  const sheetData = sheetDataOf(worksheet.toString("utf8"));
+  const worksheetText = worksheet.toString("utf8");
+  const sheetData = sheetDataOf(worksheetText);
   if (sheetData === null) {
     return "unreadable";
   }
   const cellLimit = (maxRows + 1) * MAX_COLUMNS;
-  if (countElements(sheetData, "row") > 2 * (maxRows + 1)) {
+  if (countElements(sheetData.text, "row") > 2 * (maxRows + 1)) {
     return "too-many-rows";
   }
-  if (countElements(sheetData, "c") > cellLimit) {
+  // A merge gives each cell of its range the value of its first cell, so
+  // `exceljs` makes a cell for each of them: they count as cells (R-064).
+  const merges = mergedRanges(worksheetText, sheetData);
+  if (merges === null || countElements(sheetData.text, "c") + merges.cells > cellLimit || !addressesInSheet(sheetData.text)) {
     return "unreadable";
   }
+  // The runs of rich text in a cell (`<is>`) count with the strings.
+  let strings = countElements(sheetData.text, "r");
 
   const parts: Array<readonly [string, Buffer]> = [];
   const stringsEntry = entries.get(SHARED_STRINGS_PART);
   if (stringsEntry !== undefined) {
-    const strings = unpack(zip, stringsEntry, budget);
-    if (strings === null) {
+    const sharedStrings = unpack(zip, stringsEntry, budget);
+    if (sharedStrings === null) {
       return "unreadable";
     }
-    budget -= strings.byteLength;
-    const text = strings.toString("utf8");
-    if (countElements(text, "si") + countElements(text, "r") > 2 * cellLimit) {
-      return "unreadable";
-    }
-    parts.push([SHARED_STRINGS_PART, strings]);
+    budget -= sharedStrings.byteLength;
+    const text = sharedStrings.toString("utf8");
+    strings += countElements(text, "si") + countElements(text, "r");
+    parts.push([SHARED_STRINGS_PART, sharedStrings]);
+  }
+  if (strings > 2 * cellLimit) {
+    return "unreadable";
   }
   const stylesEntry = entries.get(STYLES_PART);
   if (stylesEntry !== undefined) {
@@ -364,7 +469,12 @@ function boundedWorkbook(bytes: Uint8Array, maxRows: number): Buffer | "unreadab
     `<Relationships xmlns="${PACKAGE_RELATIONSHIP_NAMESPACE}">` +
     `<Relationship Id="rId1" Type="${RELATIONSHIP_NAMESPACE}/worksheet" Target="worksheets/sheet1.xml"/>` +
     `</Relationships>`;
-  const newWorksheet = `<worksheet xmlns="${MAIN_NAMESPACE}" xmlns:r="${RELATIONSHIP_NAMESPACE}">${sheetData}</worksheet>`;
+  // Each range passed `cellAddress`, so it holds only letters, digits, `$` and `:`.
+  const newMerges =
+    merges.ranges.length === 0
+      ? ""
+      : `<mergeCells count="${String(merges.ranges.length)}">${merges.ranges.map((range) => `<mergeCell ref="${range}"/>`).join("")}</mergeCells>`;
+  const newWorksheet = `<worksheet xmlns="${MAIN_NAMESPACE}" xmlns:r="${RELATIONSHIP_NAMESPACE}">${sheetData.text}${newMerges}</worksheet>`;
 
   return storedZip([
     ["[Content_Types].xml", Buffer.from(XML_DECLARATION + contentTypes, "utf8")],
@@ -380,8 +490,13 @@ function isObject(value: unknown): value is object {
   return typeof value === "object" && value !== null;
 }
 
-/** The cell of a sheet value. A formula gives its result, a rich text its runs, a hyperlink its text, an error nothing. */
-function toCell(value: ExcelJS.CellValue): SheetCell {
+/**
+ * The cell of a sheet value. A formula gives its result, a rich text its runs, a
+ * hyperlink its text, an error nothing. `exceljs` gives each cell that shows one
+ * shared rich text the same object, so `joined` keeps one text for each object:
+ * 5,000 cells of one rich text of 1 MiB hold one text and not 5 GiB (R-064).
+ */
+function toCell(value: ExcelJS.CellValue, joined: WeakMap<object, string>): SheetCell {
   if (value === null || value === undefined) {
     return "";
   }
@@ -395,7 +510,13 @@ function toCell(value: ExcelJS.CellValue): SheetCell {
     return value;
   }
   if ("richText" in value) {
-    return value.richText.map((run) => run.text).join("");
+    const known = joined.get(value);
+    if (known !== undefined) {
+      return known;
+    }
+    const text = value.richText.map((run) => run.text).join("");
+    joined.set(value, text);
+    return text;
   }
   if ("error" in value) {
     return "";
@@ -407,7 +528,7 @@ function toCell(value: ExcelJS.CellValue): SheetCell {
   if (result === undefined) {
     return "";
   }
-  return isObject(result) && !(result instanceof Date) ? "" : toCell(result);
+  return isObject(result) && !(result instanceof Date) ? "" : toCell(result, joined);
 }
 
 /**
@@ -417,8 +538,9 @@ function toCell(value: ExcelJS.CellValue): SheetCell {
  * the rows that it gets.
  *
  * @returns `unreadable` when the bytes are not a readable workbook with a sheet,
- * or unpack to more than the reader accepts; `too-many-rows` when the first
- * sheet holds far more rows than `maxRows`.
+ * or unpack to more than the reader accepts, or the records would hold more
+ * than `MAX_TEXT_CHARACTERS`; `too-many-rows` when the first sheet holds far
+ * more rows than `maxRows`.
  */
 export async function readFirstSheet(bytes: Uint8Array, maxRows: number): Promise<SheetReading> {
   const bounded = boundedWorkbook(bytes, maxRows);
@@ -437,12 +559,19 @@ export async function readFirstSheet(bytes: Uint8Array, maxRows: number): Promis
   }
   // `columnCount` reads every row, so it is read once and not for each row.
   const columnCount = sheet.columnCount;
+  const joined = new WeakMap<object, string>();
   const records: SheetRecord[] = [];
+  let characters = 0;
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (characters > MAX_TEXT_CHARACTERS) {
+      return;
+    }
     const width = Math.min(Math.max(columnCount, row.cellCount), MAX_COLUMNS);
     const cells: SheetCell[] = [];
-    for (let column = 1; column <= width; column += 1) {
-      cells.push(toCell(row.getCell(column).value));
+    for (let column = 1; column <= width && characters <= MAX_TEXT_CHARACTERS; column += 1) {
+      const cell = toCell(row.getCell(column).value, joined);
+      characters += typeof cell === "string" ? cell.length : 0;
+      cells.push(cell);
     }
     // A trailing blank cell is formatting, not data: a one-column sheet has one cell.
     while (cells.length > 0 && cells[cells.length - 1] === "") {
@@ -452,5 +581,5 @@ export async function readFirstSheet(bytes: Uint8Array, maxRows: number): Promis
       records.push({ number: rowNumber, cells });
     }
   });
-  return { kind: "sheet", records };
+  return characters > MAX_TEXT_CHARACTERS ? { kind: "unreadable" } : { kind: "sheet", records };
 }
